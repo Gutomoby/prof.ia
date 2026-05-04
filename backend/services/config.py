@@ -6,15 +6,21 @@ Por que pydantic-settings: dá tipagem, validação e mensagem de erro clara
 quando uma variável obrigatória está faltando, em vez de explodir lá na frente.
 """
 
+from pathlib import Path
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Caminho absoluto até backend/.env. Resolvido a partir deste próprio arquivo,
+# para funcionar independente do diretório de onde o uvicorn é invocado.
+# (config.py vive em backend/services/, então .parent.parent volta até backend/.)
+_ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
+
 
 class Settings(BaseSettings):
-    # Diz ao pydantic para ler do .env e ignorar variáveis extras
-    # (assim podemos manter NEXT_PUBLIC_* no mesmo arquivo sem reclamar).
+    # Lê do backend/.env e ignora variáveis extras (NEXT_PUBLIC_* etc.).
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_ENV_FILE,
         env_file_encoding="utf-8",
         extra="ignore",
     )

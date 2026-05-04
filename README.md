@@ -183,6 +183,20 @@ npm run dev
 
 ---
 
+## ☁️ Deploy no Vercel (frontend)
+
+O frontend já está pronto pra subir. Em ~3 minutos:
+
+1. **Importe o repo**: vá em https://vercel.com/new → conecte sua conta GitHub → selecione `Gutomoby/prof.ia`.
+2. **Configure o Root Directory**: clique em "Edit" e troque para `frontend` (sem isso o Vercel não acha o `package.json`).
+3. **Adicione as Environment Variables**:
+   - `NEXT_PUBLIC_SUPABASE_URL` = sua URL do Supabase
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = sua anon key
+   - `NEXT_PUBLIC_API_URL` = pode deixar `http://localhost:8000` por enquanto (o backend ainda não está deployado)
+4. Clique em **Deploy**. Em ~1 minuto o site está no ar com URL `*.vercel.app`.
+
+> Cada `git push origin main` redeploya automaticamente.
+
 ## 🤝 Contribuição
 
 Este é um projeto pessoal em estágio inicial. Issues e PRs são bem-vindos para discutir arquitetura ou reportar bugs.
