@@ -1,0 +1,30 @@
+# --- Web framework ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6           # servidor ASGI para rodar a API local e em produção
+
+# --- Validação e tipagem ---
+pydantic==2.9.2                     # já vem com FastAPI; fixado p/ evitar quebras
+pydantic-settings==2.5.2            # carrega variáveis do .env num objeto tipado
+
+# --- IA (apenas Claude — sem OpenAI) ---
+anthropic==0.39.0                   # Claude API (Sonnet/Haiku)
+
+# --- Embeddings LOCAIS (zero custo recorrente) ---
+# all-MiniLM-L6-v2: 384 dims, ~80 MB, roda em CPU em ~ms por chunk.
+# Bom o bastante para PT-BR. Se quiser qualidade maior, troque por
+# 'paraphrase-multilingual-MiniLM-L12-v2' (mesma dimensão).
+sentence-transformers>=3.1.0
+torch>=2.5.0                        # backend do sentence-transformers (Python 3.13+ requer 2.5+)
+
+# --- Supabase / Postgres ---
+supabase==2.7.4                     # cliente oficial; usa o REST e Storage do Supabase
+psycopg[binary]==3.2.3              # acesso direto ao Postgres (queries com pgvector)
+
+# --- Processamento de PDF e texto ---
+pymupdf>=1.25.0                     # extração de texto de PDFs (>=1.25 tem wheel para Python 3.13)
+tiktoken==0.8.0                     # contagem de tokens p/ chunking
+
+# --- Util ---
+python-multipart==0.0.10            # upload de arquivos via FastAPI
+httpx==0.27.2                       # cliente HTTP (usado pelo anthropic)
+python-dotenv==1.0.1                # carrega .env em desenvolvimento local

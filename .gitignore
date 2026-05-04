@@ -1,0 +1,21 @@
+# env
+.env
+.env.local
+*.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+
+# Claude Code (configurações locais — podem conter tokens de MCP)
+.claude/
+
+# Logs
+*.log
+
+# Backups
+*.bak
