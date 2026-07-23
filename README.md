@@ -17,7 +17,7 @@ Tudo com RAG sobre os PDFs e textos que **você** sobe.
 
 ---
 
-## ✨ O que é
+## ✨ O que é 
 
 ProfessorIA é um app de estudos *self-hosted* onde cada usuário cria um **"professor virtual"** especializado em uma matéria. O professor:
 
