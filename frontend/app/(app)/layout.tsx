@@ -1,15 +1,22 @@
-// Layout das rotas autenticadas — sidebar + área de conteúdo.
-// Por enquanto é um shell simples; a sidebar real (com lista de professores)
-// será adicionada quando tivermos auth + endpoints prontos.
-export default function AppLayout({ children }: { children: React.ReactNode }) {
+import { Sidebar } from "@/components/layout/Sidebar";
+import { api } from "@/lib/api";
+import type { ProfessorListItem } from "@/lib/types";
+
+// Layout das rotas autenticadas — sidebar (lista de professores + logout) +
+// área de conteúdo. O fetch roda no servidor a cada request (sem cache),
+// já que a lista de professores muda com frequência.
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  let professors: ProfessorListItem[] = [];
+  try {
+    const res = await api.listProfessors();
+    professors = res.items;
+  } catch {
+    // Backend fora do ar: sidebar mostra lista vazia em vez de quebrar a página.
+  }
+
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-64 border-r bg-muted/40 p-4 md:block">
-        <h1 className="text-xl font-bold">ProfessorIA</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          (sidebar — em construção)
-        </p>
-      </aside>
+      <Sidebar professors={professors} />
       <main className="flex-1 p-6">{children}</main>
     </div>
   );

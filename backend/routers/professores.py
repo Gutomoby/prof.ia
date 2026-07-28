@@ -13,12 +13,12 @@ então por enquanto o `user_id` é lido de uma variável de ambiente única
 do JWT do Supabase via dependency.
 """
 
-import os
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
 from models import Professor, ProfessorCreate
+from services.config import settings
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/professores", tags=["professores"])
@@ -64,16 +64,7 @@ def _current_user_id() -> str:
     Em produção (ou após Fase 7), trocar por uma dependency que lê o JWT
     do header Authorization e devolve auth.uid().
     """
-    user_id = os.getenv("MVP_USER_ID")
-    if not user_id:
-        raise HTTPException(
-            status_code=500,
-            detail=(
-                "MVP_USER_ID não configurado. Crie um usuário no Supabase Auth, "
-                "copie o UUID e exporte como MVP_USER_ID no backend/.env."
-            ),
-        )
-    return user_id
+    return settings.MVP_USER_ID
 
 
 # ---------------------------------------------------------------------------

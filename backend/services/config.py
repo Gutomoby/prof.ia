@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     # --- Storage ---
     STORAGE_BUCKET: str = "materiais"
 
+    # --- MVP single-user (temporário, até implementarmos auth completa) ---
+    MVP_USER_ID: str
+
 
 # Instância única importada pelos outros módulos.
 # O parsing acontece aqui, então erros de config aparecem no startup.

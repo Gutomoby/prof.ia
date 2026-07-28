@@ -5,9 +5,6 @@ import { createBrowserClient } from "@supabase/ssr";
   Usa as duas variáveis públicas do .env.local:
     - NEXT_PUBLIC_SUPABASE_URL
     - NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  Para uso server-side (Server Components, Route Handlers) crie outro cliente
-  com createServerClient — fazemos isso quando formos implementar auth.
 */
 export function createClient() {
   return createBrowserClient(
