@@ -1,58 +1,109 @@
+"use client";
+
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useEffect, useState } from "react";
+import { Plus, GraduationCap } from "lucide-react";
+import { api, ApiError } from "@/lib/api";
+import { PageHeader } from "@/components/layout/PageHeader";
+import { Card, CardFooter } from "@/components/ui/card";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { ProfessorListItem } from "@/lib/types";
 
-export default async function DashboardPage() {
-  let professors: ProfessorListItem[] = [];
-  let error: string | null = null;
-  try {
-    const res = await api.listProfessors();
-    professors = res.items;
-  } catch {
-    error = "Não foi possível carregar seus professores. O backend está no ar?";
+export default function DashboardPage() {
+  const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.listProfessors();
+      setProfessors(res.items);
+    } catch (err) {
+      setError(
+        err instanceof ApiError ? err.message : "Não foi possível carregar seus professores. O backend está no ar?"
+      );
+    } finally {
+      setLoading(false);
+    }
   }
 
+  useEffect(() => {
+    load();
+  }, []);
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Seus professores</h2>
-        <Link
-          href="/professor/novo"
-          className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-        >
-          + Novo professor
-        </Link>
-      </div>
+    <div>
+      <PageHeader
+        title="Seus professores"
+        action={
+          <Link href="/professor/novo" className={buttonVariants("default", "default")}>
+            <Plus className="h-4 w-4" />
+            Novo professor
+          </Link>
+        }
+      />
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
-
-      {!error && professors.length === 0 && (
-        <Card>
-          <CardContent className="py-8 text-center text-muted-foreground">
-            Você ainda não criou nenhum professor. Comece criando um assunto.
-          </CardContent>
-        </Card>
+      {loading && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-36" />
+          ))}
+        </div>
       )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {professors.map((p) => (
-          <Card key={p.id}>
-            <CardHeader>
-              <CardTitle>{p.name}</CardTitle>
-              <CardDescription>{p.discipline}</CardDescription>
-            </CardHeader>
-            <CardContent className="flex gap-2">
-              <Link href={`/professor/${p.id}/quiz`} className="text-sm text-primary underline-offset-2 hover:underline">
-                Quiz
+      {!loading && error && (
+        <InlineAlert>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span>{error}</span>
+            <Button variant="outline" size="sm" onClick={load}>
+              Tentar novamente
+            </Button>
+          </div>
+        </InlineAlert>
+      )}
+
+      {!loading && !error && professors.length === 0 && (
+        <EmptyState
+          icon={GraduationCap}
+          title="Você ainda não criou nenhum professor"
+          description="Comece cadastrando o primeiro assunto que você quer estudar."
+          action={
+            <Link href="/professor/novo" className={buttonVariants("default", "default")}>
+              <Plus className="h-4 w-4" />
+              Criar seu primeiro professor
+            </Link>
+          }
+        />
+      )}
+
+      {!loading && !error && professors.length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {professors.map((p) => (
+            <Card key={p.id} className="flex flex-col overflow-hidden">
+              <Link
+                href={`/professor/${p.id}/quiz`}
+                className="block flex-1 space-y-1.5 p-6 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+              >
+                <h3 className="text-base font-semibold leading-none tracking-tight">{p.name}</h3>
+                <p className="text-sm text-muted-foreground">{p.discipline}</p>
               </Link>
-              <Link href={`/professor/${p.id}/configurar`} className="text-sm text-primary underline-offset-2 hover:underline">
-                Material
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <CardFooter className="gap-2 border-t pt-3">
+                <Link href={`/professor/${p.id}/quiz`} className={buttonVariants("ghost", "sm", "flex-1")}>
+                  Quiz
+                </Link>
+                <Link href={`/professor/${p.id}/configurar`} className={buttonVariants("ghost", "sm", "flex-1")}>
+                  Material
+                </Link>
+              </CardFooter>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

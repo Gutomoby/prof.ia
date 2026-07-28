@@ -13,6 +13,7 @@ import type {
   GeneratedActivity,
   ActivitySubmitResult,
   ActivityHistoryItem,
+  ActivityDetail,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -141,6 +142,10 @@ export function listAtividades(professorId: string, activityType = "quiz") {
   );
 }
 
+export function getAtividade(activityId: string) {
+  return request<ActivityDetail>(`/atividades/${activityId}`);
+}
+
 export const api = {
   request,
   listProfessors,
@@ -153,4 +158,5 @@ export const api = {
   generateAtividade,
   submitAtividade,
   listAtividades,
+  getAtividade,
 };

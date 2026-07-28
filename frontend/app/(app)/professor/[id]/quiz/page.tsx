@@ -1,18 +1,33 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { History as HistoryIcon, RotateCcw } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import { QuizOption } from "@/components/quiz/QuizOption";
+import { QuizReview } from "@/components/quiz/QuizReview";
+import { useQuizGuard } from "@/components/layout/QuizGuardContext";
 import type { ActivityHistoryItem, ActivitySubmitResult, GeneratedActivity } from "@/lib/types";
 
 type View = "idle" | "respondendo" | "resultado";
 
+function scoreBadgeVariant(scorePct: number) {
+  if (scorePct >= 70) return "success" as const;
+  if (scorePct < 40) return "destructive" as const;
+  return "neutral" as const;
+}
+
 export default function QuizPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
+  const { setUnsaved } = useQuizGuard();
 
   const [view, setView] = useState<View>("idle");
   const [topic, setTopic] = useState("");
@@ -29,6 +44,15 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [history, setHistory] = useState<ActivityHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
 
+  useEffect(() => {
+    setUnsaved(view === "respondendo");
+  }, [view, setUnsaved]);
+
+  useEffect(() => {
+    return () => setUnsaved(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function refreshHistory() {
     setHistoryLoading(true);
     try {
@@ -43,17 +67,22 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     refreshHistory();
+    // Prefill o tópico se o usuário chegou aqui por "Tentar novamente" a partir
+    // do histórico (?topic=...). Lido de window.location em vez de useSearchParams
+    // pra não exigir um Suspense boundary só por causa disso.
+    const topicParam = new URLSearchParams(window.location.search).get("topic");
+    if (topicParam) setTopic(topicParam);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
-  async function handleGenerate(e: React.FormEvent) {
-    e.preventDefault();
+  async function startQuiz(quizTopic: string | null) {
     setGenError(null);
     setGenerating(true);
     try {
-      const generated = await api.generateAtividade({ professor_id: professorId, topic: topic || null });
+      const generated = await api.generateAtividade({ professor_id: professorId, topic: quizTopic });
       setActivity(generated);
       setAnswers({});
+      setResult(null);
       setStartedAt(Date.now());
       setView("respondendo");
     } catch (err) {
@@ -93,11 +122,10 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   }
 
   const allAnswered = activity ? activity.questions.every((_, i) => answers[String(i)] !== undefined) : false;
+  const answeredCount = activity ? activity.questions.filter((_, i) => answers[String(i)] !== undefined).length : 0;
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold">Quiz</h2>
-
       {view === "idle" && (
         <>
           <Card>
@@ -106,7 +134,13 @@ export default function QuizPage({ params }: { params: { id: string } }) {
               <CardDescription>Deixe o tópico em branco para a IA escolher.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleGenerate} className="space-y-4">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  startQuiz(topic || null);
+                }}
+                className="space-y-4"
+              >
                 <div className="space-y-2">
                   <Label htmlFor="topic">Tópico (opcional)</Label>
                   <Input
@@ -116,109 +150,116 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                     onChange={(e) => setTopic(e.target.value)}
                   />
                 </div>
-                {genError && <p className="text-sm text-destructive">{genError}</p>}
-                <Button type="submit" disabled={generating}>
+                {genError && <InlineAlert>{genError}</InlineAlert>}
+                <Button type="submit" size="lg" className="w-full" loading={generating}>
                   {generating ? "Gerando..." : "Gerar quiz"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Histórico</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {historyLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
-              {!historyLoading && history.length === 0 && (
-                <p className="text-sm text-muted-foreground">Nenhuma tentativa ainda.</p>
-              )}
-              <ul className="divide-y">
-                {history.map((h) => (
-                  <li key={h.id} className="flex items-center justify-between py-2 text-sm">
-                    <span>{h.topic || "Tópico geral"}</span>
-                    <span className="text-muted-foreground">
-                      {new Date(h.created_at).toLocaleDateString("pt-BR")}
-                    </span>
-                    <span className="font-medium">{h.score_pct != null ? `${h.score_pct}%` : "—"}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-muted-foreground">Histórico</h2>
+
+            {historyLoading && (
+              <div className="space-y-2">
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+              </div>
+            )}
+
+            {!historyLoading && history.length === 0 && (
+              <Card>
+                <EmptyState icon={HistoryIcon} title="Nenhuma tentativa ainda" description="Gere seu primeiro quiz acima." />
+              </Card>
+            )}
+
+            {!historyLoading &&
+              history.map((h) => (
+                <Link key={h.id} href={`/professor/${professorId}/quiz/historico/${h.id}`} className="block">
+                  <Card className="transition-colors hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <div className="flex items-center justify-between gap-4 p-4">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{h.topic || "Tópico geral"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(h.created_at).toLocaleDateString("pt-BR")}
+                        </p>
+                      </div>
+                      {h.score_pct != null && (
+                        <Badge variant={scoreBadgeVariant(h.score_pct)}>{h.score_pct}%</Badge>
+                      )}
+                    </div>
+                  </Card>
+                </Link>
+              ))}
+          </div>
         </>
       )}
 
       {view === "respondendo" && activity && (
         <div className="space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="h-1.5 flex-1 rounded-full bg-muted">
+              <div
+                className="h-1.5 rounded-full bg-primary transition-all duration-300"
+                style={{ width: `${(answeredCount / activity.questions.length) * 100}%` }}
+              />
+            </div>
+            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+              {answeredCount} de {activity.questions.length} respondidas
+            </span>
+          </div>
+
           {activity.questions.map((q, qi) => (
             <Card key={qi}>
               <CardHeader>
-                <CardTitle className="text-base">
+                <CardTitle>
                   {qi + 1}. {q.enunciado}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
                 {q.alternativas.map((alt, ai) => (
-                  <button
+                  <QuizOption
                     key={ai}
-                    type="button"
+                    index={ai}
+                    label={alt}
+                    state={answers[String(qi)] === ai ? "selected" : "default"}
                     onClick={() => selectAnswer(qi, ai)}
-                    className={cn(
-                      "block w-full rounded-md border px-4 py-2 text-left text-sm transition-colors hover:bg-accent",
-                      answers[String(qi)] === ai && "border-primary bg-accent"
-                    )}
-                  >
-                    {alt}
-                  </button>
+                  />
                 ))}
               </CardContent>
             </Card>
           ))}
-          <Button onClick={handleSubmit} disabled={!allAnswered || submitting} className="w-full">
+          <Button onClick={handleSubmit} disabled={!allAnswered} loading={submitting} size="lg" className="w-full">
             {submitting ? "Enviando..." : "Enviar respostas"}
           </Button>
         </div>
       )}
 
       {view === "resultado" && result && (
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="py-6 text-center">
-              <p className="text-sm text-muted-foreground">Pontuação</p>
-              <p className="text-4xl font-bold">{result.score_pct}%</p>
-            </CardContent>
-          </Card>
-
-          {result.questions.map((q, qi) => (
-            <Card key={qi} className={cn(q.correta ? "border-emerald-500" : "border-destructive")}>
-              <CardHeader>
-                <CardTitle className="text-base">
-                  {qi + 1}. {q.enunciado}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {q.alternativas.map((alt, ai) => (
-                  <div
-                    key={ai}
-                    className={cn(
-                      "rounded-md border px-4 py-2 text-sm",
-                      ai === q.resposta_correta && "border-emerald-500 bg-emerald-500/10",
-                      ai === q.resposta_usuario && ai !== q.resposta_correta && "border-destructive bg-destructive/10"
-                    )}
-                  >
-                    {alt}
-                  </div>
-                ))}
-                <p className="pt-2 text-sm text-muted-foreground">{q.explicacao}</p>
-              </CardContent>
-            </Card>
-          ))}
-
-          <Button onClick={handleReset} className="w-full">
-            Novo quiz
-          </Button>
-        </div>
+        <QuizReview
+          scorePct={result.score_pct}
+          questions={result.questions}
+          footer={
+            <div className="space-y-3">
+              {genError && <InlineAlert>{genError}</InlineAlert>}
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  className="flex-1"
+                  size="lg"
+                  loading={generating}
+                  onClick={() => startQuiz(activity?.topic ?? null)}
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Tentar novamente
+                </Button>
+                <Button variant="outline" className="flex-1" size="lg" onClick={handleReset}>
+                  Novo quiz
+                </Button>
+              </div>
+            </div>
+          }
+        />
       )}
     </div>
   );

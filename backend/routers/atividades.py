@@ -7,9 +7,10 @@ seguinte — o campo `activity_type` já existe no schema para não precisar
 migrar depois.
 
 Endpoints:
-  POST /atividades/gerar      pede ao Claude para gerar um quiz novo
-  POST /atividades/submeter   recebe as respostas, calcula score e salva
-  GET  /atividades            lista atividades de um professor (histórico)
+  POST /atividades/gerar        pede ao Claude para gerar um quiz novo
+  POST /atividades/submeter     recebe as respostas, calcula score e salva
+  GET  /atividades              lista atividades de um professor (histórico)
+  GET  /atividades/{id}         detalhe corrigido de uma tentativa (revisitar)
 """
 
 from uuid import UUID
@@ -44,6 +45,21 @@ def _strip_answers(questions: list[dict]) -> list[dict]:
         {k: v for k, v in q.items() if k not in ("resposta_correta", "explicacao")}
         for q in questions
     ]
+
+
+def _correct_questions(questions: list[dict], answers: dict) -> tuple[list[dict], float]:
+    """Cruza as respostas do usuário com o gabarito. Usado tanto na submissão quanto ao revisitar."""
+    corrected = []
+    n_certas = 0
+    for idx, q in enumerate(questions):
+        resposta_usuario = answers.get(str(idx))
+        correta = resposta_usuario == q["resposta_correta"]
+        if correta:
+            n_certas += 1
+        corrected.append({**q, "resposta_usuario": resposta_usuario, "correta": correta})
+
+    score_pct = round((n_certas / len(questions)) * 100, 1) if questions else 0.0
+    return corrected, score_pct
 
 
 # ---------------------------------------------------------------------------
@@ -124,17 +140,7 @@ def submeter_atividade(payload: ActivitySubmitRequest):
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
     questions: list[dict] = found.data[0]["questions"]
-
-    corrected = []
-    n_certas = 0
-    for idx, q in enumerate(questions):
-        resposta_usuario = payload.answers.get(str(idx))
-        correta = resposta_usuario == q["resposta_correta"]
-        if correta:
-            n_certas += 1
-        corrected.append({**q, "resposta_usuario": resposta_usuario, "correta": correta})
-
-    score_pct = round((n_certas / len(questions)) * 100, 1) if questions else 0.0
+    corrected, score_pct = _correct_questions(questions, payload.answers)
 
     sb.table("activity_results").update(
         {
@@ -164,3 +170,39 @@ def list_atividades(professor_id: UUID, activity_type: str = "quiz"):
         .execute()
     )
     return {"items": res.data or []}
+
+
+@router.get("/{activity_id}")
+def get_atividade(activity_id: UUID):
+    """Detalhe de uma tentativa já respondida — usado pra "revisitar" um quiz do histórico.
+
+    O gabarito (resposta_correta/explicacao) fica salvo permanentemente em
+    `questions` desde a geração, e as respostas do usuário em `answers` desde
+    a submissão — então a correção completa pode ser reconstruída aqui sem
+    guardar nenhum dado novo.
+    """
+    sb = get_supabase()
+    found = (
+        sb.table("activity_results")
+        .select("id, topic, questions, answers, score_pct, time_seconds, created_at")
+        .eq("id", str(activity_id))
+        .limit(1)
+        .execute()
+    )
+    if not found.data:
+        raise HTTPException(status_code=404, detail="Atividade não encontrada")
+
+    row = found.data[0]
+    if row["score_pct"] is None:
+        raise HTTPException(status_code=400, detail="Essa atividade ainda não foi respondida")
+
+    corrected, _ = _correct_questions(row["questions"], row["answers"] or {})
+
+    return {
+        "id": row["id"],
+        "topic": row["topic"],
+        "score_pct": row["score_pct"],
+        "time_seconds": row["time_seconds"],
+        "created_at": row["created_at"],
+        "questions": corrected,
+    }

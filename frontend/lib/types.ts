@@ -60,3 +60,12 @@ export interface ActivityHistoryItem {
   time_seconds: number | null;
   created_at: string;
 }
+
+export interface ActivityDetail {
+  id: string;
+  topic: string | null;
+  score_pct: number;
+  time_seconds: number | null;
+  created_at: string;
+  questions: SubmittedQuestionResult[];
+}

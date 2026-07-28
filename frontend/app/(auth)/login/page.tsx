@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { InlineAlert } from "@/components/ui/inline-alert";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -64,8 +65,8 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && <InlineAlert>{error}</InlineAlert>}
+            <Button type="submit" size="lg" className="w-full" loading={loading}>
               {loading ? "Entrando..." : "Entrar"}
             </Button>
           </form>

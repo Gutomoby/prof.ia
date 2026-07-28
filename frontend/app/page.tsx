@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 // Landing page (rota /). Server Component — sem JS no client além do que o
 // Next manda automaticamente. Em produção fica leve e funciona sem auth.
@@ -23,17 +25,14 @@ export default function LandingPage() {
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">
-          <Link
-            href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-md bg-primary px-8 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90"
-          >
+          <Link href="/login" className={buttonVariants("default", "lg", "px-8")}>
             Entrar no app
           </Link>
           <a
             href="https://github.com/Gutomoby/prof.ia"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex h-11 items-center justify-center rounded-md border border-input bg-background px-8 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            className={buttonVariants("outline", "lg", "px-8")}
           >
             Ver código no GitHub
           </a>
@@ -103,10 +102,10 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+    <Card className="p-6">
       <div className="text-3xl">{icon}</div>
       <h3 className="mt-4 text-lg font-semibold">{title}</h3>
       <p className="mt-2 text-sm text-muted-foreground">{description}</p>
-    </div>
+    </Card>
   );
 }

@@ -1,12 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FileStack, Trash2 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { InlineAlert } from "@/components/ui/inline-alert";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { DocumentItem } from "@/lib/types";
 
 export default function ConfigurarPage({ params }: { params: { id: string } }) {
@@ -24,6 +28,8 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [textContent, setTextContent] = useState("");
   const [textError, setTextError] = useState<string | null>(null);
   const [textLoading, setTextLoading] = useState(false);
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   async function refreshDocuments() {
     setLoadingList(true);
@@ -78,14 +84,17 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   }
 
   async function handleDelete(id: string) {
-    await api.deleteDocument(id);
-    await refreshDocuments();
+    setDeletingId(id);
+    try {
+      await api.deleteDocument(id);
+      await refreshDocuments();
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold">Configurar material</h2>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -100,8 +109,8 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
                 accept=".pdf"
                 onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
               />
-              {pdfError && <p className="text-sm text-destructive">{pdfError}</p>}
-              <Button type="submit" disabled={!pdfFile || pdfLoading}>
+              {pdfError && <InlineAlert>{pdfError}</InlineAlert>}
+              <Button type="submit" disabled={!pdfFile} loading={pdfLoading}>
                 {pdfLoading ? "Enviando..." : "Enviar PDF"}
               </Button>
             </form>
@@ -135,8 +144,8 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
                   onChange={(e) => setTextContent(e.target.value)}
                 />
               </div>
-              {textError && <p className="text-sm text-destructive">{textError}</p>}
-              <Button type="submit" disabled={textLoading}>
+              {textError && <InlineAlert>{textError}</InlineAlert>}
+              <Button type="submit" loading={textLoading}>
                 {textLoading ? "Salvando..." : "Salvar texto"}
               </Button>
             </form>
@@ -144,34 +153,53 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Materiais adicionados</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingList && <p className="text-sm text-muted-foreground">Carregando...</p>}
-          {listError && <p className="text-sm text-destructive">{listError}</p>}
-          {!loadingList && documents.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum material enviado ainda.</p>
-          )}
-          <ul className="divide-y">
-            {documents.map((doc) => (
-              <li key={doc.id} className="flex items-center justify-between py-2">
+      <div className="space-y-3">
+        <h2 className="text-sm font-medium text-muted-foreground">Materiais adicionados</h2>
+
+        {loadingList && (
+          <div className="space-y-2">
+            <Skeleton className="h-14" />
+            <Skeleton className="h-14" />
+          </div>
+        )}
+
+        {!loadingList && listError && <InlineAlert>{listError}</InlineAlert>}
+
+        {!loadingList && !listError && documents.length === 0 && (
+          <Card>
+            <EmptyState
+              icon={FileStack}
+              title="Nenhum material enviado ainda"
+              description="Envie um PDF ou cole um texto acima para o quiz poder usar esse conteúdo."
+            />
+          </Card>
+        )}
+
+        {!loadingList &&
+          !listError &&
+          documents.length > 0 &&
+          documents.map((doc) => (
+            <Card key={doc.id}>
+              <div className="flex items-center justify-between p-4">
                 <div>
                   <p className="text-sm font-medium">{doc.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {doc.type === "pdf" ? "PDF" : "Texto"} ·{" "}
-                    {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                    {doc.type === "pdf" ? "PDF" : "Texto"} · {new Date(doc.created_at).toLocaleDateString("pt-BR")}
                   </p>
                 </div>
-                <Button variant="ghost" onClick={() => handleDelete(doc.id)}>
-                  Excluir
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleDelete(doc.id)}
+                  loading={deletingId === doc.id}
+                  aria-label={`Excluir ${doc.name}`}
+                >
+                  {deletingId !== doc.id && <Trash2 className="h-4 w-4" />}
                 </Button>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+              </div>
+            </Card>
+          ))}
+      </div>
     </div>
   );
 }
