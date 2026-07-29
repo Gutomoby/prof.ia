@@ -18,6 +18,7 @@ export function ProfessorHeader({
 }) {
   const pathname = usePathname();
   const activeTab = TABS.find((t) => t.match(pathname));
+  const isHistoricoDetail = pathname.includes("/historico/");
   const { unsaved } = useQuizGuard();
 
   function handleTabClick(e: React.MouseEvent) {
@@ -29,12 +30,13 @@ export function ProfessorHeader({
   return (
     <div>
       <PageHeader
-        title={activeTab?.label ?? professor.name}
-        backHref="/dashboard"
+        title={isHistoricoDetail ? "Revisão" : activeTab?.label ?? professor.name}
+        backHref={isHistoricoDetail ? `/professor/${professor.id}/quiz` : "/dashboard"}
         breadcrumb={[
           { label: "Professores", href: "/dashboard" },
           { label: professor.name, href: `/professor/${professor.id}/quiz` },
-          ...(activeTab ? [{ label: activeTab.label }] : []),
+          ...(activeTab ? [{ label: activeTab.label, href: isHistoricoDetail ? activeTab.href(professor.id) : undefined }] : []),
+          ...(isHistoricoDetail ? [{ label: "Revisão" }] : []),
         ]}
       />
       <div className="-mt-4 mb-6 flex items-center gap-4">
@@ -48,7 +50,7 @@ export function ProfessorHeader({
                 href={tab.href(professor.id)}
                 onClick={handleTabClick}
                 className={cn(
-                  "rounded-full px-3 py-1 text-sm font-medium transition-colors",
+                  "rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 )}
               >

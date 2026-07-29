@@ -30,6 +30,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [textLoading, setTextLoading] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   async function refreshDocuments() {
     setLoadingList(true);
@@ -84,10 +85,13 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   }
 
   async function handleDelete(id: string) {
+    setDeleteError(null);
     setDeletingId(id);
     try {
       await api.deleteDocument(id);
       await refreshDocuments();
+    } catch (err) {
+      setDeleteError(err instanceof ApiError ? err.message : "Falha ao excluir o material.");
     } finally {
       setDeletingId(null);
     }
@@ -158,12 +162,13 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
         {loadingList && (
           <div className="space-y-2">
-            <Skeleton className="h-14" />
-            <Skeleton className="h-14" />
+            <Skeleton className="h-14 rounded-xl" />
+            <Skeleton className="h-14 rounded-xl" />
           </div>
         )}
 
         {!loadingList && listError && <InlineAlert>{listError}</InlineAlert>}
+        {deleteError && <InlineAlert>{deleteError}</InlineAlert>}
 
         {!loadingList && !listError && documents.length === 0 && (
           <Card>

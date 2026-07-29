@@ -51,7 +51,7 @@ export default function DashboardPage() {
       {loading && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-36" />
+            <Skeleton key={i} className="h-36 rounded-xl" />
           ))}
         </div>
       )}

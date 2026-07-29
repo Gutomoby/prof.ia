@@ -38,7 +38,11 @@ export function PageHeader({
             <span key={i} className="flex shrink-0 items-center gap-1">
               {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
               {crumb.href ? (
-                <Link href={crumb.href} className="underline-offset-2 hover:text-foreground hover:underline">
+                <Link
+                  href={crumb.href}
+                  onClick={handleBackClick}
+                  className="rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
                   {crumb.label}
                 </Link>
               ) : (

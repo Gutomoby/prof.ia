@@ -19,6 +19,10 @@ import type { ActivityHistoryItem, ActivitySubmitResult, GeneratedActivity } fro
 
 type View = "idle" | "respondendo" | "resultado";
 
+function pendingQuizKey(professorId: string) {
+  return `pending-quiz-${professorId}`;
+}
+
 function scoreBadgeVariant(scorePct: number) {
   if (scorePct >= 70) return "success" as const;
   if (scorePct < 40) return "destructive" as const;
@@ -39,10 +43,12 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<ActivitySubmitResult | null>(null);
 
   const [history, setHistory] = useState<ActivityHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useEffect(() => {
     setUnsaved(view === "respondendo");
@@ -55,11 +61,12 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   async function refreshHistory() {
     setHistoryLoading(true);
+    setHistoryError(null);
     try {
       const res = await api.listAtividades(professorId, "quiz");
       setHistory(res.items);
-    } catch {
-      // histórico é acessório — falha silenciosa não deve travar a tela de quiz
+    } catch (err) {
+      setHistoryError(err instanceof ApiError ? err.message : "Não foi possível carregar o histórico.");
     } finally {
       setHistoryLoading(false);
     }
@@ -67,11 +74,24 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     refreshHistory();
-    // Prefill o tópico se o usuário chegou aqui por "Tentar novamente" a partir
-    // do histórico (?topic=...). Lido de window.location em vez de useSearchParams
-    // pra não exigir um Suspense boundary só por causa disso.
-    const topicParam = new URLSearchParams(window.location.search).get("topic");
-    if (topicParam) setTopic(topicParam);
+
+    // "Tentar novamente" a partir da tela de revisitar histórico já gera o
+    // quiz por lá (pra ter o mesmo comportamento imediato do botão na tela
+    // de resultado) e deixa o resultado aqui via sessionStorage.
+    const pendingRaw = sessionStorage.getItem(pendingQuizKey(professorId));
+    if (pendingRaw) {
+      sessionStorage.removeItem(pendingQuizKey(professorId));
+      try {
+        const pending: GeneratedActivity = JSON.parse(pendingRaw);
+        setActivity(pending);
+        setAnswers({});
+        setResult(null);
+        setStartedAt(Date.now());
+        setView("respondendo");
+      } catch {
+        // payload inválido — ignora e deixa o usuário gerar um quiz normalmente
+      }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -98,6 +118,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   async function handleSubmit() {
     if (!activity) return;
+    setSubmitError(null);
     setSubmitting(true);
     try {
       const time_seconds = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
@@ -109,6 +130,8 @@ export default function QuizPage({ params }: { params: { id: string } }) {
       setResult(res);
       setView("resultado");
       refreshHistory();
+    } catch (err) {
+      setSubmitError(err instanceof ApiError ? err.message : "Falha ao enviar as respostas.");
     } finally {
       setSubmitting(false);
     }
@@ -118,11 +141,15 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setActivity(null);
     setResult(null);
     setTopic("");
+    setGenError(null);
     setView("idle");
   }
 
   const allAnswered = activity ? activity.questions.every((_, i) => answers[String(i)] !== undefined) : false;
   const answeredCount = activity ? activity.questions.filter((_, i) => answers[String(i)] !== undefined).length : 0;
+
+  const answeredHistory = history.filter((h) => h.score_pct != null);
+  const pendingHistory = history.filter((h) => h.score_pct == null);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -163,19 +190,31 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
             {historyLoading && (
               <div className="space-y-2">
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
+                <Skeleton className="h-16 rounded-xl" />
+                <Skeleton className="h-16 rounded-xl" />
               </div>
             )}
 
-            {!historyLoading && history.length === 0 && (
+            {!historyLoading && historyError && (
+              <InlineAlert>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>{historyError}</span>
+                  <Button variant="outline" size="sm" onClick={refreshHistory}>
+                    Tentar novamente
+                  </Button>
+                </div>
+              </InlineAlert>
+            )}
+
+            {!historyLoading && !historyError && history.length === 0 && (
               <Card>
                 <EmptyState icon={HistoryIcon} title="Nenhuma tentativa ainda" description="Gere seu primeiro quiz acima." />
               </Card>
             )}
 
             {!historyLoading &&
-              history.map((h) => (
+              !historyError &&
+              answeredHistory.map((h) => (
                 <Link key={h.id} href={`/professor/${professorId}/quiz/historico/${h.id}`} className="block">
                   <Card className="transition-colors hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     <div className="flex items-center justify-between gap-4 p-4">
@@ -185,12 +224,26 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                           {new Date(h.created_at).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
-                      {h.score_pct != null && (
-                        <Badge variant={scoreBadgeVariant(h.score_pct)}>{h.score_pct}%</Badge>
-                      )}
+                      <Badge variant={scoreBadgeVariant(h.score_pct as number)}>{h.score_pct}%</Badge>
                     </div>
                   </Card>
                 </Link>
+              ))}
+
+            {!historyLoading &&
+              !historyError &&
+              pendingHistory.map((h) => (
+                <Card key={h.id}>
+                  <div className="flex items-center justify-between gap-4 p-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-muted-foreground">{h.topic || "Tópico geral"}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {new Date(h.created_at).toLocaleDateString("pt-BR")}
+                      </p>
+                    </div>
+                    <Badge variant="neutral">Não finalizado</Badge>
+                  </div>
+                </Card>
               ))}
           </div>
         </>
@@ -199,7 +252,14 @@ export default function QuizPage({ params }: { params: { id: string } }) {
       {view === "respondendo" && activity && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div className="h-1.5 flex-1 rounded-full bg-muted">
+            <div
+              role="progressbar"
+              aria-valuenow={answeredCount}
+              aria-valuemin={0}
+              aria-valuemax={activity.questions.length}
+              aria-label="Progresso do quiz"
+              className="h-1.5 flex-1 rounded-full bg-muted"
+            >
               <div
                 className="h-1.5 rounded-full bg-primary transition-all duration-300"
                 style={{ width: `${(answeredCount / activity.questions.length) * 100}%` }}
@@ -230,6 +290,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
               </CardContent>
             </Card>
           ))}
+          {submitError && <InlineAlert>{submitError}</InlineAlert>}
           <Button onClick={handleSubmit} disabled={!allAnswered} loading={submitting} size="lg" className="w-full">
             {submitting ? "Enviando..." : "Enviar respostas"}
           </Button>

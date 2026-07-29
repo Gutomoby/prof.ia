@@ -42,7 +42,11 @@ export default function NovoProfessorPage() {
 
   return (
     <div className="mx-auto max-w-xl">
-      <PageHeader title="Novo professor" backHref="/dashboard" />
+      <PageHeader
+        title="Novo professor"
+        backHref="/dashboard"
+        breadcrumb={[{ label: "Professores", href: "/dashboard" }, { label: "Novo professor" }]}
+      />
       <Card>
         <CardHeader>
           <CardTitle>Cadastrar assunto</CardTitle>

@@ -22,12 +22,12 @@ app = FastAPI(
 )
 
 # CORS: libera o frontend Next.js (em dev e em produção) a chamar a API.
-# Em produção, troque "*" pelo domínio real do Vercel.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "https://profia-rose.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],

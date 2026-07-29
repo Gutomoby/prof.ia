@@ -10,7 +10,7 @@ export default function LandingPage() {
       {/* HERO */}
       <section className="container mx-auto flex flex-col items-center px-4 py-24 text-center md:py-32">
         <span className="mb-6 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-3 py-1 text-xs font-medium text-muted-foreground">
-          <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          <span className="h-2 w-2 rounded-full bg-success" />
           MVP em construção · Fases 1 e 2 prontas
         </span>
 

@@ -27,6 +27,20 @@ export class ApiError extends Error {
   }
 }
 
+// FastAPI serializa HTTPException como {"detail": "mensagem"} — extrai isso
+// em vez de jogar o JSON cru na tela. Cai pro texto bruto/statusText se a
+// resposta não for esse formato (ex.: erro 502 de um proxy, HTML de erro).
+async function extractErrorMessage(res: Response): Promise<string> {
+  const body = await res.text();
+  try {
+    const parsed = JSON.parse(body);
+    if (typeof parsed?.detail === "string") return parsed.detail;
+  } catch {
+    // não era JSON — usa o texto cru mesmo
+  }
+  return body || res.statusText;
+}
+
 // Helper interno — todos os métodos abaixo passam por aqui.
 // Adiciona JSON headers e converte respostas em erro num ApiError com mensagem.
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
@@ -40,8 +54,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new ApiError(res.status, body || res.statusText);
+    throw new ApiError(res.status, await extractErrorMessage(res));
   }
 
   // Algumas rotas (ex.: streaming) não retornam JSON — caller usa fetch direto nesses casos.
@@ -54,8 +67,7 @@ async function requestForm<T>(path: string, formData: FormData): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, { method: "POST", body: formData });
 
   if (!res.ok) {
-    const body = await res.text();
-    throw new ApiError(res.status, body || res.statusText);
+    throw new ApiError(res.status, await extractErrorMessage(res));
   }
 
   return res.json() as Promise<T>;

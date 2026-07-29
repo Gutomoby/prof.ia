@@ -26,7 +26,7 @@ export function QuizOption({
       onClick={onClick}
       disabled={disabled}
       className={cn(
-        "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors",
+        "flex w-full items-center gap-3 rounded-lg border px-4 py-3 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         state === "default" && "border-input bg-background hover:border-primary/40 hover:bg-accent",
         state === "selected" && "border-primary bg-primary/5",
         state === "correct" && "border-success bg-success/10",
