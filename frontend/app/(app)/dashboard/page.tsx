@@ -86,7 +86,7 @@ export default function DashboardPage() {
           {professors.map((p) => (
             <Card key={p.id} className="flex flex-col overflow-hidden">
               <Link
-                href={`/professor/${p.id}/quiz`}
+                href={`/professor/${p.id}/inicio`}
                 className="block flex-1 space-y-1.5 p-6 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               >
                 <h3 className="text-base font-semibold leading-none tracking-tight">{p.name}</h3>

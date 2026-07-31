@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from models import ActivityGenerateRequest, ActivitySubmitRequest
 from services.claude import MODEL_HAIKU, generate_json
 from services.rag import search_chunks
+from services.scoring import correct_questions
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/atividades", tags=["atividades"])
@@ -45,21 +46,6 @@ def _strip_answers(questions: list[dict]) -> list[dict]:
         {k: v for k, v in q.items() if k not in ("resposta_correta", "explicacao")}
         for q in questions
     ]
-
-
-def _correct_questions(questions: list[dict], answers: dict) -> tuple[list[dict], float]:
-    """Cruza as respostas do usuário com o gabarito. Usado tanto na submissão quanto ao revisitar."""
-    corrected = []
-    n_certas = 0
-    for idx, q in enumerate(questions):
-        resposta_usuario = answers.get(str(idx))
-        correta = resposta_usuario == q["resposta_correta"]
-        if correta:
-            n_certas += 1
-        corrected.append({**q, "resposta_usuario": resposta_usuario, "correta": correta})
-
-    score_pct = round((n_certas / len(questions)) * 100, 1) if questions else 0.0
-    return corrected, score_pct
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +126,7 @@ def submeter_atividade(payload: ActivitySubmitRequest):
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
     questions: list[dict] = found.data[0]["questions"]
-    corrected, score_pct = _correct_questions(questions, payload.answers)
+    corrected, score_pct = correct_questions(questions, payload.answers)
 
     sb.table("activity_results").update(
         {
@@ -196,7 +182,7 @@ def get_atividade(activity_id: UUID):
     if row["score_pct"] is None:
         raise HTTPException(status_code=400, detail="Essa atividade ainda não foi respondida")
 
-    corrected, _ = _correct_questions(row["questions"], row["answers"] or {})
+    corrected, _ = correct_questions(row["questions"], row["answers"] or {})
 
     return {
         "id": row["id"],

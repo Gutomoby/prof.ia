@@ -15,18 +15,13 @@ import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
 import { QuizReview } from "@/components/quiz/QuizReview";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
+import { scoreBadgeVariant } from "@/lib/utils";
 import type { ActivityHistoryItem, ActivitySubmitResult, GeneratedActivity } from "@/lib/types";
 
 type View = "idle" | "respondendo" | "resultado";
 
 function pendingQuizKey(professorId: string) {
   return `pending-quiz-${professorId}`;
-}
-
-function scoreBadgeVariant(scorePct: number) {
-  if (scorePct >= 70) return "success" as const;
-  if (scorePct < 40) return "destructive" as const;
-  return "neutral" as const;
 }
 
 export default function QuizPage({ params }: { params: { id: string } }) {

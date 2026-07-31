@@ -69,3 +69,53 @@ export interface ActivityDetail {
   created_at: string;
   questions: SubmittedQuestionResult[];
 }
+
+// ---------------------------------------------------------------------------
+// Score / progresso (Início)
+// ---------------------------------------------------------------------------
+
+export interface TopicStat {
+  topico: string;
+  n_questions: number;
+  accuracy_pct: number;
+  status: "dominado" | "pendente";
+}
+
+export interface ScoreTrendPoint {
+  data: string;
+  score_pct: number;
+}
+
+export interface WeeklyGoal {
+  quizzes_respondidos: number;
+  media_score_pct: number | null;
+}
+
+export interface MonthlyGoal {
+  topicos_dominados: number;
+  topicos_totais: number;
+}
+
+export interface ScoreSummary {
+  streak_days: number;
+  topics: TopicStat[];
+  score_trend: ScoreTrendPoint[];
+  weekly: WeeklyGoal;
+  monthly: MonthlyGoal;
+  overall_mastery_pct: number;
+  exam_dates: string | null;
+}
+
+export interface StudyPlanContent {
+  resumo: string;
+  prioridades: string[];
+  semana: string[];
+  mes: string[];
+}
+
+export interface StudyPlan {
+  id: string;
+  professor_id: string;
+  content: StudyPlanContent;
+  created_at: string;
+}

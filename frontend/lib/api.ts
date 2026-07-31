@@ -14,6 +14,8 @@ import type {
   ActivitySubmitResult,
   ActivityHistoryItem,
   ActivityDetail,
+  ScoreSummary,
+  StudyPlan,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -158,6 +160,29 @@ export function getAtividade(activityId: string) {
   return request<ActivityDetail>(`/atividades/${activityId}`);
 }
 
+// ---------------------------------------------------------------------------
+// Score / progresso (Início)
+// ---------------------------------------------------------------------------
+
+export function getScoreSummary(professorId: string) {
+  return request<ScoreSummary>(`/score/${professorId}`);
+}
+
+// Plano ainda não gerado é um estado normal (não um erro) — devolve null
+// em vez de propagar o 404 do backend.
+export async function getStudyPlan(professorId: string): Promise<StudyPlan | null> {
+  try {
+    return await request<StudyPlan>(`/score/${professorId}/plano`);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export function generateStudyPlan(professorId: string) {
+  return request<StudyPlan>(`/score/${professorId}/plano`, { method: "POST" });
+}
+
 export const api = {
   request,
   listProfessors,
@@ -171,4 +196,7 @@ export const api = {
   submitAtividade,
   listAtividades,
   getAtividade,
+  getScoreSummary,
+  getStudyPlan,
+  generateStudyPlan,
 };

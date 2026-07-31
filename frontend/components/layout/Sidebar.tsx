@@ -47,7 +47,7 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
           return (
             <Link
               key={p.id}
-              href={`/professor/${p.id}/quiz`}
+              href={`/professor/${p.id}/inicio`}
               onClick={handleLinkClick}
               className={cn(
                 "block rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",

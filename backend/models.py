@@ -119,13 +119,52 @@ class ActivityResult(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class ScoreByTopic(BaseModel):
-    topic: str
+class TopicStat(BaseModel):
+    topico: str
+    n_questions: int
+    accuracy_pct: float
+    status: Literal["dominado", "pendente"]
+
+
+class ScoreTrendPoint(BaseModel):
+    data: datetime
     score_pct: float
-    n_activities: int
+
+
+class WeeklyGoal(BaseModel):
+    quizzes_respondidos: int
+    media_score_pct: float | None
+
+
+class MonthlyGoal(BaseModel):
+    topicos_dominados: int
+    topicos_totais: int
 
 
 class ScoreSummary(BaseModel):
-    by_topic: list[ScoreByTopic]
-    by_activity_type: list[dict[str, Any]]
-    recommendation: str | None  # texto gerado pelo Haiku
+    streak_days: int
+    topics: list[TopicStat]
+    score_trend: list[ScoreTrendPoint]
+    weekly: WeeklyGoal
+    monthly: MonthlyGoal
+    overall_mastery_pct: float
+    exam_dates: str | None  # repassado do professor, só informativo (texto livre)
+
+
+# ---------------------------------------------------------------------------
+# Plano de estudos (gerado por IA)
+# ---------------------------------------------------------------------------
+
+
+class StudyPlanContent(BaseModel):
+    resumo: str
+    prioridades: list[str]
+    semana: list[str]
+    mes: list[str]
+
+
+class StudyPlan(BaseModel):
+    id: UUID
+    professor_id: UUID
+    content: StudyPlanContent
+    created_at: datetime
