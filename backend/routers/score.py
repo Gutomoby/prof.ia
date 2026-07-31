@@ -124,10 +124,13 @@ def generate_plan(professor_id: UUID):
     if pendentes:
         topicos_desc = f"Tópicos que o aluno ainda está com dificuldade (priorize esses): {', '.join(pendentes)}."
     elif topics:
+        dominados = ", ".join(f"{t['topico']} ({t['accuracy_pct']}%)" for t in topics)
         topicos_desc = (
-            "O aluno já domina todos os tópicos testados até agora — não invente pontos fracos. "
-            "Sugira avançar para tópicos novos do material que ainda não foram cobrados em quiz, "
-            "ou aprofundar o nível de dificuldade dos tópicos já dominados."
+            f"IMPORTANTE: o aluno JÁ TEM histórico de quiz e está indo bem — domina {len(topics)} "
+            f"de {len(topics)} tópicos testados até agora: {dominados}. "
+            "No campo 'resumo', comece afirmando esse bom desempenho (nunca diga que ele não tem dados "
+            "ou está começando). Sugira avançar para tópicos novos do material que ainda não foram "
+            "cobrados em quiz, ou aprofundar o nível de dificuldade dos tópicos já dominados."
         )
     else:
         topicos_desc = (
