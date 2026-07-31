@@ -121,11 +121,19 @@ def generate_plan(professor_id: UUID):
 
     system_prompt = (professor["system_prompt"] or "").replace("{chunks_retrieved}", context)
 
-    topicos_desc = (
-        f"Tópicos que o aluno ainda está com dificuldade (priorize esses): {', '.join(pendentes)}."
-        if pendentes
-        else "O aluno ainda não respondeu quizzes suficientes para identificar pontos fracos — sugira um plano inicial equilibrado cobrindo o material disponível."
-    )
+    if pendentes:
+        topicos_desc = f"Tópicos que o aluno ainda está com dificuldade (priorize esses): {', '.join(pendentes)}."
+    elif topics:
+        topicos_desc = (
+            "O aluno já domina todos os tópicos testados até agora — não invente pontos fracos. "
+            "Sugira avançar para tópicos novos do material que ainda não foram cobrados em quiz, "
+            "ou aprofundar o nível de dificuldade dos tópicos já dominados."
+        )
+    else:
+        topicos_desc = (
+            "O aluno ainda não respondeu nenhum quiz — sugira um plano inicial equilibrado "
+            "cobrindo o material disponível, sem mencionar pontos fracos."
+        )
     exam_desc = f"Datas de prova informadas pelo aluno: {professor['exam_dates']}." if professor["exam_dates"] else ""
 
     user_prompt = (
