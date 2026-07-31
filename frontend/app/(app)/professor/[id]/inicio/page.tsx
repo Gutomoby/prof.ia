@@ -70,13 +70,9 @@ export default function InicioPage({ params }: { params: { id: string } }) {
 
   if (summaryLoading) {
     return (
-      <div className="mx-auto max-w-3xl space-y-4">
-        <Skeleton className="h-32 rounded-xl" />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-          <Skeleton className="h-24 rounded-xl" />
-        </div>
+      <div className="mx-auto max-w-3xl space-y-10">
+        <Skeleton className="mx-auto h-16 w-40 rounded-lg" />
+        <Skeleton className="h-24 rounded-2xl" />
         <Skeleton className="h-56 rounded-xl" />
       </div>
     );
@@ -100,71 +96,61 @@ export default function InicioPage({ params }: { params: { id: string } }) {
   const hasHistory = summary.topics.length > 0;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      {/* Hero: domínio geral + streak */}
-      <Card>
-        <CardContent className="flex flex-col items-center gap-2 py-8 text-center">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Target className="h-4 w-4" />
-            Domínio geral da matéria
-          </div>
-          <p className="text-4xl font-bold tabular-nums md:text-5xl">{summary.overall_mastery_pct}%</p>
-          <div className="mt-2 flex items-center gap-3">
-            <Badge variant={summary.streak_days > 0 ? "success" : "neutral"}>
-              <span className="inline-flex items-center gap-1">
-                <Flame className="h-3.5 w-3.5" />
-                {summary.streak_days} {summary.streak_days === 1 ? "dia" : "dias"} seguidos
-              </span>
-            </Badge>
-            {summary.exam_dates && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
-                {summary.exam_dates}
-              </span>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+    <div className="mx-auto max-w-3xl space-y-10 md:space-y-12">
+      {/* Hero: manchete solta, sem caixa — domínio geral + streak */}
+      <header className="flex flex-col items-center gap-2 py-6 text-center md:py-8">
+        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Target className="h-3.5 w-3.5" />
+          Domínio geral da matéria
+        </div>
+        <p className="text-6xl font-bold tabular-nums tracking-tight md:text-7xl">{summary.overall_mastery_pct}%</p>
+        <div className="mt-2 flex items-center gap-3">
+          <Badge variant={summary.streak_days > 0 ? "success" : "neutral"}>
+            <span className="inline-flex items-center gap-1">
+              <Flame className="h-3.5 w-3.5" />
+              {summary.streak_days} {summary.streak_days === 1 ? "dia" : "dias"} seguidos
+            </span>
+          </Badge>
+          {summary.exam_dates && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3.5 w-3.5" />
+              {summary.exam_dates}
+            </span>
+          )}
+        </div>
+      </header>
 
-      {/* Metas */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>Meta diária</CardDescription>
-            <CardTitle className="text-2xl">
-              {summary.streak_days > 0 ? "Em dia 🔥" : "Comece hoje"}
-            </CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Esta semana</CardDescription>
-            <CardTitle className="text-2xl">
-              {summary.weekly.quizzes_respondidos} {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
-            </CardTitle>
-            {summary.weekly.media_score_pct != null && (
-              <CardDescription>Média de {summary.weekly.media_score_pct}%</CardDescription>
-            )}
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardDescription>Este mês</CardDescription>
-            <CardTitle className="text-2xl">+{summary.monthly.topicos_dominados} tópicos</CardTitle>
-            <CardDescription>{summary.monthly.topicos_totais} dominados no total</CardDescription>
-          </CardHeader>
-        </Card>
+      {/* Metas — uma única faixa tonal dividida por hairlines, não 3 caixas separadas */}
+      <div className="grid grid-cols-1 divide-y divide-border/60 rounded-2xl bg-muted/50 dark:bg-muted/25 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        <div className="px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Meta diária</p>
+          <p className="mt-1 text-2xl font-bold">{summary.streak_days > 0 ? "Em dia 🔥" : "Comece hoje"}</p>
+        </div>
+        <div className="px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Esta semana</p>
+          <p className="mt-1 text-2xl font-bold">
+            {summary.weekly.quizzes_respondidos} {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
+          </p>
+          {summary.weekly.media_score_pct != null && (
+            <p className="text-xs text-muted-foreground">Média de {summary.weekly.media_score_pct}%</p>
+          )}
+        </div>
+        <div className="px-6 py-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Este mês</p>
+          <p className="mt-1 text-2xl font-bold">+{summary.monthly.topicos_dominados} tópicos</p>
+          <p className="text-xs text-muted-foreground">{summary.monthly.topicos_totais} dominados no total</p>
+        </div>
       </div>
 
-      {/* Evolução da pontuação */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-4 w-4" />
+      {/* Evolução da pontuação — seção solta, sem caixa, só um hairline de abertura */}
+      <Card variant="flat" className="border-t border-border/60 pt-8">
+        <CardHeader className="px-0 pb-4 pt-0">
+          <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <TrendingUp className="h-3.5 w-3.5" />
             Evolução da pontuação
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           {hasHistory ? (
             <ScoreTrendChart points={summary.score_trend} />
           ) : (
@@ -177,13 +163,13 @@ export default function InicioPage({ params }: { params: { id: string } }) {
         </CardContent>
       </Card>
 
-      {/* Tópicos dominados vs pendentes */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tópicos</CardTitle>
+      {/* Tópicos dominados vs pendentes — mesmo tratamento solto */}
+      <Card variant="flat" className="border-t border-border/60 pt-8">
+        <CardHeader className="px-0 pb-4 pt-0">
+          <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Tópicos</CardTitle>
           <CardDescription>≥70% de acerto (com pelo menos 2 questões) conta como dominado.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 pb-0">
           {hasHistory ? (
             <ul className="divide-y">
               {summary.topics.map((t) => (
@@ -203,8 +189,8 @@ export default function InicioPage({ params }: { params: { id: string } }) {
         </CardContent>
       </Card>
 
-      {/* Plano de estudos */}
-      <Card>
+      {/* Plano de estudos — a única superfície "fechada" da página, porque tem o CTA principal */}
+      <Card variant="elevated" className="rounded-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4" />

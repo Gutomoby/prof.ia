@@ -1,10 +1,26 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 
-export function Card({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+type CardVariant = "default" | "flat" | "elevated";
+
+// default = igual ao Card de sempre (borda + sombra leve) — usado em tudo que
+// não foi explicitamente revisado. flat = sem moldura nenhuma (uma seção que
+// se separa por espaço/tipografia, não por caixa). elevated = preenchimento
+// tonal em vez de sombra (a única "superfície" de verdade de uma tela).
+const cardVariantClasses: Record<CardVariant, string> = {
+  default: "border bg-card shadow-sm",
+  flat: "border-0 bg-transparent shadow-none",
+  elevated: "border-0 shadow-none bg-muted/50 dark:bg-muted/25",
+};
+
+export function Card({
+  className,
+  variant = "default",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement> & { variant?: CardVariant }) {
   return (
     <div
-      className={cn("rounded-xl border bg-card text-card-foreground shadow-sm", className)}
+      className={cn("rounded-xl text-card-foreground", cardVariantClasses[variant], className)}
       {...props}
     />
   );

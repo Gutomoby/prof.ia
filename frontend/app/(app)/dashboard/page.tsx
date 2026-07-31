@@ -49,7 +49,7 @@ export default function DashboardPage() {
       />
 
       {loading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-36 rounded-xl" />
           ))}
@@ -82,17 +82,20 @@ export default function DashboardPage() {
       )}
 
       {!loading && !error && professors.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {professors.map((p) => (
-            <Card key={p.id} className="flex flex-col overflow-hidden">
+            <Card
+              key={p.id}
+              className="flex flex-col overflow-hidden border-border/60 shadow-none transition-shadow hover:shadow-md"
+            >
               <Link
                 href={`/professor/${p.id}/inicio`}
                 className="block flex-1 space-y-1.5 p-6 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               >
                 <h3 className="text-base font-semibold leading-none tracking-tight">{p.name}</h3>
-                <p className="text-sm text-muted-foreground">{p.discipline}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{p.discipline}</p>
               </Link>
-              <CardFooter className="gap-2 border-t pt-3">
+              <CardFooter className="gap-2 border-t border-border/60 pt-3">
                 <Link href={`/professor/${p.id}/quiz`} className={buttonVariants("ghost", "sm", "flex-1")}>
                   Quiz
                 </Link>
