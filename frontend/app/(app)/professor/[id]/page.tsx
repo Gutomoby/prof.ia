@@ -81,7 +81,7 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
         </CardHeader>
         <CardContent className="px-0 pb-0">
           {summary.topics.length > 0 ? (
-            <TopicTrail topics={summary.topics} />
+            <TopicTrail topics={summary.topics} professorId={professorId} />
           ) : (
             <EmptyState
               icon={Map}

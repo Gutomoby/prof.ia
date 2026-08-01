@@ -15,14 +15,11 @@ import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
 import { QuizReview } from "@/components/quiz/QuizReview";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
+import { pendingQuizKey } from "@/lib/use-start-quiz";
 import { scoreBadgeVariant } from "@/lib/utils";
 import type { ActivityHistoryItem, ActivitySubmitResult, GeneratedActivity } from "@/lib/types";
 
 type View = "idle" | "respondendo" | "resultado";
-
-function pendingQuizKey(professorId: string) {
-  return `pending-quiz-${professorId}`;
-}
 
 export default function QuizPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
@@ -296,6 +293,11 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         <QuizReview
           scorePct={result.score_pct}
           questions={result.questions}
+          reward={{
+            xpGanho: result.xp_ganho,
+            topicosDominados: result.topicos_dominados,
+            currentStreak: result.current_streak,
+          }}
           footer={
             <div className="space-y-3">
               {genError && <InlineAlert>{genError}</InlineAlert>}

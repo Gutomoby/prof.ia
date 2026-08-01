@@ -16,34 +16,12 @@ export function scoreBadgeVariant(scorePct: number): "success" | "destructive" |
   return "neutral";
 }
 
-function toUtcDateKey(iso: string): string {
-  return new Date(iso).toISOString().slice(0, 10);
-}
-
-function shiftUtcDateKey(dateKey: string, deltaDays: number): string {
-  const d = new Date(`${dateKey}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + deltaDays);
-  return d.toISOString().slice(0, 10);
-}
-
-// Streak "cross-matéria": um dia conta se o aluno estudou QUALQUER matéria
-// naquele dia — diferente do streak_days que cada GET /score/{id} devolve
-// isolado por matéria. Mesma regra de backend/services/scoring.py::compute_streak
-// (dias consecutivos terminando hoje ou ontem), só que operando sobre as datas
-// de score_trend de todas as matérias combinadas.
-export function computeCombinedStreak(isoDates: string[]): number {
-  if (isoDates.length === 0) return 0;
-
-  const uniqueDates = new Set(isoDates.map(toUtcDateKey));
-  const today = new Date().toISOString().slice(0, 10);
-  const anchor = uniqueDates.has(today) ? today : shiftUtcDateKey(today, -1);
-  if (!uniqueDates.has(anchor)) return 0;
-
-  let streak = 0;
-  let cursor = anchor;
-  while (uniqueDates.has(cursor)) {
-    streak += 1;
-    cursor = shiftUtcDateKey(cursor, -1);
-  }
-  return streak;
+// Chave YYYY-MM-DD no fuso local do navegador. Usada pra agrupar atividades
+// por dia no calendário: os timestamps chegam em UTC, mas o "dia" que importa
+// é o de quem estudou (mesma regra do backend, que usa America/Sao_Paulo).
+export function localDateKey(iso: string): string {
+  const d = new Date(iso);
+  const mes = String(d.getMonth() + 1).padStart(2, "0");
+  const dia = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mes}-${dia}`;
 }

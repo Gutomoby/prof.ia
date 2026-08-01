@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { RotateCcw } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizReview } from "@/components/quiz/QuizReview";
+import { useStartQuiz } from "@/lib/use-start-quiz";
 import type { ActivityDetail } from "@/lib/types";
 
 export default function QuizHistoricoDetailPage({
@@ -18,14 +18,14 @@ export default function QuizHistoricoDetailPage({
   params: { id: string; activityId: string };
 }) {
   const { id: professorId, activityId } = params;
-  const router = useRouter();
 
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [retrying, setRetrying] = useState(false);
-  const [retryError, setRetryError] = useState<string | null>(null);
+  // Gera o quiz novo aqui mesmo e entrega pra /quiz via sessionStorage, que
+  // assume direto a view "respondendo" — mesmo caminho de todo CTA de prática.
+  const { start, generating: retrying, error: retryError } = useStartQuiz(professorId);
 
   useEffect(() => {
     (async () => {
@@ -40,23 +40,6 @@ export default function QuizHistoricoDetailPage({
       }
     })();
   }, [activityId]);
-
-  // Gera o quiz novo aqui mesmo (mesmo comportamento imediato do "Tentar
-  // novamente" da tela de resultado) e passa o resultado pra /quiz via
-  // sessionStorage, que assume direto a view "respondendo" com ele.
-  async function handleRetry() {
-    if (!detail) return;
-    setRetryError(null);
-    setRetrying(true);
-    try {
-      const generated = await api.generateAtividade({ professor_id: professorId, topic: detail.topic });
-      sessionStorage.setItem(`pending-quiz-${professorId}`, JSON.stringify(generated));
-      router.push(`/professor/${professorId}/quiz`);
-    } catch (err) {
-      setRetryError(err instanceof ApiError ? err.message : "Falha ao gerar o quiz.");
-      setRetrying(false);
-    }
-  }
 
   if (loading) {
     return (
@@ -95,7 +78,7 @@ export default function QuizHistoricoDetailPage({
           <div className="space-y-3">
             {retryError && <InlineAlert>{retryError}</InlineAlert>}
             <div className="flex flex-col gap-2 sm:flex-row">
-              <Button className="flex-1" size="lg" loading={retrying} onClick={handleRetry}>
+              <Button className="flex-1" size="lg" loading={retrying} onClick={() => start(detail.topic)}>
                 <RotateCcw className="h-4 w-4" />
                 Tentar novamente
               </Button>

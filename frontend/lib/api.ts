@@ -10,12 +10,17 @@ import type {
   Professor,
   ProfessorListItem,
   DocumentItem,
+  DocumentWithProfessor,
   GeneratedActivity,
   ActivitySubmitResult,
   ActivityHistoryItem,
   ActivityDetail,
   ScoreSummary,
   StudyPlan,
+  UserProgress,
+  CalendarResponse,
+  CalendarEvent,
+  EventKind,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -183,6 +188,47 @@ export function generateStudyPlan(professorId: string) {
   return request<StudyPlan>(`/score/${professorId}/plano`, { method: "POST" });
 }
 
+// ---------------------------------------------------------------------------
+// Progressão global (XP, nível, sequência)
+// ---------------------------------------------------------------------------
+
+export function getProgress() {
+  return request<UserProgress>("/progresso");
+}
+
+// ---------------------------------------------------------------------------
+// Calendário
+// ---------------------------------------------------------------------------
+
+// `inicio` e `fim` são datas YYYY-MM-DD, ambas inclusivas.
+export function getCalendar(inicio: string, fim: string) {
+  return request<CalendarResponse>(`/calendario?inicio=${inicio}&fim=${fim}`);
+}
+
+export function createEvent(payload: {
+  title: string;
+  kind: EventKind;
+  event_date: string;
+  professor_id?: string | null;
+}) {
+  return request<CalendarEvent>("/calendario/eventos", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function deleteEvent(eventId: string) {
+  return request<{ deleted: string }>(`/calendario/eventos/${eventId}`, { method: "DELETE" });
+}
+
+// ---------------------------------------------------------------------------
+// Biblioteca (acervo global)
+// ---------------------------------------------------------------------------
+
+export function listAllDocuments() {
+  return request<{ items: DocumentWithProfessor[] }>("/documentos");
+}
+
 export const api = {
   request,
   listProfessors,
@@ -199,4 +245,9 @@ export const api = {
   getScoreSummary,
   getStudyPlan,
   generateStudyPlan,
+  getProgress,
+  getCalendar,
+  createEvent,
+  deleteEvent,
+  listAllDocuments,
 };
