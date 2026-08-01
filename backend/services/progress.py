@@ -124,6 +124,18 @@ def _backfill_values(user_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def reset_progress(user_id: str) -> None:
+    """Descarta a linha de progresso para que ela seja recalculada na próxima leitura.
+
+    Chamado ao apagar um professor: as atividades dele somem em cascata, então
+    o XP acumulado a partir delas deixa de ter lastro. Como get_or_create_progress
+    refaz o backfill do que sobrou, apagar tudo zera de verdade em vez de deixar
+    um nível pendurado sem histórico que o justifique.
+    """
+    sb = get_supabase()
+    sb.table("user_progress").delete().eq("user_id", user_id).execute()
+
+
 def _update_progress(user_id: str, patch: dict) -> dict:
     sb = get_supabase()
     res = sb.table("user_progress").update(patch).eq("user_id", user_id).execute()

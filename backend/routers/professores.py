@@ -19,6 +19,7 @@ from fastapi import APIRouter, HTTPException
 
 from models import Professor, ProfessorCreate
 from services.config import settings
+from services.progress import reset_progress
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/professores", tags=["professores"])
@@ -133,14 +134,22 @@ def get_professor(professor_id: UUID):
 
 @router.delete("/{professor_id}")
 def delete_professor(professor_id: UUID):
-    """Remove o professor e tudo associado (cascade via FKs)."""
+    """Remove o professor e tudo associado (cascade via FKs).
+
+    Vai junto, por cascade: materiais, chunks, quizzes respondidos, planos de
+    estudo, sessões de chat e eventos de calendário daquela matéria. Como as
+    atividades somem, o XP derivado delas é recalculado — ver reset_progress().
+    """
     sb = get_supabase()
     res = (
         sb.table("professors")
         .delete()
         .eq("id", str(professor_id))
+        .eq("user_id", _current_user_id())
         .execute()
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Professor não encontrado")
+
+    reset_progress(_current_user_id())
     return {"deleted": str(professor_id)}

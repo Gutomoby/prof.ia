@@ -104,6 +104,12 @@ export function createProfessor(payload: {
   });
 }
 
+// Apaga o professor e, em cascata, TODO o conteúdo dele: materiais, quizzes
+// respondidos, planos de estudo e eventos de calendário. Não tem desfazer.
+export function deleteProfessor(id: string) {
+  return request<{ deleted: string }>(`/professores/${id}`, { method: "DELETE" });
+}
+
 // ---------------------------------------------------------------------------
 // Documentos
 // ---------------------------------------------------------------------------
@@ -234,6 +240,7 @@ export const api = {
   listProfessors,
   getProfessor,
   createProfessor,
+  deleteProfessor,
   listDocuments,
   uploadPdf,
   uploadText,

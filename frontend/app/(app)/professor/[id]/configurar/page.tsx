@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DeleteProfessor } from "@/components/professor/DeleteProfessor";
 import type { DocumentItem } from "@/lib/types";
 
 export default function ConfigurarPage({ params }: { params: { id: string } }) {
@@ -32,6 +33,11 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Só para rotular a confirmação de exclusão do professor. Se falhar, a seção
+  // de apagar simplesmente não aparece — melhor do que oferecer uma ação
+  // destrutiva sem conseguir dizer sobre quem ela é.
+  const [professorName, setProfessorName] = useState<string | null>(null);
+
   async function refreshDocuments() {
     setLoadingList(true);
     setListError(null);
@@ -47,6 +53,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     refreshDocuments();
+    api
+      .getProfessor(professorId)
+      .then((p) => setProfessorName(p.name))
+      .catch(() => setProfessorName(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -205,6 +215,12 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
             </Card>
           ))}
       </div>
+
+      {professorName && (
+        <div className="pt-4">
+          <DeleteProfessor professorId={professorId} professorName={professorName} />
+        </div>
+      )}
     </div>
   );
 }
