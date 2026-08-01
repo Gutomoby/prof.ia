@@ -168,7 +168,7 @@ export default function DashboardPage() {
                   className="flex flex-col overflow-hidden border-border/60 shadow-none transition-shadow hover:shadow-md"
                 >
                   <Link
-                    href={`/professor/${p.id}/inicio`}
+                    href={`/professor/${p.id}`}
                     className="block flex-1 space-y-2 p-6 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                   >
                     <div className="space-y-1.5">

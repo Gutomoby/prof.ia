@@ -7,7 +7,8 @@ import { useQuizGuard } from "./QuizGuardContext";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: (id: string) => `/professor/${id}/inicio`, label: "Início", match: (p: string) => p.includes("/inicio") },
+  { href: (id: string) => `/professor/${id}`, label: "Visão geral", match: (p: string) => /^\/professor\/[^/]+$/.test(p) },
+  { href: (id: string) => `/professor/${id}/inicio`, label: "Progresso", match: (p: string) => p.includes("/inicio") },
   { href: (id: string) => `/professor/${id}/quiz`, label: "Quiz", match: (p: string) => p.includes("/quiz") },
   { href: (id: string) => `/professor/${id}/configurar`, label: "Material", match: (p: string) => p.includes("/configurar") },
 ];
@@ -35,7 +36,7 @@ export function ProfessorHeader({
         backHref={isHistoricoDetail ? `/professor/${professor.id}/quiz` : "/dashboard"}
         breadcrumb={[
           { label: "Professores", href: "/dashboard" },
-          { label: professor.name, href: `/professor/${professor.id}/inicio` },
+          { label: professor.name, href: `/professor/${professor.id}` },
           ...(activeTab ? [{ label: activeTab.label, href: isHistoricoDetail ? activeTab.href(professor.id) : undefined }] : []),
           ...(isHistoricoDetail ? [{ label: "Revisão" }] : []),
         ]}
