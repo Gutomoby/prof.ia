@@ -125,7 +125,9 @@ export function DayPanel({
                   {a.professor_name}
                 </p>
               </div>
-              <Badge variant={scoreBadgeVariant(a.score_pct)}>{a.score_pct}%</Badge>
+              <Badge variant={scoreBadgeVariant(a.score_pct)} className="metric">
+                {a.score_pct}%
+              </Badge>
             </Link>
           ))}
         </div>

@@ -189,7 +189,8 @@ export default function DashboardPage() {
                       ) : hasData ? (
                         <div className="flex items-center gap-2">
                           <Badge variant={scoreBadgeVariant(score.overall_mastery_pct)}>
-                            {score.overall_mastery_pct}% domínio
+                            <span className="metric">{score.overall_mastery_pct}%</span>
+                            <span className="ml-1">domínio</span>
                           </Badge>
                           {score.streak_days > 0 && (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">

@@ -3,57 +3,70 @@
 @tailwind utilities;
 
 /*
-  Variáveis de tema do shadcn/ui (paleta "slate").
-  Tudo em HSL para permitir temas claro/escuro pela classe .dark no <html>.
+  Tema "caderneta": fundo de papel (não branco puro), texto em tinta e um
+  índigo de caneta como acento. Os neutros puxam levemente para o quente
+  (matiz 60) para o papel não parecer cinza de template; o acento e o texto
+  puxam para o frio, que é o contraste que dá a leitura de tinta sobre papel.
+
+  Todos os pares de texto foram verificados em WCAG AA (>= 4.5:1) nos dois
+  temas, e --input tem 3:1 contra o fundo por ser contorno de componente
+  (WCAG 1.4.11), não separador decorativo — por isso é bem mais escuro que
+  --border.
+
+  O tema escuro segue a preferência do sistema (darkMode: "media" no
+  tailwind.config.ts). Antes ele existia mas nunca era ativado: nada
+  colocava a classe .dark no <html>.
 */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    --background: 60 20% 98%;
+    --foreground: 220 13% 9%;
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 13% 9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-    --primary: 217 83% 45%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222 47% 11%;
-    --muted: 210 25% 96%;
-    --muted-foreground: 215 16% 40%;
-    --accent: 210 40% 95%;
-    --accent-foreground: 222 47% 11%;
+    --popover-foreground: 220 13% 9%;
+    --primary: 226 57% 38%;
+    --primary-foreground: 60 20% 98%;
+    --secondary: 60 10% 94%;
+    --secondary-foreground: 220 13% 9%;
+    --muted: 60 10% 94%;
+    --muted-foreground: 218 9% 40%;
+    --accent: 60 12% 93%;
+    --accent-foreground: 220 13% 9%;
     --destructive: 0 72% 40%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 66% 26%;
-    --success-foreground: 210 40% 98%;
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 83% 45%;
+    --destructive-foreground: 60 20% 98%;
+    --success: 152 60% 26%;
+    --success-foreground: 60 20% 98%;
+    --border: 60 9% 88%;
+    --input: 220 10% 56%;
+    --ring: 226 57% 38%;
     --radius: 0.75rem;
   }
 
-  .dark {
-    --background: 222 47% 8%;
-    --foreground: 210 40% 98%;
-    --card: 222 40% 11%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222 40% 11%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 222 47% 8%;
-    --secondary: 217 33% 18%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 33% 18%;
-    --muted-foreground: 215 20% 68%;
-    --accent: 217 33% 20%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 63% 65%;
-    --destructive-foreground: 222 47% 8%;
-    --success: 142 55% 55%;
-    --success-foreground: 144 60% 8%;
-    --border: 217 33% 20%;
-    --input: 217 33% 20%;
-    --ring: 217 91% 60%;
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --background: 220 14% 8%;
+      --foreground: 60 10% 96%;
+      --card: 220 13% 11%;
+      --card-foreground: 60 10% 96%;
+      --popover: 220 13% 11%;
+      --popover-foreground: 60 10% 96%;
+      --primary: 226 78% 70%;
+      --primary-foreground: 220 14% 8%;
+      --secondary: 220 12% 18%;
+      --secondary-foreground: 60 10% 96%;
+      --muted: 220 12% 18%;
+      --muted-foreground: 218 12% 68%;
+      --accent: 220 12% 20%;
+      --accent-foreground: 60 10% 96%;
+      --destructive: 0 63% 65%;
+      --destructive-foreground: 220 14% 8%;
+      --success: 152 50% 58%;
+      --success-foreground: 152 60% 8%;
+      --border: 220 10% 20%;
+      --input: 220 10% 40%;
+      --ring: 226 78% 70%;
+    }
   }
 }
 
@@ -63,5 +76,25 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Toda métrica do app (domínio, XP, sequência, nota, dia do calendário) usa
+     a mono com números tabulares: as colunas alinham e o conjunto ganha o
+     registro de caderneta de notas, que é o público do app (exatas). */
+  .metric {
+    font-family: var(--font-mono), ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -17,7 +17,13 @@ export function TopicTrail({ topics, professorId }: { topics: TopicStat[]; profe
   });
 
   // Deslocamento horizontal cíclico: centro → direita → centro → esquerda.
-  const OFFSETS = ["translate-x-0", "translate-x-16", "translate-x-0", "-translate-x-16"];
+  // Menor no celular, onde 64px de desvio jogaria o nó pra fora da tela.
+  const OFFSETS = [
+    "translate-x-0",
+    "translate-x-8 sm:translate-x-16",
+    "translate-x-0",
+    "-translate-x-8 sm:-translate-x-16",
+  ];
 
   return (
     <ol className="relative mx-auto flex max-w-md flex-col items-center gap-1 py-2">
@@ -28,7 +34,7 @@ export function TopicTrail({ topics, professorId }: { topics: TopicStat[]; profe
             <div className={cn("flex flex-col items-center transition-transform", OFFSETS[i % OFFSETS.length])}>
               <div
                 className={cn(
-                  "flex h-14 w-14 items-center justify-center rounded-full text-sm font-bold tabular-nums shadow-sm",
+                  "flex h-14 w-14 items-center justify-center rounded-full text-sm font-bold metric shadow-sm",
                   dominado
                     ? `${color.bg} text-white`
                     : "border-2 border-dashed border-muted-foreground/40 bg-background text-muted-foreground"
@@ -37,8 +43,10 @@ export function TopicTrail({ topics, professorId }: { topics: TopicStat[]; profe
                 {dominado ? <Check className="h-6 w-6" strokeWidth={3} /> : `${Math.round(t.accuracy_pct)}%`}
               </div>
               <p className="mt-2 max-w-[11rem] text-center text-sm font-medium leading-snug">{t.topico}</p>
-              <p className="text-xs text-muted-foreground">
-                {dominado ? `Dominado · ${t.accuracy_pct}%` : `${t.n_questions} ${t.n_questions === 1 ? "questão" : "questões"}`}
+              <p className="metric text-xs text-muted-foreground">
+                {dominado
+                  ? `Dominado · ${t.accuracy_pct}%`
+                  : `${t.n_questions} ${t.n_questions === 1 ? "questão" : "questões"}`}
               </p>
             </div>
 

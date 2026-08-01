@@ -123,7 +123,7 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
             <Flame
               className={cn("h-4 w-4", progress.current_streak > 0 ? "text-success" : "text-muted-foreground")}
             />
-            <span className="tabular-nums">
+            <span className="metric">
               {progress.current_streak} {progress.current_streak === 1 ? "dia" : "dias"}
             </span>
           </div>
@@ -131,7 +131,7 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
             <div className="flex items-center gap-2 text-sm">
               <Zap className="h-4 w-4 text-primary" />
               <span>Nível {progress.level}</span>
-              <span className="ml-auto text-xs tabular-nums text-muted-foreground">
+              <span className="ml-auto text-xs metric text-muted-foreground">
                 {progress.xp_no_nivel}/{progress.xp_do_nivel}
               </span>
             </div>

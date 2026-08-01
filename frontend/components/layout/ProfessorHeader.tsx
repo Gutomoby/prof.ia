@@ -41,25 +41,31 @@ export function ProfessorHeader({
           ...(isHistoricoDetail ? [{ label: "Revisão" }] : []),
         ]}
       />
-      <div className="-mt-4 mb-6 flex items-center gap-4">
+      {/* Em telas estreitas a disciplina vai para cima das abas e a régua de
+          abas rola na horizontal — com 4 abas elas não cabem lado a lado com
+          o rótulo em 360px. */}
+      <div className="-mt-4 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
         <p className="text-sm text-muted-foreground">{professor.discipline}</p>
-        <nav className="ml-auto flex gap-1 rounded-full bg-muted p-1">
-          {TABS.map((tab) => {
-            const isActive = tab.match(pathname);
-            return (
-              <Link
-                key={tab.label}
-                href={tab.href(professor.id)}
-                onClick={handleTabClick}
-                className={cn(
-                  "rounded-full px-3 py-1 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                {tab.label}
-              </Link>
-            );
-          })}
+        <nav className="-mx-4 overflow-x-auto px-4 md:mx-0 md:ml-auto md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex w-max gap-1 rounded-full bg-muted p-1">
+            {TABS.map((tab) => {
+              const isActive = tab.match(pathname);
+              return (
+                <Link
+                  key={tab.label}
+                  href={tab.href(professor.id)}
+                  onClick={handleTabClick}
+                  aria-current={isActive ? "page" : undefined}
+                  className={cn(
+                    "whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  {tab.label}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
       </div>
     </div>

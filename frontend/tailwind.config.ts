@@ -2,7 +2,9 @@ import type { Config } from "tailwindcss";
 
 // Configuração do Tailwind compatível com shadcn/ui (variáveis CSS via HSL)
 const config: Config = {
-  darkMode: ["class"],
+  // Segue a preferência do sistema operacional. Antes era "class", mas nada
+  // no app colocava a classe .dark no <html> — o tema escuro nunca ligava.
+  darkMode: "media",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",
@@ -56,6 +58,7 @@ const config: Config = {
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: ["var(--font-mono)", "ui-monospace", "monospace"],
       },
       borderRadius: {
         xl: "var(--radius)",

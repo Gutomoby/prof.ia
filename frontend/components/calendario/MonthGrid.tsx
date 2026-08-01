@@ -59,7 +59,7 @@ export function MonthGrid({
     <div>
       <div className="grid grid-cols-7 border-b border-border/60 pb-2">
         {WEEKDAYS.map((w) => (
-          <div key={w} className="text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <div key={w} className="text-center text-[10px] font-semibold uppercase tracking-wide text-muted-foreground sm:text-xs">
             {w}
           </div>
         ))}
@@ -84,22 +84,22 @@ export function MonthGrid({
               aria-label={`${cell.day}, ${activities.length} atividades, ${events.length} eventos`}
               aria-current={isToday ? "date" : undefined}
               className={cn(
-                "flex min-h-[4.5rem] flex-col items-center gap-1.5 border-b border-r border-border/40 p-2 transition-colors first:rounded-tl-lg hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+                "flex min-h-[3.25rem] flex-col items-center gap-1 border-b border-r border-border/40 p-1 transition-colors first:rounded-tl-lg hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring sm:min-h-[4.5rem] sm:gap-1.5 sm:p-2",
                 !cell.inMonth && "text-muted-foreground/40",
                 isSelected && "bg-accent"
               )}
             >
               <span
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-sm tabular-nums",
-                  isToday && "bg-primary font-semibold text-primary-foreground",
-                  !isToday && isSelected && "font-semibold"
+                  "metric flex h-6 w-6 items-center justify-center rounded-full text-xs sm:h-7 sm:w-7 sm:text-sm",
+                  isToday && "bg-primary font-bold text-primary-foreground",
+                  !isToday && isSelected && "font-bold"
                 )}
               >
                 {cell.day}
               </span>
 
-              <span className="flex flex-wrap justify-center gap-1">
+              <span className="flex flex-wrap justify-center gap-0.5 sm:gap-1">
                 {materias.slice(0, 4).map((professorId) => (
                   <span
                     key={professorId}
@@ -109,9 +109,13 @@ export function MonthGrid({
               </span>
 
               {events.length > 0 && (
-                <span className="w-full truncate rounded bg-destructive/10 px-1 text-[10px] font-medium leading-4 text-destructive">
-                  {events.length === 1 ? events[0].title : `${events.length} eventos`}
-                </span>
+                // No celular não cabe o título: vira só um traço vermelho.
+                <>
+                  <span className="h-1 w-4 rounded-full bg-destructive sm:hidden" aria-hidden />
+                  <span className="hidden w-full truncate rounded bg-destructive/10 px-1 text-[10px] font-medium leading-4 text-destructive sm:block">
+                    {events.length === 1 ? events[0].title : `${events.length} eventos`}
+                  </span>
+                </>
               )}
             </button>
           );

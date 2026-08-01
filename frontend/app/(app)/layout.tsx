@@ -1,4 +1,5 @@
 import { Sidebar } from "@/components/layout/Sidebar";
+import { MobileNav } from "@/components/layout/MobileNav";
 import { QuizGuardProvider } from "@/components/layout/QuizGuardContext";
 import { api } from "@/lib/api";
 import type { ProfessorListItem } from "@/lib/types";
@@ -23,8 +24,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <QuizGuardProvider>
       <div className="flex min-h-screen">
         <Sidebar professors={professors} />
-        <main className="flex-1 p-6">{children}</main>
+        {/* pb generoso no mobile para o conteúdo não ficar sob a barra fixa */}
+        <main className="min-w-0 flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
       </div>
+      <MobileNav professors={professors} />
     </QuizGuardProvider>
   );
 }

@@ -18,7 +18,7 @@ export function ProgressStrip({ progress, loading }: { progress: UserProgress | 
       <div className="flex items-center gap-2.5">
         <Flame className={progress.current_streak > 0 ? "h-5 w-5 text-success" : "h-5 w-5 text-muted-foreground"} />
         <div>
-          <p className="text-lg font-bold leading-tight tabular-nums">
+          <p className="metric text-lg font-bold leading-tight">
             {progress.current_streak} {progress.current_streak === 1 ? "dia" : "dias"}
           </p>
           <p className="text-xs text-muted-foreground">
@@ -30,12 +30,17 @@ export function ProgressStrip({ progress, loading }: { progress: UserProgress | 
       <div className="flex min-w-[12rem] flex-1 items-center gap-2.5">
         <Zap className="h-5 w-5 text-primary" />
         <div className="flex-1">
-          <p className="text-lg font-bold leading-tight tabular-nums">Nível {progress.level}</p>
+          <p className="text-lg font-bold leading-tight">
+            Nível <span className="metric">{progress.level}</span>
+          </p>
           <div className="mt-1 flex items-center gap-2">
             <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-              <div className="h-full rounded-full bg-primary" style={{ width: `${pctNoNivel}%` }} />
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-500"
+                style={{ width: `${pctNoNivel}%` }}
+              />
             </div>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            <span className="metric shrink-0 text-xs text-muted-foreground">
               {progress.xp_no_nivel}/{progress.xp_do_nivel} XP
             </span>
           </div>

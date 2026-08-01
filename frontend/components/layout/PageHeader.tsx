@@ -52,8 +52,8 @@ export function PageHeader({
           ))}
         </nav>
       )}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <div className="flex min-w-0 items-center gap-3">
           {backHref && (
             <Link
               href={backHref}
@@ -65,7 +65,7 @@ export function PageHeader({
               <span className="hidden sm:inline">Voltar</span>
             </Link>
           )}
-          <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{title}</h1>
+          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">{title}</h1>
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>

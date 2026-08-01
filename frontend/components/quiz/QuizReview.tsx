@@ -21,18 +21,18 @@ export function QuizReview({
       <Card>
         <CardContent className="flex flex-col items-center gap-1 py-8">
           <p className="text-sm text-muted-foreground">Pontuação</p>
-          <p className="text-4xl font-bold tabular-nums md:text-5xl">{scorePct}%</p>
+          <p className="text-4xl font-bold metric md:text-5xl">{scorePct}%</p>
 
           {reward && (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               <span className="inline-flex items-center gap-1.5 text-sm font-medium">
                 <Zap className="h-4 w-4 text-primary" />
-                <span className="tabular-nums">+{reward.xpGanho} XP</span>
+                <span className="metric">+{reward.xpGanho} XP</span>
               </span>
               {reward.currentStreak > 0 && (
                 <span className="inline-flex items-center gap-1.5 text-sm font-medium">
                   <Flame className="h-4 w-4 text-success" />
-                  <span className="tabular-nums">
+                  <span className="metric">
                     {reward.currentStreak} {reward.currentStreak === 1 ? "dia" : "dias"}
                   </span>
                 </span>

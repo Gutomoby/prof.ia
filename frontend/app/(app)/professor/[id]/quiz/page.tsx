@@ -216,7 +216,9 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                           {new Date(h.created_at).toLocaleDateString("pt-BR")}
                         </p>
                       </div>
-                      <Badge variant={scoreBadgeVariant(h.score_pct as number)}>{h.score_pct}%</Badge>
+                      <Badge variant={scoreBadgeVariant(h.score_pct as number)} className="metric">
+                        {h.score_pct}%
+                      </Badge>
                     </div>
                   </Card>
                 </Link>
@@ -257,7 +259,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                 style={{ width: `${(answeredCount / activity.questions.length) * 100}%` }}
               />
             </div>
-            <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+            <span className="shrink-0 text-xs metric text-muted-foreground">
               {answeredCount} de {activity.questions.length} respondidas
             </span>
           </div>
