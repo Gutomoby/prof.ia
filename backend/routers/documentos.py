@@ -17,6 +17,7 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from models import DocumentTextCreate
 from services.config import settings
 from services.pdf import extract_text
+from services.progress import XP_MATERIAL_INDEXADO, award_xp
 from services.rag import index_document
 from services.supabase_client import get_supabase
 
@@ -115,6 +116,10 @@ async def upload_pdf(
     # 4) Indexação RAG (chunking + embeddings + insert)
     n_chunks = index_document(professor_id, document_id, text)
 
+    # Material rende XP, mas não conta como "estudou hoje" — só atividade mantém
+    # a sequência viva, senão bastaria subir arquivo pra não quebrar o streak.
+    award_xp(settings.MVP_USER_ID, XP_MATERIAL_INDEXADO, counts_for_streak=False)
+
     return {
         "document_id": str(document_id),
         "name": file.filename,
@@ -158,6 +163,8 @@ def upload_text(payload: DocumentTextCreate):
 
     n_chunks = index_document(payload.professor_id, document_id, payload.raw_text)
 
+    award_xp(settings.MVP_USER_ID, XP_MATERIAL_INDEXADO, counts_for_streak=False)
+
     return {
         "document_id": str(document_id),
         "name": payload.name,
@@ -171,17 +178,51 @@ def upload_text(payload: DocumentTextCreate):
 
 
 @router.get("")
-def list_documents(professor_id: UUID):
-    """Lista os documentos de um professor (mais recentes primeiro)."""
+def list_documents(professor_id: UUID | None = None):
+    """Documentos de um professor, ou de todos eles se `professor_id` for omitido.
+
+    Sem `professor_id` a resposta traz nome e disciplina da matéria em cada item
+    — é o que a Biblioteca (acervo global) consome para agrupar.
+    """
     sb = get_supabase()
+
+    if professor_id is not None:
+        res = (
+            sb.table("documents")
+            .select("id, name, type, created_at")
+            .eq("professor_id", str(professor_id))
+            .order("created_at", desc=True)
+            .execute()
+        )
+        return {"items": res.data or []}
+
+    professors_res = (
+        sb.table("professors")
+        .select("id, name, discipline")
+        .eq("user_id", settings.MVP_USER_ID)
+        .execute()
+    )
+    professors = {row["id"]: row for row in (professors_res.data or [])}
+    if not professors:
+        return {"items": []}
+
     res = (
         sb.table("documents")
-        .select("id, name, type, created_at")
-        .eq("professor_id", str(professor_id))
+        .select("id, professor_id, name, type, created_at")
+        .in_("professor_id", list(professors.keys()))
         .order("created_at", desc=True)
         .execute()
     )
-    return {"items": res.data or []}
+    items = [
+        {
+            **row,
+            "professor_name": professors[row["professor_id"]]["name"],
+            "discipline": professors[row["professor_id"]]["discipline"],
+        }
+        for row in (res.data or [])
+        if row["professor_id"] in professors
+    ]
+    return {"items": items}
 
 
 @router.delete("/{document_id}")

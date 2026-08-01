@@ -12,7 +12,7 @@ e configuramos CORS para o frontend Next.js.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from routers import professores, documentos, chat, atividades, score
+from routers import professores, documentos, chat, atividades, score, progresso, calendario
 
 # Instância principal da aplicação. O título aparece no /docs (Swagger UI).
 app = FastAPI(
@@ -47,3 +47,5 @@ app.include_router(documentos.router)
 app.include_router(chat.router)
 app.include_router(atividades.router)
 app.include_router(score.router)
+app.include_router(progresso.router)
+app.include_router(calendario.router)

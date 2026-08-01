@@ -5,10 +5,27 @@ Usado por routers/atividades.py (correção pontual de uma tentativa) e por
 routers/score.py (agregação de todas as tentativas de um professor).
 """
 
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timedelta
 from uuid import UUID
+from zoneinfo import ZoneInfo
 
+from services.config import settings
 from services.supabase_client import get_supabase
+
+# Tudo que vira "dia" (sequência de estudo) é convertido para o fuso do usuário
+# antes de virar date. Os timestamps do banco são timestamptz em UTC; contar o
+# dia em UTC quebraria a sequência de quem estuda de noite no Brasil.
+APP_TZ = ZoneInfo(settings.APP_TIMEZONE)
+
+
+def to_local_date(value: str | datetime) -> date:
+    """Converte um timestamp do banco (ISO/UTC) para a data no fuso do usuário."""
+    dt = datetime.fromisoformat(value) if isinstance(value, str) else value
+    return dt.astimezone(APP_TZ).date()
+
+
+def today_local() -> date:
+    return datetime.now(APP_TZ).date()
 
 # Corte de "domínio" por tópico — mesmo critério visual já usado no Badge de
 # score do histórico do quiz (verde >=70%, vermelho <40%, neutro no meio).
@@ -99,7 +116,7 @@ def compute_streak(activity_dates: list[date]) -> int:
         return 0
 
     unique_dates = set(activity_dates)
-    today = datetime.now(timezone.utc).date()
+    today = today_local()
 
     anchor = today if today in unique_dates else today - timedelta(days=1)
     if anchor not in unique_dates:

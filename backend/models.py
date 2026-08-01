@@ -6,7 +6,7 @@ Importante: estes schemas NÃO são tabelas do banco. As tabelas vivem no Supaba
 HTTP, validando entradas e serializando respostas.
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -168,3 +168,60 @@ class StudyPlan(BaseModel):
     professor_id: UUID
     content: StudyPlanContent
     created_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Progressão global (XP, nível, sequência)
+# ---------------------------------------------------------------------------
+
+
+class UserProgress(BaseModel):
+    total_xp: int
+    level: int
+    xp_no_nivel: int = Field(..., description="XP já acumulado dentro do nível atual.")
+    xp_do_nivel: int = Field(..., description="XP total que o nível atual exige para fechar.")
+    current_streak: int
+    longest_streak: int
+    last_activity_date: date | None
+
+
+# ---------------------------------------------------------------------------
+# Calendário
+# ---------------------------------------------------------------------------
+
+
+EventKind = Literal["prova", "revisao", "tarefa", "outro"]
+
+
+class CalendarEventCreate(BaseModel):
+    title: str
+    kind: EventKind = "outro"
+    event_date: date
+    professor_id: UUID | None = Field(
+        None, description="Matéria à qual o evento pertence. Vazio = evento geral."
+    )
+
+
+class CalendarEvent(BaseModel):
+    id: UUID
+    professor_id: UUID | None
+    professor_name: str | None
+    title: str
+    kind: EventKind
+    event_date: date
+
+
+class CalendarActivity(BaseModel):
+    """Um quiz respondido, já com a matéria resolvida para exibição."""
+    id: UUID
+    professor_id: UUID
+    professor_name: str
+    discipline: str
+    topic: str | None
+    score_pct: float
+    created_at: datetime
+
+
+class CalendarResponse(BaseModel):
+    activities: list[CalendarActivity]
+    events: list[CalendarEvent]

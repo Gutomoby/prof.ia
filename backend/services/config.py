@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # --- MVP single-user (temporário, até implementarmos auth completa) ---
     MVP_USER_ID: str
 
+    # --- Fuso horário do usuário ---
+    # "Dia de estudo" (sequência/streak) precisa ser contado no fuso de quem
+    # estuda, não em UTC: no Brasil (UTC-3), estudar às 22h já é o dia seguinte
+    # em UTC e a sequência quebraria um dia antes da hora.
+    APP_TIMEZONE: str = "America/Sao_Paulo"
+
 
 # Instância única importada pelos outros módulos.
 # O parsing acontece aqui, então erros de config aparecem no startup.

@@ -14,7 +14,7 @@ from fastapi import APIRouter, HTTPException
 
 from services.claude import MODEL_HAIKU, generate_study_plan
 from services.rag import search_chunks
-from services.scoring import answered_activities, compute_streak, topic_stats
+from services.scoring import answered_activities, compute_streak, to_local_date, topic_stats
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/score", tags=["score"])
@@ -47,7 +47,7 @@ def get_score_summary(professor_id: UUID):
     month_ago = now - timedelta(days=30)
 
     activities = answered_activities(professor_id)
-    activity_dates = [datetime.fromisoformat(a["created_at"]).date() for a in activities]
+    activity_dates = [to_local_date(a["created_at"]) for a in activities]
     score_trend = [
         {"data": a["created_at"], "score_pct": a["score_pct"]} for a in activities
     ]

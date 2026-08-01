@@ -19,8 +19,16 @@ from fastapi import APIRouter, HTTPException
 
 from models import ActivityGenerateRequest, ActivitySubmitRequest
 from services.claude import MODEL_HAIKU, generate_json
+from services.config import settings
+from services.progress import (
+    XP_ATIVIDADE_CONCLUIDA,
+    XP_QUESTAO_CORRETA,
+    XP_QUESTAO_ERRADA,
+    XP_TOPICO_DOMINADO,
+    award_xp,
+)
 from services.rag import search_chunks
-from services.scoring import correct_questions
+from services.scoring import correct_questions, topic_stats
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/atividades", tags=["atividades"])
@@ -117,7 +125,7 @@ def submeter_atividade(payload: ActivitySubmitRequest):
     sb = get_supabase()
     found = (
         sb.table("activity_results")
-        .select("id, questions")
+        .select("id, professor_id, questions")
         .eq("id", str(payload.activity_id))
         .limit(1)
         .execute()
@@ -125,8 +133,15 @@ def submeter_atividade(payload: ActivitySubmitRequest):
     if not found.data:
         raise HTTPException(status_code=404, detail="Atividade não encontrada")
 
+    professor_id = found.data[0]["professor_id"]
     questions: list[dict] = found.data[0]["questions"]
     corrected, score_pct = correct_questions(questions, payload.answers)
+
+    # Snapshot antes da correção entrar no banco, para saber quais tópicos
+    # *acabaram* de cruzar o limiar de domínio com essa tentativa.
+    dominados_antes = {
+        t["topico"] for t in topic_stats(professor_id) if t["status"] == "dominado"
+    }
 
     sb.table("activity_results").update(
         {
@@ -136,7 +151,27 @@ def submeter_atividade(payload: ActivitySubmitRequest):
         }
     ).eq("id", str(payload.activity_id)).execute()
 
-    return {"score_pct": score_pct, "questions": corrected}
+    dominados_agora = {
+        t["topico"] for t in topic_stats(professor_id) if t["status"] == "dominado"
+    }
+    novos_dominados = sorted(dominados_agora - dominados_antes)
+
+    xp_ganho = XP_ATIVIDADE_CONCLUIDA + len(novos_dominados) * XP_TOPICO_DOMINADO
+    for question in corrected:
+        if question["correta"]:
+            xp_ganho += XP_QUESTAO_CORRETA
+        elif question["resposta_usuario"] is not None:
+            xp_ganho += XP_QUESTAO_ERRADA
+
+    progress = award_xp(settings.MVP_USER_ID, xp_ganho, counts_for_streak=True)
+
+    return {
+        "score_pct": score_pct,
+        "questions": corrected,
+        "xp_ganho": xp_ganho,
+        "topicos_dominados": novos_dominados,
+        "current_streak": progress["current_streak"],
+    }
 
 
 # ---------------------------------------------------------------------------
