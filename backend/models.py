@@ -30,6 +30,18 @@ class ProfessorCreate(BaseModel):
     )
 
 
+class ProfessorUpdate(BaseModel):
+    """Edição parcial — só os campos enviados mudam.
+
+    Todos são opcionais para permitir corrigir só o nome, por exemplo, sem
+    reenviar o resto. exam_dates aceita null explícito para limpar a data.
+    """
+    name: str | None = None
+    discipline: str | None = None
+    teaching_style: str | None = None
+    exam_dates: str | None = None
+
+
 class Professor(ProfessorCreate):
     """Professor já persistido — inclui id e timestamps."""
     id: UUID

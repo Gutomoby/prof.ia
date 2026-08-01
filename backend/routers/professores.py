@@ -17,7 +17,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from models import Professor, ProfessorCreate
+from models import Professor, ProfessorCreate, ProfessorUpdate
 from services.config import settings
 from services.progress import reset_progress
 from services.supabase_client import get_supabase
@@ -49,13 +49,20 @@ Instruções:
 - Ao corrigir, explique o motivo do erro de forma didática."""
 
 
-def _build_system_prompt(payload: ProfessorCreate) -> str:
-    """Monta o system_prompt parcial (sem chunks_retrieved ainda)."""
+def _build_system_prompt(
+    name: str, discipline: str, teaching_style: str | None, exam_dates: str | None
+) -> str:
+    """Monta o system_prompt parcial (sem chunks_retrieved ainda).
+
+    Recebe os campos soltos, e não o payload, porque a edição precisa remontar
+    o prompt a partir da mistura entre o que já estava salvo e o que veio na
+    requisição.
+    """
     return SYSTEM_PROMPT_TEMPLATE.format(
-        name=payload.name,
-        discipline=payload.discipline,
-        teaching_style=payload.teaching_style or "didático e claro",
-        exam_dates=payload.exam_dates or "(não informadas)",
+        name=name,
+        discipline=discipline,
+        teaching_style=teaching_style or "didático e claro",
+        exam_dates=exam_dates or "(não informadas)",
     )
 
 
@@ -81,7 +88,9 @@ def create_professor(payload: ProfessorCreate):
     dados do usuário. Isso evita prompt injection vindo do frontend.
     """
     sb = get_supabase()
-    system_prompt = _build_system_prompt(payload)
+    system_prompt = _build_system_prompt(
+        payload.name, payload.discipline, payload.teaching_style, payload.exam_dates
+    )
 
     res = (
         sb.table("professors")
@@ -129,6 +138,55 @@ def get_professor(professor_id: UUID):
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Professor não encontrado")
+    return res.data[0]
+
+
+@router.patch("/{professor_id}", response_model=Professor)
+def update_professor(professor_id: UUID, payload: ProfessorUpdate):
+    """Edita nome, disciplina, estilo de ensino e datas de prova.
+
+    O system_prompt é derivado desses campos, então precisa ser remontado
+    junto — senão o professor continuaria se apresentando com o nome antigo
+    nas próximas atividades. Material e histórico não são tocados.
+    """
+    sb = get_supabase()
+
+    atual = (
+        sb.table("professors")
+        .select("name, discipline, teaching_style, exam_dates")
+        .eq("id", str(professor_id))
+        .eq("user_id", _current_user_id())
+        .limit(1)
+        .execute()
+    )
+    if not atual.data:
+        raise HTTPException(status_code=404, detail="Professor não encontrado")
+
+    # exclude_unset: um campo ausente mantém o valor salvo; um campo enviado
+    # como null limpa de verdade (útil para tirar a data de prova).
+    mudancas = payload.model_dump(exclude_unset=True)
+    if not mudancas:
+        raise HTTPException(status_code=400, detail="Nada para atualizar")
+
+    novo = {**atual.data[0], **mudancas}
+    if not (novo.get("name") or "").strip():
+        raise HTTPException(status_code=400, detail="O nome não pode ficar vazio")
+    if not (novo.get("discipline") or "").strip():
+        raise HTTPException(status_code=400, detail="A matéria não pode ficar vazia")
+
+    novo["system_prompt"] = _build_system_prompt(
+        novo["name"], novo["discipline"], novo.get("teaching_style"), novo.get("exam_dates")
+    )
+
+    res = (
+        sb.table("professors")
+        .update(novo)
+        .eq("id", str(professor_id))
+        .eq("user_id", _current_user_id())
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Falha ao atualizar o professor")
     return res.data[0]
 
 

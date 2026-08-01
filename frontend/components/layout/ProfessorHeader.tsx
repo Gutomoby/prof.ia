@@ -2,8 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Settings } from "lucide-react";
 import { PageHeader } from "./PageHeader";
 import { useQuizGuard } from "./QuizGuardContext";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const TABS = [
@@ -21,6 +23,9 @@ export function ProfessorHeader({
   const pathname = usePathname();
   const activeTab = TABS.find((t) => t.match(pathname));
   const isHistoricoDetail = pathname.includes("/historico/");
+  // Ajustes (editar/apagar) não vira aba: com 4 abas a régua já fica no limite
+  // em 360px. Fica na engrenagem do cabeçalho, alcançável de qualquer aba.
+  const isAjustes = pathname.includes("/ajustes");
   const { unsaved } = useQuizGuard();
 
   function handleTabClick(e: React.MouseEvent) {
@@ -29,17 +34,33 @@ export function ProfessorHeader({
     }
   }
 
+  const titulo = isHistoricoDetail ? "Revisão" : isAjustes ? "Ajustes" : activeTab?.label ?? professor.name;
+
   return (
     <div>
       <PageHeader
-        title={isHistoricoDetail ? "Revisão" : activeTab?.label ?? professor.name}
+        title={titulo}
         backHref={isHistoricoDetail ? `/professor/${professor.id}/quiz` : "/dashboard"}
         breadcrumb={[
           { label: "Professores", href: "/dashboard" },
           { label: professor.name, href: `/professor/${professor.id}` },
           ...(activeTab ? [{ label: activeTab.label, href: isHistoricoDetail ? activeTab.href(professor.id) : undefined }] : []),
           ...(isHistoricoDetail ? [{ label: "Revisão" }] : []),
+          ...(isAjustes ? [{ label: "Ajustes" }] : []),
         ]}
+        action={
+          isAjustes ? undefined : (
+            <Link
+              href={`/professor/${professor.id}/ajustes`}
+              onClick={handleTabClick}
+              className={buttonVariants("secondary", "sm")}
+              aria-label={`Ajustes de ${professor.name}`}
+            >
+              <Settings className="h-4 w-4" />
+              Ajustes
+            </Link>
+          )
+        }
       />
       {/* Em telas estreitas a disciplina vai para cima das abas e a régua de
           abas rola na horizontal — com 4 abas elas não cabem lado a lado com

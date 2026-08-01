@@ -104,6 +104,23 @@ export function createProfessor(payload: {
   });
 }
 
+// Edição parcial: só os campos enviados mudam. O backend remonta o
+// system_prompt sozinho, já que ele é derivado desses campos.
+export function updateProfessor(
+  id: string,
+  payload: Partial<{
+    name: string;
+    discipline: string;
+    teaching_style: string | null;
+    exam_dates: string | null;
+  }>
+) {
+  return request<Professor>(`/professores/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 // Apaga o professor e, em cascata, TODO o conteúdo dele: materiais, quizzes
 // respondidos, planos de estudo e eventos de calendário. Não tem desfazer.
 export function deleteProfessor(id: string) {
@@ -240,6 +257,7 @@ export const api = {
   listProfessors,
   getProfessor,
   createProfessor,
+  updateProfessor,
   deleteProfessor,
   listDocuments,
   uploadPdf,
