@@ -108,7 +108,7 @@ def generate_modules(system_prompt: str, user_prompt: str, model: str = MODEL_SO
     client = _get_client()
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=8192,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         tools=[_MODULES_TOOL],
@@ -165,9 +165,11 @@ def generate_json(system_prompt: str, user_prompt: str, model: str = MODEL_HAIKU
     Retorna o dict com a chave "questions" (ver _QUIZ_TOOL para o schema).
     """
     client = _get_client()
+    # 8192: um quiz de módulo (8-10 questões com explicação) não cabe em 4096
+    # e o corte no meio da tool devolvia input vazio ("nenhuma questão").
     response = client.messages.create(
         model=model,
-        max_tokens=4096,
+        max_tokens=8192,
         system=system_prompt,
         messages=[{"role": "user", "content": user_prompt}],
         tools=[_QUIZ_TOOL],
