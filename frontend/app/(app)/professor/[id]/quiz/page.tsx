@@ -18,7 +18,7 @@ import { ModuleList } from "@/components/quiz/ModuleList";
 import { DifficultyPicker, DIFFICULTY_LABELS } from "@/components/quiz/DifficultyPicker";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
 import { pendingQuizKey } from "@/lib/use-start-quiz";
-import { scoreBadgeVariant } from "@/lib/utils";
+import { pctInteiro, scoreBadgeVariant } from "@/lib/utils";
 import type { ActivityHistoryItem, ActivitySubmitResult, Difficulty, GeneratedActivity } from "@/lib/types";
 
 type View = "idle" | "respondendo" | "resultado";
@@ -241,8 +241,11 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                           {h.difficulty ? ` · ${DIFFICULTY_LABELS[h.difficulty]}` : ""}
                         </p>
                       </div>
-                      <Badge variant={scoreBadgeVariant(h.score_pct as number)} className="metric">
-                        {h.score_pct}%
+                      <Badge
+                        variant={scoreBadgeVariant(pctInteiro(h.score_pct as number))}
+                        className="metric"
+                      >
+                        {pctInteiro(h.score_pct as number)}%
                       </Badge>
                     </div>
                   </Card>

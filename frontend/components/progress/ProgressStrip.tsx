@@ -2,6 +2,7 @@ import { Flame, Target, Zap } from "lucide-react";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { UserProgress } from "@/lib/types";
 
 // Anel da meta diária. Índigo enquanto está em andamento, verde quando fecha —
@@ -48,10 +49,20 @@ export function ProgressStrip({ progress, loading }: { progress: UserProgress | 
     <GlassCard
       nivel="hud"
       radius="grupo"
-      className="flex flex-wrap items-center gap-x-8 gap-y-5 px-6 py-5"
+      className={cn(
+        // A tela 14 tem duas caixas no HUD (sequência e nível); a meta do dia
+        // veio da tela 20. Com três, o flex-wrap jogava a meta sozinha numa
+        // segunda linha, desalinhada.
+        //
+        // No celular vira grade: sequência e meta dividem a primeira linha,
+        // nível ocupa a segunda inteira — é a única que tem barra e precisa de
+        // largura. Da largura sm em diante volta a ser uma linha só.
+        "grid grid-cols-2 items-center gap-x-6 gap-y-5 px-6 py-5",
+        "sm:flex sm:flex-wrap sm:gap-x-8"
+      )}
     >
       {/* Sequência */}
-      <div className="flex items-center gap-2.5">
+      <div className="order-1 flex items-center gap-2.5">
         <Flame className={temSequencia ? "h-5 w-5 text-acerto" : "h-5 w-5 text-tinta-fraca"} />
         <div>
           <p className="text-titulo-cartao leading-none">
@@ -67,7 +78,7 @@ export function ProgressStrip({ progress, loading }: { progress: UserProgress | 
       </div>
 
       {/* Nível e XP acumulado */}
-      <div className="flex min-w-[12rem] flex-1 items-center gap-2.5">
+      <div className="order-3 col-span-2 flex items-center gap-2.5 sm:order-2 sm:min-w-[12rem] sm:flex-1">
         <Zap className="h-5 w-5 text-indigo" />
         <div className="flex-1">
           <p className="text-linha font-semibold text-tinta">
@@ -91,7 +102,7 @@ export function ProgressStrip({ progress, loading }: { progress: UserProgress | 
       </div>
 
       {/* Meta do dia */}
-      <div className="flex items-center gap-2.5">
+      <div className="order-2 flex items-center gap-2.5 sm:order-3">
         <div className="relative">
           <GoalRing pct={goalPct} done={goalDone} />
           <Target

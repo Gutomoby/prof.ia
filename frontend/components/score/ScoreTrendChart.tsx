@@ -1,6 +1,7 @@
 "use client";
 
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { pctInteiro } from "@/lib/utils";
 import type { ScoreTrendPoint } from "@/lib/types";
 
 function formatShortDate(iso: string) {
@@ -13,7 +14,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   const point = payload[0].payload;
   return (
     <div className="rounded-lg border bg-card px-3 py-2 text-sm shadow-sm">
-      <p className="font-semibold metric text-foreground">{point.score_pct}%</p>
+      <p className="font-semibold metric text-foreground">{pctInteiro(point.score_pct)}%</p>
       <p className="text-xs text-muted-foreground">{new Date(point.data).toLocaleDateString("pt-BR")}</p>
     </div>
   );

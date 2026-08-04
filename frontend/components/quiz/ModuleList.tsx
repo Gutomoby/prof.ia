@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Skeleton } from "@/components/ui/skeleton";
-import { scoreBadgeVariant } from "@/lib/utils";
+import { pctInteiro, scoreBadgeVariant } from "@/lib/utils";
 import type { Module } from "@/lib/types";
 
 /*
@@ -112,8 +112,8 @@ export function ModuleList({
               </div>
               <div className="flex shrink-0 items-center gap-3 sm:flex-col sm:items-end">
                 {m.melhor_score_pct !== null && (
-                  <Badge variant={scoreBadgeVariant(m.melhor_score_pct)} className="metric">
-                    melhor: {m.melhor_score_pct}%
+                  <Badge variant={scoreBadgeVariant(pctInteiro(m.melhor_score_pct))} className="metric">
+                    melhor: {pctInteiro(m.melhor_score_pct)}%
                   </Badge>
                 )}
                 <Button size="sm" disabled={starting || organizing} onClick={() => onStart(m.id)}>

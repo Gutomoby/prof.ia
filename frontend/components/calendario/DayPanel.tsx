@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { professorColor } from "@/lib/professor-color";
-import { scoreBadgeVariant } from "@/lib/utils";
+import { pctInteiro, scoreBadgeVariant } from "@/lib/utils";
 import type { CalendarActivity, CalendarEvent, EventKind, ProfessorListItem } from "@/lib/types";
 
 const KIND_LABEL: Record<EventKind, string> = {
@@ -125,8 +125,8 @@ export function DayPanel({
                   {a.professor_name}
                 </p>
               </div>
-              <Badge variant={scoreBadgeVariant(a.score_pct)} className="metric">
-                {a.score_pct}%
+              <Badge variant={scoreBadgeVariant(pctInteiro(a.score_pct))} className="metric">
+                {pctInteiro(a.score_pct)}%
               </Badge>
             </Link>
           ))}

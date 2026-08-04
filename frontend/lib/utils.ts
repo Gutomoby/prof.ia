@@ -40,6 +40,17 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// Toda porcentagem em tela é inteira: as 81 telas do handoff só mostram 42%,
+// 68%, 88%. O backend devolve float, e imprimir cru dava "5.4%" — fora do
+// design e ainda com ponto decimal num app em português.
+//
+// Arredonde ANTES de decidir a cor. Se o corte usar o valor cru e o texto o
+// arredondado, 69,6% sai escrito "70%" em cinza, contradizendo a regra de que
+// >=70% é verde.
+export function pctInteiro(valor: number): number {
+  return Math.round(valor);
+}
+
 // Mesmo corte usado em toda exibição de score (badge do histórico de quiz,
 // tópicos dominados/pendentes no Início): >=70% sucesso, <40% erro, resto neutro.
 export function scoreBadgeVariant(scorePct: number): "success" | "destructive" | "neutral" {

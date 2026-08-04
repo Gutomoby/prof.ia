@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, pctInteiro } from "@/lib/utils";
 import { professorColor } from "@/lib/professor-color";
 import type { TopicStat } from "@/lib/types";
 
@@ -45,7 +45,7 @@ export function TopicTrail({ topics, professorId }: { topics: TopicStat[]; profe
               <p className="mt-2 max-w-[11rem] text-center text-sm font-medium leading-snug">{t.topico}</p>
               <p className="metric text-xs text-muted-foreground">
                 {dominado
-                  ? `Dominado · ${t.accuracy_pct}%`
+                  ? `Dominado · ${pctInteiro(t.accuracy_pct)}%`
                   : `${t.n_questions} ${t.n_questions === 1 ? "questão" : "questões"}`}
               </p>
             </div>

@@ -1,4 +1,5 @@
 import type { TopicStat } from "./types";
+import { pctInteiro } from "./utils";
 
 export type NextStepKind = "subir-material" | "diagnostico" | "revisar-topico" | "praticar-tudo";
 
@@ -49,10 +50,13 @@ export function computeNextStep(params: { hasDocuments: boolean; topics: TopicSt
     return {
       kind: "revisar-topico",
       title: alvo.topico,
-      description: `Você acertou ${alvo.accuracy_pct}% em ${alvo.n_questions} ${
+      description: `Você acertou ${pctInteiro(alvo.accuracy_pct)}% em ${alvo.n_questions} ${
         alvo.n_questions === 1 ? "questão" : "questões"
       } aqui — é o ponto mais fraco agora.`,
-      ctaLabel: `Praticar ${alvo.topico}`,
+      // Rótulo curto e fixo, como na tela 14. Interpolar o nome do tópico aqui
+      // estourava a cápsula em duas ou três linhas com tópico longo, e era
+      // redundante: o título logo acima já é o nome do tópico.
+      ctaLabel: "Praticar esse tópico",
       topic: alvo.topico,
     };
   }

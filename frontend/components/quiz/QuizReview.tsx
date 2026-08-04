@@ -1,6 +1,7 @@
 import { Flame, Trophy, Zap } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { QuizOption } from "./QuizOption";
+import { pctInteiro } from "@/lib/utils";
 import type { SubmittedQuestionResult } from "@/lib/types";
 
 export function QuizReview({
@@ -21,7 +22,7 @@ export function QuizReview({
       <Card>
         <CardContent className="flex flex-col items-center gap-1 py-8">
           <p className="text-sm text-muted-foreground">Pontuação</p>
-          <p className="text-4xl font-bold metric md:text-5xl">{scorePct}%</p>
+          <p className="text-4xl font-bold metric md:text-5xl">{pctInteiro(scorePct)}%</p>
 
           {reward && (
             <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">

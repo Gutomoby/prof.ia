@@ -16,6 +16,7 @@ import { TodayCard } from "@/components/progress/TodayCard";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
+import { pctInteiro } from "@/lib/utils";
 import type { ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
 
 export default function EstudarPage() {
@@ -195,13 +196,15 @@ export default function EstudarPage() {
                     detailsLoading ? (
                       <Skeleton className="h-4 w-10" />
                     ) : temDados ? (
-                      <MetricText
-                        className="text-corpo"
-                        weight="bold"
-                        tone={toneDaNota(score.overall_mastery_pct)}
-                      >
-                        {score.overall_mastery_pct}%
-                      </MetricText>
+                      (() => {
+                        // Um valor só para cor e texto — ver pctInteiro().
+                        const dominio = pctInteiro(score.overall_mastery_pct);
+                        return (
+                          <MetricText className="text-corpo" weight="bold" tone={toneDaNota(dominio)}>
+                            {dominio}%
+                          </MetricText>
+                        );
+                      })()
                     ) : undefined
                   }
                   trailing={<ChevronRight className="h-[18px] w-[18px]" />}

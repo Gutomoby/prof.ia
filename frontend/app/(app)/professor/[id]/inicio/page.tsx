@@ -10,7 +10,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreTrendChart } from "@/components/score/ScoreTrendChart";
-import { scoreBadgeVariant } from "@/lib/utils";
+import { pctInteiro, scoreBadgeVariant } from "@/lib/utils";
 import type { ScoreSummary, StudyPlan } from "@/lib/types";
 
 export default function InicioPage({ params }: { params: { id: string } }) {
@@ -103,7 +103,7 @@ export default function InicioPage({ params }: { params: { id: string } }) {
           <Target className="h-3.5 w-3.5" />
           Domínio geral da matéria
         </div>
-        <p className="text-6xl font-bold metric tracking-tight md:text-7xl">{summary.overall_mastery_pct}%</p>
+        <p className="text-6xl font-bold metric tracking-tight md:text-7xl">{pctInteiro(summary.overall_mastery_pct)}%</p>
         <div className="mt-2 flex items-center gap-3">
           <Badge variant={summary.streak_days > 0 ? "success" : "neutral"}>
             <span className="inline-flex items-center gap-1">
@@ -132,7 +132,7 @@ export default function InicioPage({ params }: { params: { id: string } }) {
             {summary.weekly.quizzes_respondidos} {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
           </p>
           {summary.weekly.media_score_pct != null && (
-            <p className="text-xs text-muted-foreground">Média de {summary.weekly.media_score_pct}%</p>
+            <p className="text-xs text-muted-foreground">Média de {pctInteiro(summary.weekly.media_score_pct)}%</p>
           )}
         </div>
         <div className="px-6 py-5">
@@ -175,8 +175,8 @@ export default function InicioPage({ params }: { params: { id: string } }) {
               {summary.topics.map((t) => (
                 <li key={t.topico} className="flex items-center justify-between gap-4 py-2">
                   <span className="text-sm">{t.topico}</span>
-                  <Badge variant={scoreBadgeVariant(t.accuracy_pct)} className="metric">
-                    {t.accuracy_pct}%
+                  <Badge variant={scoreBadgeVariant(pctInteiro(t.accuracy_pct))} className="metric">
+                    {pctInteiro(t.accuracy_pct)}%
                   </Badge>
                 </li>
               ))}

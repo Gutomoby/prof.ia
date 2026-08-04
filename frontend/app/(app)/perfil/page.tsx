@@ -102,7 +102,13 @@ export default function PerfilPage() {
             </GlassCard>
 
             <GlassCard className="flex items-center gap-2 p-4">
-              <Estatistica valor={progress.current_streak} rotulo="dias seguidos" />
+              {/* Sequência de 1 dia é comum (todo mundo passa por ela no
+                  primeiro dia), então o singular não é caso de borda raro.
+                  Mesma regra do HUD em ProgressStrip. */}
+              <Estatistica
+                valor={progress.current_streak}
+                rotulo={progress.current_streak === 1 ? "dia seguido" : "dias seguidos"}
+              />
               <span className="h-10 w-[0.5px] flex-none bg-borda" />
               <Estatistica valor={progress.longest_streak} rotulo="seu recorde" />
             </GlassCard>
