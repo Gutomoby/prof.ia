@@ -31,7 +31,13 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/professor");
+  // /perfil expõe e-mail e progresso, então entra na proteção junto com as
+  // outras. (/biblioteca e /calendario também deveriam estar aqui — ficaram de
+  // fora desde antes desta migração; ver nota na Fase E.)
+  const isProtected =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/professor") ||
+    pathname.startsWith("/perfil");
   // Logado não tem o que fazer no login/criar conta. /recuperar-senha e
   // /atualizar-senha ficam FORA disso: o link de recovery autentica o usuário,
   // e redirecionar aqui impediria a troca de senha.
@@ -53,5 +59,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/professor/:path*", "/login", "/criar-conta"],
+  matcher: ["/dashboard/:path*", "/professor/:path*", "/perfil/:path*", "/login", "/criar-conta"],
 };

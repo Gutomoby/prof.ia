@@ -1,10 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ChevronRight } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
+import { ChevronLeft } from "lucide-react";
 import { useQuizGuard } from "./QuizGuardContext";
-import { cn } from "@/lib/utils";
 
 export interface Breadcrumb {
   label: string;
@@ -14,13 +12,23 @@ export interface Breadcrumb {
 export function PageHeader({
   title,
   backHref,
-  breadcrumb,
+  backLabel = "Voltar",
+  subtitle,
   action,
 }: {
   title: string;
   backHref?: string;
-  breadcrumb?: Breadcrumb[];
+  /** Rótulo do link de volta. O design nomeia o destino ("Prof. Atuária"). */
+  backLabel?: string;
+  subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  /**
+   * @deprecated O design trocou a trilha de migalhas pelo link de volta (celular)
+   * e pela sidebar (desktop) — não é renderizada. A prop continua na assinatura
+   * só para `professor/novo/page.tsx` seguir compilando até a Fase E; some
+   * quando aquela tela migrar.
+   */
+  breadcrumb?: Breadcrumb[];
 }) {
   const { unsaved } = useQuizGuard();
 
@@ -31,43 +39,25 @@ export function PageHeader({
   }
 
   return (
-    <div className="space-y-3 pb-6">
-      {breadcrumb && breadcrumb.length > 0 && (
-        <nav className="flex items-center gap-1 overflow-x-auto text-sm text-muted-foreground">
-          {breadcrumb.map((crumb, i) => (
-            <span key={i} className="flex shrink-0 items-center gap-1">
-              {i > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0" />}
-              {crumb.href ? (
-                <Link
-                  href={crumb.href}
-                  onClick={handleBackClick}
-                  className="rounded-sm underline-offset-2 hover:text-foreground hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {crumb.label}
-                </Link>
-              ) : (
-                <span className="text-foreground">{crumb.label}</span>
-              )}
-            </span>
-          ))}
-        </nav>
+    <div className="pb-4">
+      {backHref && (
+        <Link
+          href={backHref}
+          onClick={handleBackClick}
+          className="-ml-1 mb-1 inline-flex items-center gap-1.5 rounded-chip py-1 pl-1 pr-2 text-[16px] font-medium text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+        >
+          <ChevronLeft className="h-[18px] w-[18px]" />
+          {backLabel}
+        </Link>
       )}
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="flex min-w-0 items-center gap-3">
-          {backHref && (
-            <Link
-              href={backHref}
-              onClick={handleBackClick}
-              className={cn(buttonVariants("secondary", "sm"), "px-2.5 sm:px-3")}
-              aria-label="Voltar"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Voltar</span>
-            </Link>
-          )}
-          <h1 className="truncate text-xl font-bold tracking-tight sm:text-2xl md:text-3xl">{title}</h1>
+
+      <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
+        <div className="min-w-0">
+          {/* Uma large title por tela, à esquerda. Tracking positivo, à moda SF. */}
+          <h1 className="truncate text-titulo-grande text-tinta">{title}</h1>
+          {subtitle && <div className="mt-1 text-corpo text-tinta-fraca">{subtitle}</div>}
         </div>
-        {action && <div className="shrink-0">{action}</div>}
+        {action && <div className="flex shrink-0 items-center gap-3">{action}</div>}
       </div>
     </div>
   );

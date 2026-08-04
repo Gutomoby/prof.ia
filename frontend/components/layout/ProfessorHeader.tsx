@@ -1,19 +1,30 @@
 "use client";
 
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Settings } from "lucide-react";
 import { PageHeader } from "./PageHeader";
 import { useQuizGuard } from "./QuizGuardContext";
-import { buttonVariants } from "@/components/ui/button";
+import { Segmented } from "@/components/ui/segmented";
+import { professorColor } from "@/lib/professor-color";
 import { cn } from "@/lib/utils";
 
 const TABS = [
-  { href: (id: string) => `/professor/${id}`, label: "Visão geral", match: (p: string) => /^\/professor\/[^/]+$/.test(p) },
-  { href: (id: string) => `/professor/${id}/inicio`, label: "Progresso", match: (p: string) => p.includes("/inicio") },
-  { href: (id: string) => `/professor/${id}/quiz`, label: "Quiz", match: (p: string) => p.includes("/quiz") },
-  { href: (id: string) => `/professor/${id}/configurar`, label: "Material", match: (p: string) => p.includes("/configurar") },
-];
+  { value: "geral", label: "Visão geral", path: (id: string) => `/professor/${id}` },
+  { value: "progresso", label: "Progresso", path: (id: string) => `/professor/${id}/inicio` },
+  { value: "quiz", label: "Quiz", path: (id: string) => `/professor/${id}/quiz` },
+  { value: "material", label: "Material", path: (id: string) => `/professor/${id}/configurar` },
+] as const;
+
+type TabValue = (typeof TABS)[number]["value"];
+
+function tabAtiva(pathname: string): TabValue | null {
+  if (pathname.includes("/inicio")) return "progresso";
+  if (pathname.includes("/quiz")) return "quiz";
+  if (pathname.includes("/configurar")) return "material";
+  if (/^\/professor\/[^/]+$/.test(pathname)) return "geral";
+  return null;
+}
 
 export function ProfessorHeader({
   professor,
@@ -21,74 +32,90 @@ export function ProfessorHeader({
   professor: { id: string; name: string; discipline: string };
 }) {
   const pathname = usePathname();
-  const activeTab = TABS.find((t) => t.match(pathname));
-  const isHistoricoDetail = pathname.includes("/historico/");
-  // Ajustes (editar/apagar) não vira aba: com 4 abas a régua já fica no limite
-  // em 360px. Fica na engrenagem do cabeçalho, alcançável de qualquer aba.
-  const isAjustes = pathname.includes("/ajustes");
+  const router = useRouter();
   const { unsaved } = useQuizGuard();
 
-  function handleTabClick(e: React.MouseEvent) {
-    if (unsaved && !window.confirm("Sair sem enviar? Suas respostas serão perdidas.")) {
-      e.preventDefault();
-    }
+  const ativa = tabAtiva(pathname);
+  const isHistoricoDetail = pathname.includes("/historico/");
+  // Ajustes não vira aba: com 4 abas a régua já fica no limite em 360px.
+  const isAjustes = pathname.includes("/ajustes");
+  const color = professorColor(professor.id);
+
+  function confirmNavigate(): boolean {
+    if (!unsaved) return true;
+    return window.confirm("Sair sem enviar? Suas respostas serão perdidas.");
   }
 
-  const titulo = isHistoricoDetail ? "Revisão" : isAjustes ? "Ajustes" : activeTab?.label ?? professor.name;
+  function handleTabChange(value: string) {
+    if (!confirmNavigate()) return;
+    const tab = TABS.find((t) => t.value === value);
+    if (tab) router.push(tab.path(professor.id));
+  }
+
+  function handleLinkClick(e: React.MouseEvent) {
+    if (!confirmNavigate()) e.preventDefault();
+  }
+
+  // O nome da matéria é o título: as abas dizem em que seção você está, o
+  // large title diz de quem é a sala. Revisão e Ajustes saem desse padrão
+  // porque são destinos, não seções.
+  const titulo = isHistoricoDetail ? "Revisão" : isAjustes ? "Ajustes" : professor.name;
 
   return (
-    <div>
+    <div className="mb-4">
       <PageHeader
         title={titulo}
-        backHref={isHistoricoDetail ? `/professor/${professor.id}/quiz` : "/dashboard"}
-        breadcrumb={[
-          { label: "Professores", href: "/dashboard" },
-          { label: professor.name, href: `/professor/${professor.id}` },
-          ...(activeTab ? [{ label: activeTab.label, href: isHistoricoDetail ? activeTab.href(professor.id) : undefined }] : []),
-          ...(isHistoricoDetail ? [{ label: "Revisão" }] : []),
-          ...(isAjustes ? [{ label: "Ajustes" }] : []),
-        ]}
+        backHref={
+          isHistoricoDetail || isAjustes ? `/professor/${professor.id}` : "/dashboard"
+        }
+        backLabel={isHistoricoDetail || isAjustes ? professor.name : "Estudar"}
+        subtitle={
+          <span className="flex items-center gap-2">
+            {/* Cor de matéria sempre como ponto, nunca como fundo. */}
+            <span aria-hidden className={cn("h-2 w-2 flex-none rounded-capsula", color.bg)} />
+            {professor.discipline}
+          </span>
+        }
         action={
           isAjustes ? undefined : (
             <Link
               href={`/professor/${professor.id}/ajustes`}
-              onClick={handleTabClick}
-              className={buttonVariants("secondary", "sm")}
+              onClick={handleLinkClick}
               aria-label={`Ajustes de ${professor.name}`}
+              className={cn(
+                "flex h-capsula-secundaria items-center gap-2 rounded-capsula bg-white px-5",
+                "text-[16px] font-semibold text-indigo shadow-capsula-secundaria",
+                "transition-all duration-180 ease-out hover:bg-papel",
+                "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+              )}
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-[17px] w-[17px]" />
               Ajustes
             </Link>
           )
         }
       />
-      {/* Em telas estreitas a disciplina vai para cima das abas e a régua de
-          abas rola na horizontal — com 4 abas elas não cabem lado a lado com
-          o rótulo em 360px. */}
-      <div className="-mt-4 mb-6 flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
-        <p className="text-sm text-muted-foreground">{professor.discipline}</p>
-        <nav className="-mx-4 overflow-x-auto px-4 md:mx-0 md:ml-auto md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="flex w-max gap-1 rounded-full bg-muted p-1">
-            {TABS.map((tab) => {
-              const isActive = tab.match(pathname);
-              return (
-                <Link
-                  key={tab.label}
-                  href={tab.href(professor.id)}
-                  onClick={handleTabClick}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </div>
-        </nav>
-      </div>
+
+      {ativa && !isAjustes && !isHistoricoDetail && (
+        <div className="md:max-w-[560px]">
+          <Segmented
+            aria-label={`Seções de ${professor.name}`}
+            value={ativa}
+            onValueChange={handleTabChange}
+            options={TABS.map((t) => ({ value: t.value, label: t.label }))}
+            size="mobile"
+            className="md:hidden"
+          />
+          <Segmented
+            aria-label={`Seções de ${professor.name}`}
+            value={ativa}
+            onValueChange={handleTabChange}
+            options={TABS.map((t) => ({ value: t.value, label: t.label }))}
+            size="desktop"
+            className="hidden md:flex"
+          />
+        </div>
+      )}
     </div>
   );
 }
