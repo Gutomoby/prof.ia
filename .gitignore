@@ -19,3 +19,10 @@ Thumbs.db
 
 # Backups
 *.bak
+
+# Handoff de design (Kango): protótipos em HTML, ~1,2 MB, com runtime próprio.
+# São referência de leitura, não código de produção — o que vira código mora em
+# globals.css, tailwind.config.ts e components/ui/. Fora do repo para não
+# versionar binário nem confundir com fonte.
+design_handoff_kango_ui/
+Kanguru EDtech gamificada.zip
