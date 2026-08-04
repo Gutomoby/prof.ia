@@ -2,8 +2,8 @@
 Wrapper para chamadas à Claude API (Anthropic).
 
 Centraliza a escolha de modelo por feature, conforme decidido:
-  - Chat e Prova:                       claude-sonnet-4-20250514
-  - Quiz, Simulado, Reforço, Análise:   claude-haiku-4-5-20251001
+  - Módulos, Chat e Prova (qualidade):        claude-sonnet-5
+  - Quiz, Simulado, Reforço, Análise (custo): claude-haiku-4-5-20251001
 """
 
 from functools import lru_cache
@@ -12,9 +12,9 @@ from anthropic import Anthropic
 
 from services.config import settings
 
-# Modelos definidos na especificação do projeto.
-# Mantenha aqui — se trocar de modelo, troca em um lugar só.
-MODEL_SONNET = "claude-sonnet-4-20250514"
+# Modelos do projeto. Mantenha aqui — se trocar de modelo, troca em um lugar só.
+# claude-sonnet-4-20250514 saiu do ar (404 na API) — substituído pelo Sonnet 5.
+MODEL_SONNET = "claude-sonnet-5"
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
 
 
