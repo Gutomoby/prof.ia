@@ -2,24 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, GraduationCap, Flame } from "lucide-react";
+import { Plus, GraduationCap, ChevronRight } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { PageHeader } from "@/components/layout/PageHeader";
-import { Card, CardFooter } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { MetricText, toneDaNota } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
-import { scoreBadgeVariant } from "@/lib/utils";
 import type { ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
 
-export default function DashboardPage() {
+export default function EstudarPage() {
   const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,10 +98,12 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeader
-        title="Início"
+        title="Estudar"
         action={
-          <Link href="/professor/novo" className={buttonVariants("default", "default")}>
-            <Plus className="h-4 w-4" />
+          // Secundária de propósito: a cápsula principal da tela é a do cartão
+          // de hoje. Se as duas fossem cheias, nenhuma seria o caminho.
+          <Link href="/professor/novo" className={capsuleVariants("secundaria")}>
+            <Plus className="h-[18px] w-[18px]" />
             Novo professor
           </Link>
         }
@@ -110,13 +111,12 @@ export default function DashboardPage() {
 
       {loading && (
         <div className="space-y-6">
-          <Skeleton className="h-16 rounded-2xl" />
-          <Skeleton className="h-44 rounded-2xl" />
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-36 rounded-xl" />
-            ))}
+          <Skeleton className="h-[92px] rounded-grupo" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <Skeleton className="h-52 rounded-grupo lg:col-span-2" />
+            <Skeleton className="h-52 rounded-grupo" />
           </div>
+          <Skeleton className="h-40 rounded-grupo" />
         </div>
       )}
 
@@ -124,9 +124,9 @@ export default function DashboardPage() {
         <InlineAlert>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>{error}</span>
-            <Button variant="outline" size="sm" onClick={load}>
+            <Capsule variant="secundaria" onClick={load}>
               Tentar novamente
-            </Button>
+            </Capsule>
           </div>
         </InlineAlert>
       )}
@@ -137,8 +137,8 @@ export default function DashboardPage() {
           title="Comece pela matéria que mais te preocupa"
           description="Crie um professor, suba o material dele, e ele passa a estudar com você."
           action={
-            <Link href="/professor/novo" className={buttonVariants("default", "default")}>
-              <Plus className="h-4 w-4" />
+            <Link href="/professor/novo" className={capsuleVariants("principal")}>
+              <Plus className="h-[18px] w-[18px]" />
               Criar professor
             </Link>
           }
@@ -146,7 +146,7 @@ export default function DashboardPage() {
       )}
 
       {!loading && !error && professors.length > 0 && (
-        <div className="space-y-8">
+        <div className="space-y-6">
           <ProgressStrip progress={progress} loading={progressLoading} />
 
           {/* Próximo passo e mini-calendário lado a lado no desktop; empilhados
@@ -154,7 +154,7 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               {detailsLoading ? (
-                <Skeleton className="h-44 rounded-2xl" />
+                <Skeleton className="h-52 rounded-grupo" />
               ) : (
                 globalStep && <TodayCard globalStep={globalStep} />
               )}
@@ -162,72 +162,53 @@ export default function DashboardPage() {
             <MiniCalendar />
           </div>
 
-          <div>
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Suas matérias
-            </h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {professors.map((p) => {
-                const score = scores[p.id];
-                const hasData = score && score.topics.length > 0;
-                const semMaterial = documentCounts[p.id] === 0;
-                const color = professorColor(p.id);
+          <InsetList label="Suas matérias">
+            {professors.map((p) => {
+              const score = scores[p.id];
+              const temDados = score && score.topics.length > 0;
+              const semMaterial = documentCounts[p.id] === 0;
+              const color = professorColor(p.id);
 
-                return (
-                  <Card
-                    key={p.id}
-                    className="flex flex-col overflow-hidden border-border/60 shadow-none transition-shadow hover:shadow-md"
-                  >
-                    <Link
-                      href={`/professor/${p.id}`}
-                      className="block flex-1 space-y-2 p-6 transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-                    >
-                      <div className="space-y-1.5">
-                        <h3 className="flex items-center gap-2 text-base font-semibold leading-none tracking-tight">
-                          <span className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${color.bg}`} />
-                          {p.name}
-                        </h3>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                          {p.discipline}
-                        </p>
-                      </div>
-
-                      {detailsLoading ? (
-                        <Skeleton className="h-5 w-32" />
-                      ) : hasData ? (
-                        <div className="flex items-center gap-2">
-                          <Badge variant={scoreBadgeVariant(score.overall_mastery_pct)}>
-                            <span className="metric">{score.overall_mastery_pct}%</span>
-                            <span className="ml-1">domínio</span>
-                          </Badge>
-                          {score.streak_days > 0 && (
-                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                              <Flame className="h-3.5 w-3.5" />
-                              {score.streak_days} {score.streak_days === 1 ? "dia" : "dias"}
-                            </span>
-                          )}
-                        </div>
-                      ) : (
-                        // Estado vazio é convite, não beco sem saída: diz o que
-                        // fazer em vez de só "sem dados".
-                        <p className="text-xs text-muted-foreground">
-                          {semMaterial ? `Sem material ainda — ensine o ${p.name}` : "Faça o diagnóstico inicial"}
-                        </p>
-                      )}
-                    </Link>
-                    <CardFooter className="gap-2 border-t border-border/60 pt-3">
-                      <Link href={`/professor/${p.id}/quiz`} className={buttonVariants("ghost", "sm", "flex-1")}>
-                        Quiz
-                      </Link>
-                      <Link href={`/professor/${p.id}/configurar`} className={buttonVariants("ghost", "sm", "flex-1")}>
-                        Material
-                      </Link>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
+              return (
+                <InsetRow
+                  key={p.id}
+                  href={`/professor/${p.id}`}
+                  title={
+                    <span className="flex items-center gap-2">
+                      {/* Cor de matéria só como ponto de 8px. */}
+                      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${color.bg}`} />
+                      <span className="truncate">{p.name}</span>
+                    </span>
+                  }
+                  subtitle={
+                    detailsLoading
+                      ? p.discipline
+                      : temDados
+                        ? p.discipline
+                        : // Estado vazio é convite, não beco sem saída: diz o que
+                          // fazer em vez de só "sem dados".
+                          semMaterial
+                          ? `Sem material ainda — ensine o ${p.name}`
+                          : "Faça o diagnóstico inicial"
+                  }
+                  value={
+                    detailsLoading ? (
+                      <Skeleton className="h-4 w-10" />
+                    ) : temDados ? (
+                      <MetricText
+                        className="text-corpo"
+                        weight="bold"
+                        tone={toneDaNota(score.overall_mastery_pct)}
+                      >
+                        {score.overall_mastery_pct}%
+                      </MetricText>
+                    ) : undefined
+                  }
+                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                />
+              );
+            })}
+          </InsetList>
         </div>
       )}
     </div>

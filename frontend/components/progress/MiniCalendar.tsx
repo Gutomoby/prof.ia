@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowRight } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { api } from "@/lib/api";
-import { Card } from "@/components/ui/card";
+import { GlassCard } from "@/components/ui/glass-card";
+import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { professorColor } from "@/lib/professor-color";
 import { cn, localDateKey } from "@/lib/utils";
@@ -17,7 +18,7 @@ function pad(n: number) {
 }
 
 /*
-  Versão compacta do calendário para o dashboard: só o mês atual, dias com
+  Versão compacta do calendário para a tela Estudar: só o mês atual, dias com
   bolinha colorida por matéria estudada e traço nos dias com evento marcado.
   Clique leva para /calendario, onde mora a visão completa.
 */
@@ -40,11 +41,11 @@ export function MiniCalendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sem dado não há o que mostrar — o dashboard fica mais limpo sem um card de erro.
+  // Sem dado não há o que mostrar — a tela fica mais limpa sem um cartão de erro.
   if (failed) return null;
 
   if (!data) {
-    return <Skeleton className="h-full min-h-[16rem] rounded-xl" />;
+    return <Skeleton className="h-full min-h-[16rem] rounded-grupo" />;
   }
 
   const materiasByDay: Record<string, string[]> = {};
@@ -60,21 +61,21 @@ export function MiniCalendar() {
   const monthLabel = now.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 
   return (
-    <Card className="flex h-full flex-col p-4">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold capitalize">{monthLabel}</p>
+    <GlassCard nivel="cartao" radius="grupo" className="flex h-full flex-col p-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <p className="text-linha font-semibold capitalize text-tinta">{monthLabel}</p>
         <Link
           href="/calendario"
-          className="inline-flex items-center gap-1 text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="-mr-1 inline-flex items-center gap-0.5 rounded-chip py-1 pl-2 pr-1 text-nota font-semibold text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
         >
           Ver calendário
-          <ArrowRight className="h-3 w-3" />
+          <ChevronRight className="h-3.5 w-3.5" />
         </Link>
       </div>
 
-      <div className="grid grid-cols-7 gap-y-1 text-center">
+      <div className="grid grid-cols-7 gap-y-1.5 text-center">
         {WEEKDAYS.map((w, i) => (
-          <span key={i} className="text-[10px] font-semibold uppercase text-muted-foreground">
+          <span key={i} className="text-rotulo uppercase text-tinta-fraca">
             {w}
           </span>
         ))}
@@ -88,26 +89,28 @@ export function MiniCalendar() {
           const isToday = key === todayKey;
           return (
             <span key={key} className="flex flex-col items-center gap-0.5">
-              <span
+              <MetricText
                 className={cn(
-                  "metric flex h-6 w-6 items-center justify-center rounded-full text-xs",
-                  isToday && "bg-primary font-bold text-primary-foreground"
+                  "flex h-6 w-6 items-center justify-center rounded-full text-nota",
+                  isToday && "bg-indigo text-papel"
                 )}
+                tone={isToday ? "tinta" : "fraca"}
+                weight={isToday ? "bold" : "normal"}
               >
                 {day}
-              </span>
+              </MetricText>
               <span className="flex h-1.5 items-center gap-0.5">
                 {materias.slice(0, 3).map((pid) => (
                   <span key={pid} className={cn("h-1.5 w-1.5 rounded-full", professorColor(pid).bg)} />
                 ))}
                 {materias.length === 0 && eventDays.has(key) && (
-                  <span className="h-1 w-3 rounded-full bg-destructive/70" />
+                  <span className="h-1 w-3 rounded-full bg-tinta-fraca/60" />
                 )}
               </span>
             </span>
           );
         })}
       </div>
-    </Card>
+    </GlassCard>
   );
 }
