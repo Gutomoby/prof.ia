@@ -157,16 +157,28 @@ def get_or_create_progress(user_id: str) -> dict:
     return sb.table("user_progress").select("*").eq("user_id", user_id).limit(1).execute().data[0]
 
 
+def xp_today_of(row: dict) -> int:
+    """XP acumulado hoje. A coluna xp_today só vale se a data bater com hoje —
+    o "zerar à meia-noite" é implícito: um dia sem XP nunca escreve a linha."""
+    if row.get("xp_today_date") == today_local().isoformat():
+        return row.get("xp_today") or 0
+    return 0
+
+
 def award_xp(user_id: str, amount: int, counts_for_streak: bool = False) -> dict:
     """Credita XP e, se a ação contar como estudo do dia, atualiza a sequência.
 
     Só atividade concluída mexe na sequência — subir material rende XP mas não
     mantém o streak vivo, senão bastaria fazer upload para "estudar".
+    Todo XP conta para a meta diária, inclusive material: a meta mede esforço
+    do dia, não só quizzes.
     """
     current = get_or_create_progress(user_id)
 
     patch: dict = {
         "total_xp": current["total_xp"] + amount,
+        "xp_today": xp_today_of(current) + amount,
+        "xp_today_date": today_local().isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
 

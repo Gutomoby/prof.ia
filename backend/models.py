@@ -96,6 +96,9 @@ class ChatSendRequest(BaseModel):
 
 ActivityType = Literal["quiz", "simulado", "prova", "reforco"]
 
+# Dificuldade do quiz — muda o estilo das questões, não a matéria.
+Difficulty = Literal["facil", "medio", "dificil"]
+
 
 class ActivityGenerateRequest(BaseModel):
     """Pede à IA para gerar uma atividade nova."""
@@ -104,6 +107,13 @@ class ActivityGenerateRequest(BaseModel):
     topic: str | None = Field(
         None,
         description="Tópico específico (ex.: 'Tábuas de Mortalidade'). Se vazio, IA escolhe.",
+    )
+    module_id: UUID | None = Field(
+        None,
+        description="Gerar o quiz cobrindo um módulo inteiro (ignora `topic`).",
+    )
+    difficulty: Difficulty | None = Field(
+        None, description="Dificuldade das questões. Vazio = médio."
     )
 
 
@@ -195,6 +205,30 @@ class UserProgress(BaseModel):
     current_streak: int
     longest_streak: int
     last_activity_date: date | None
+    daily_goal_xp: int = Field(..., description="Meta diária de XP escolhida pelo usuário.")
+    xp_hoje: int = Field(..., description="XP acumulado hoje (fuso do usuário).")
+
+
+class DailyGoalUpdate(BaseModel):
+    daily_goal_xp: int = Field(..., ge=10, le=1000, description="Nova meta diária de XP.")
+
+
+# ---------------------------------------------------------------------------
+# Módulos (capítulos gerados por IA a partir do material)
+# ---------------------------------------------------------------------------
+
+
+class Module(BaseModel):
+    id: UUID
+    professor_id: UUID
+    position: int
+    name: str
+    description: str | None
+    topics: list[str]
+    created_at: datetime
+    # Derivados de activity_results (não persistidos na tabela):
+    n_tentativas: int = 0
+    melhor_score_pct: float | None = None
 
 
 # ---------------------------------------------------------------------------

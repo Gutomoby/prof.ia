@@ -2,21 +2,19 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { Brand } from "@/components/layout/Brand";
 
-export default function LoginPage() {
-  const router = useRouter();
+export default function RecuperarSenhaPage() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,30 +22,48 @@ export default function LoginPage() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/atualizar-senha`,
+    });
     setLoading(false);
-    if (error) {
-      setError("E-mail ou senha inválidos.");
+
+    if (resetError) {
+      setError("Não foi possível enviar o e-mail agora. Tente de novo em instantes.");
       return;
     }
+    setSent(true);
+  }
 
-    router.push("/dashboard");
-    router.refresh();
+  if (sent) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-2xl">
+            <MailCheck className="h-6 w-6 text-success" />
+            E-mail enviado
+          </CardTitle>
+          <CardDescription>
+            Se existir uma conta para <strong>{email}</strong>, você vai receber um
+            link para redefinir a senha. Confira também a caixa de spam.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Link href="/login" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
+            Voltar para o login
+          </Link>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
     <div className="space-y-6">
-      {/* No desktop o wordmark já está no painel ao lado. */}
-      <div className="text-center lg:hidden">
-        <Brand className="text-3xl" />
-        <p className="mt-1 text-sm text-muted-foreground">O seu companheiro de estudos</p>
-      </div>
-
       <Card>
         <CardHeader>
-          <CardTitle className="text-2xl">Entrar</CardTitle>
-          <CardDescription>Bom te ver de novo. Bora estudar?</CardDescription>
+          <CardTitle className="text-2xl">Recuperar senha</CardTitle>
+          <CardDescription>
+            Informe o e-mail da conta e enviaremos um link para criar uma senha nova.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -62,40 +78,21 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Senha</Label>
-                <Link
-                  href="/recuperar-senha"
-                  className="text-xs font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Esqueci minha senha
-                </Link>
-              </div>
-              <Input
-                id="password"
-                type="password"
-                required
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
             {error && <InlineAlert>{error}</InlineAlert>}
             <Button type="submit" size="lg" className="w-full" loading={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Enviando..." : "Enviar link"}
             </Button>
           </form>
         </CardContent>
       </Card>
 
       <p className="text-center text-sm text-muted-foreground">
-        Ainda não tem conta?{" "}
+        Lembrou a senha?{" "}
         <Link
-          href="/criar-conta"
+          href="/login"
           className="font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          Criar conta
+          Entrar
         </Link>
       </p>
     </div>

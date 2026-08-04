@@ -32,7 +32,10 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/professor");
-  const isLoginPage = pathname === "/login";
+  // Logado não tem o que fazer no login/criar conta. /recuperar-senha e
+  // /atualizar-senha ficam FORA disso: o link de recovery autentica o usuário,
+  // e redirecionar aqui impediria a troca de senha.
+  const isGuestOnlyPage = pathname === "/login" || pathname === "/criar-conta";
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -40,7 +43,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && isLoginPage) {
+  if (user && isGuestOnlyPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
@@ -50,5 +53,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/professor/:path*", "/login"],
+  matcher: ["/dashboard/:path*", "/professor/:path*", "/login", "/criar-conta"],
 };

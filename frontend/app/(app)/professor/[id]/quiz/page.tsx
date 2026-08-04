@@ -14,10 +14,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
 import { QuizReview } from "@/components/quiz/QuizReview";
+import { ModuleList } from "@/components/quiz/ModuleList";
+import { DifficultyPicker, DIFFICULTY_LABELS } from "@/components/quiz/DifficultyPicker";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
 import { pendingQuizKey } from "@/lib/use-start-quiz";
 import { scoreBadgeVariant } from "@/lib/utils";
-import type { ActivityHistoryItem, ActivitySubmitResult, GeneratedActivity } from "@/lib/types";
+import type { ActivityHistoryItem, ActivitySubmitResult, Difficulty, GeneratedActivity } from "@/lib/types";
 
 type View = "idle" | "respondendo" | "resultado";
 
@@ -27,6 +29,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   const [view, setView] = useState<View>("idle");
   const [topic, setTopic] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("medio");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
 
@@ -87,11 +90,16 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
-  async function startQuiz(quizTopic: string | null) {
+  async function startQuiz(opts: { topic?: string | null; moduleId?: string | null }) {
     setGenError(null);
     setGenerating(true);
     try {
-      const generated = await api.generateAtividade({ professor_id: professorId, topic: quizTopic });
+      const generated = await api.generateAtividade({
+        professor_id: professorId,
+        topic: opts.topic ?? null,
+        module_id: opts.moduleId ?? null,
+        difficulty,
+      });
       setActivity(generated);
       setAnswers({});
       setResult(null);
@@ -147,16 +155,33 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     <div className="mx-auto max-w-2xl space-y-6">
       {view === "idle" && (
         <>
+          {/* Dificuldade é global na tela: vale para módulos e tópico livre. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span className="text-sm font-medium text-muted-foreground">Dificuldade das questões</span>
+            <DifficultyPicker value={difficulty} onChange={setDifficulty} disabled={generating} />
+          </div>
+
+          {genError && <InlineAlert>{genError}</InlineAlert>}
+
+          <div className="space-y-3">
+            <h2 className="text-sm font-medium text-muted-foreground">Módulos do material</h2>
+            <ModuleList
+              professorId={professorId}
+              starting={generating}
+              onStart={(moduleId) => startQuiz({ moduleId })}
+            />
+          </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Gerar novo quiz</CardTitle>
+              <CardTitle>Quiz por tópico livre</CardTitle>
               <CardDescription>Deixe o tópico em branco para a IA escolher.</CardDescription>
             </CardHeader>
             <CardContent>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  startQuiz(topic || null);
+                  startQuiz({ topic: topic || null });
                 }}
                 className="space-y-4"
               >
@@ -169,7 +194,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                     onChange={(e) => setTopic(e.target.value)}
                   />
                 </div>
-                {genError && <InlineAlert>{genError}</InlineAlert>}
                 <Button type="submit" size="lg" className="w-full" loading={generating}>
                   {generating ? "Gerando..." : "Gerar quiz"}
                 </Button>
@@ -214,6 +238,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                         <p className="truncate text-sm font-medium">{h.topic || "Tópico geral"}</p>
                         <p className="text-xs text-muted-foreground">
                           {new Date(h.created_at).toLocaleDateString("pt-BR")}
+                          {h.difficulty ? ` · ${DIFFICULTY_LABELS[h.difficulty]}` : ""}
                         </p>
                       </div>
                       <Badge variant={scoreBadgeVariant(h.score_pct as number)} className="metric">
@@ -308,7 +333,13 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                   className="flex-1"
                   size="lg"
                   loading={generating}
-                  onClick={() => startQuiz(activity?.topic ?? null)}
+                  onClick={() =>
+                    startQuiz(
+                      activity?.module_id
+                        ? { moduleId: activity.module_id }
+                        : { topic: activity?.topic ?? null }
+                    )
+                  }
                 >
                   <RotateCcw className="h-4 w-4" />
                   Tentar novamente

@@ -13,6 +13,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
+import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
 import { scoreBadgeVariant } from "@/lib/utils";
@@ -148,11 +149,18 @@ export default function DashboardPage() {
         <div className="space-y-8">
           <ProgressStrip progress={progress} loading={progressLoading} />
 
-          {detailsLoading ? (
-            <Skeleton className="h-44 rounded-2xl" />
-          ) : (
-            globalStep && <TodayCard globalStep={globalStep} />
-          )}
+          {/* Próximo passo e mini-calendário lado a lado no desktop; empilhados
+              no celular (o "o que fazer hoje" vem primeiro de propósito). */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              {detailsLoading ? (
+                <Skeleton className="h-44 rounded-2xl" />
+              ) : (
+                globalStep && <TodayCard globalStep={globalStep} />
+              )}
+            </div>
+            <MiniCalendar />
+          </div>
 
           <div>
             <h2 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-foreground">

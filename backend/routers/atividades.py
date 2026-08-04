@@ -60,6 +60,39 @@ def _strip_answers(questions: list[dict]) -> list[dict]:
 # Geração
 # ---------------------------------------------------------------------------
 
+# A dificuldade muda o ESTILO das questões, não a matéria — o material de base
+# é o mesmo; o que varia é o quanto a questão exige de raciocínio.
+_DIFFICULTY_INSTRUCTIONS = {
+    "facil": (
+        "Dificuldade FÁCIL: questões diretas de fixação, testando definições, "
+        "conceitos básicos e reconhecimento. Alternativas erradas claramente distintas."
+    ),
+    "medio": (
+        "Dificuldade MÉDIA: questões de aplicação, no nível típico de uma prova — "
+        "exigem entender o conceito e aplicá-lo a um caso simples."
+    ),
+    "dificil": (
+        "Dificuldade DIFÍCIL: questões desafiadoras que exigem raciocínio em mais "
+        "de uma etapa, casos-limite e distratores plausíveis que pegam quem decorou "
+        "sem entender. Sem pegadinhas de enunciado ambíguo — difícil pelo conteúdo."
+    ),
+}
+
+
+def _get_module(module_id, professor_id) -> dict:
+    sb = get_supabase()
+    res = (
+        sb.table("modules")
+        .select("id, name, description, topics")
+        .eq("id", str(module_id))
+        .eq("professor_id", str(professor_id))
+        .limit(1)
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Módulo não encontrado")
+    return res.data[0]
+
 
 @router.post("/gerar")
 def gerar_atividade(payload: ActivityGenerateRequest):
@@ -70,16 +103,38 @@ def gerar_atividade(payload: ActivityGenerateRequest):
         )
 
     professor = _get_professor(payload.professor_id)
+    difficulty = payload.difficulty or "medio"
 
-    query = payload.topic or professor["discipline"]
-    chunks = search_chunks(payload.professor_id, query, top_k=8)
+    module = _get_module(payload.module_id, payload.professor_id) if payload.module_id else None
+
+    if module:
+        # Quiz do módulo inteiro: busca material pelos tópicos do capítulo.
+        topics: list[str] = module.get("topics") or []
+        query = f"{module['name']}: {', '.join(topics)}" if topics else module["name"]
+        scope_desc = (
+            f'cobrindo o módulo inteiro "{module["name"]}"'
+            + (f" (tópicos: {', '.join(topics)})" if topics else "")
+        )
+        n_questoes = "8 a 10"
+        topic_label = module["name"]
+    else:
+        query = payload.topic or professor["discipline"]
+        scope_desc = (
+            f'sobre o tópico "{payload.topic}"'
+            if payload.topic
+            else "sobre um tópico relevante do material acima"
+        )
+        n_questoes = "5 a 8"
+        topic_label = payload.topic
+
+    chunks = search_chunks(payload.professor_id, query, top_k=10 if module else 8)
     context = "\n\n---\n\n".join(c["content"] for c in chunks) or "(nenhum material enviado ainda)"
 
     system_prompt = (professor["system_prompt"] or "").replace("{chunks_retrieved}", context)
 
-    topic_desc = f'sobre o tópico "{payload.topic}"' if payload.topic else "sobre um tópico relevante do material acima"
     user_prompt = (
-        f"Gere um quiz de múltipla escolha com 5 a 8 questões {topic_desc}. "
+        f"Gere um quiz de múltipla escolha com {n_questoes} questões {scope_desc}. "
+        f"{_DIFFICULTY_INSTRUCTIONS[difficulty]} "
         "Cada questão precisa ter exatamente 4 alternativas, apenas uma correta. "
         "Baseie as questões prioritariamente no material de contexto do system prompt; "
         "se ele não cobrir o tópico, use conhecimento geral da matéria. "
@@ -98,8 +153,10 @@ def gerar_atividade(payload: ActivityGenerateRequest):
             {
                 "professor_id": str(payload.professor_id),
                 "activity_type": "quiz",
-                "topic": payload.topic,
+                "topic": topic_label,
                 "questions": questions,
+                "module_id": str(payload.module_id) if payload.module_id else None,
+                "difficulty": difficulty,
             }
         )
         .execute()
@@ -111,6 +168,8 @@ def gerar_atividade(payload: ActivityGenerateRequest):
     return {
         "activity_id": activity["id"],
         "topic": activity["topic"],
+        "module_id": activity.get("module_id"),
+        "difficulty": activity.get("difficulty"),
         "questions": _strip_answers(questions),
     }
 
@@ -184,7 +243,7 @@ def list_atividades(professor_id: UUID, activity_type: str = "quiz"):
     sb = get_supabase()
     res = (
         sb.table("activity_results")
-        .select("id, topic, score_pct, time_seconds, created_at")
+        .select("id, topic, difficulty, score_pct, time_seconds, created_at")
         .eq("professor_id", str(professor_id))
         .eq("activity_type", activity_type)
         .order("created_at", desc=True)
@@ -205,7 +264,7 @@ def get_atividade(activity_id: UUID):
     sb = get_supabase()
     found = (
         sb.table("activity_results")
-        .select("id, topic, questions, answers, score_pct, time_seconds, created_at")
+        .select("id, topic, difficulty, questions, answers, score_pct, time_seconds, created_at")
         .eq("id", str(activity_id))
         .limit(1)
         .execute()
@@ -222,6 +281,7 @@ def get_atividade(activity_id: UUID):
     return {
         "id": row["id"],
         "topic": row["topic"],
+        "difficulty": row.get("difficulty"),
         "score_pct": row["score_pct"],
         "time_seconds": row["time_seconds"],
         "created_at": row["created_at"],

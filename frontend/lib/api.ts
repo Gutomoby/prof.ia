@@ -15,6 +15,8 @@ import type {
   ActivitySubmitResult,
   ActivityHistoryItem,
   ActivityDetail,
+  Difficulty,
+  Module,
   ScoreSummary,
   StudyPlan,
   UserProgress,
@@ -160,7 +162,12 @@ export function deleteDocument(id: string) {
 // Atividades (quiz)
 // ---------------------------------------------------------------------------
 
-export function generateAtividade(payload: { professor_id: string; topic?: string | null }) {
+export function generateAtividade(payload: {
+  professor_id: string;
+  topic?: string | null;
+  module_id?: string | null;
+  difficulty?: Difficulty | null;
+}) {
   return request<GeneratedActivity>("/atividades/gerar", {
     method: "POST",
     body: JSON.stringify({ ...payload, activity_type: "quiz" }),
@@ -219,6 +226,28 @@ export function getProgress() {
   return request<UserProgress>("/progresso");
 }
 
+export function updateDailyGoal(daily_goal_xp: number) {
+  return request<UserProgress>("/progresso/meta", {
+    method: "PATCH",
+    body: JSON.stringify({ daily_goal_xp }),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Módulos (capítulos do material, organizados por IA)
+// ---------------------------------------------------------------------------
+
+export function listModules(professorId: string) {
+  return request<{ items: Module[] }>(`/professores/${professorId}/modulos`);
+}
+
+// Reorganizar substitui os módulos atuais; o histórico de quizzes permanece.
+export function generateModules(professorId: string) {
+  return request<{ items: Module[] }>(`/professores/${professorId}/modulos/gerar`, {
+    method: "POST",
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Calendário
 // ---------------------------------------------------------------------------
@@ -271,6 +300,9 @@ export const api = {
   getStudyPlan,
   generateStudyPlan,
   getProgress,
+  updateDailyGoal,
+  listModules,
+  generateModules,
   getCalendar,
   createEvent,
   deleteEvent,

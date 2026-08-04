@@ -35,9 +35,13 @@ export interface QuizQuestion {
   explicacao?: string;
 }
 
+export type Difficulty = "facil" | "medio" | "dificil";
+
 export interface GeneratedActivity {
   activity_id: string;
   topic: string | null;
+  module_id: string | null;
+  difficulty: Difficulty | null;
   questions: QuizQuestion[];
 }
 
@@ -60,6 +64,7 @@ export interface ActivitySubmitResult {
 export interface ActivityHistoryItem {
   id: string;
   topic: string | null;
+  difficulty: Difficulty | null;
   score_pct: number | null;
   time_seconds: number | null;
   created_at: string;
@@ -68,10 +73,27 @@ export interface ActivityHistoryItem {
 export interface ActivityDetail {
   id: string;
   topic: string | null;
+  difficulty: Difficulty | null;
   score_pct: number;
   time_seconds: number | null;
   created_at: string;
   questions: SubmittedQuestionResult[];
+}
+
+// ---------------------------------------------------------------------------
+// Módulos (capítulos gerados por IA) — GET/POST /professores/{id}/modulos
+// ---------------------------------------------------------------------------
+
+export interface Module {
+  id: string;
+  professor_id: string;
+  position: number;
+  name: string;
+  description: string | null;
+  topics: string[];
+  created_at: string;
+  n_tentativas: number;
+  melhor_score_pct: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +158,8 @@ export interface UserProgress {
   current_streak: number;
   longest_streak: number;
   last_activity_date: string | null;
+  daily_goal_xp: number;
+  xp_hoje: number;
 }
 
 // ---------------------------------------------------------------------------

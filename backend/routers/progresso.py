@@ -1,25 +1,25 @@
 """
-Router de Progresso — XP, nível e sequência de dias do usuário (global).
+Router de Progresso — XP, nível, sequência e meta diária do usuário (global).
 
 Endpoints:
-  GET /progresso    estado atual da progressão
+  GET   /progresso        estado atual da progressão
+  PATCH /progresso/meta   ajusta a meta diária de XP
 
-É global de propósito: sequência e nível são conceitos por pessoa, não por
-matéria. O progresso por matéria continua em /score/{professor_id}.
+É global de propósito: sequência, nível e meta são conceitos por pessoa, não
+por matéria. O progresso por matéria continua em /score/{professor_id}.
 """
 
 from fastapi import APIRouter
 
-from models import UserProgress
+from models import DailyGoalUpdate, UserProgress
 from services.config import settings
-from services.progress import get_or_create_progress, level_for_xp
+from services.progress import get_or_create_progress, level_for_xp, xp_today_of
+from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/progresso", tags=["progresso"])
 
 
-@router.get("", response_model=UserProgress)
-def get_progress():
-    row = get_or_create_progress(settings.MVP_USER_ID)
+def _serialize(row: dict) -> dict:
     level, xp_no_nivel, xp_do_nivel = level_for_xp(row["total_xp"])
     return {
         "total_xp": row["total_xp"],
@@ -29,4 +29,24 @@ def get_progress():
         "current_streak": row["current_streak"],
         "longest_streak": row["longest_streak"],
         "last_activity_date": row["last_activity_date"],
+        "daily_goal_xp": row.get("daily_goal_xp") or 50,
+        "xp_hoje": xp_today_of(row),
     }
+
+
+@router.get("", response_model=UserProgress)
+def get_progress():
+    return _serialize(get_or_create_progress(settings.MVP_USER_ID))
+
+
+@router.patch("/meta", response_model=UserProgress)
+def update_daily_goal(payload: DailyGoalUpdate):
+    get_or_create_progress(settings.MVP_USER_ID)  # garante que a linha existe
+    sb = get_supabase()
+    res = (
+        sb.table("user_progress")
+        .update({"daily_goal_xp": payload.daily_goal_xp})
+        .eq("user_id", settings.MVP_USER_ID)
+        .execute()
+    )
+    return _serialize(res.data[0])

@@ -63,6 +63,65 @@ _QUIZ_TOOL = {
 }
 
 
+# Schema da tool para organizar o material em módulos (capítulos).
+_MODULES_TOOL = {
+    "name": "return_modules",
+    "description": "Retorna os módulos (capítulos) em que o material foi organizado.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "modules": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Título curto do módulo, como um capítulo de livro.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "1-2 frases sobre o que o módulo cobre.",
+                        },
+                        "topics": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "3-8 tópicos específicos cobertos pelo módulo.",
+                        },
+                    },
+                    "required": ["name", "description", "topics"],
+                },
+            }
+        },
+        "required": ["modules"],
+    },
+}
+
+
+def generate_modules(system_prompt: str, user_prompt: str, model: str = MODEL_SONNET) -> dict:
+    """Pede ao Claude a divisão do material em módulos, via tool-forcing.
+
+    Usa Sonnet por padrão: acontece raramente (só quando o usuário reorganiza)
+    e a qualidade da divisão define a experiência de estudo inteira.
+    Retorna o dict com a chave "modules" (ver _MODULES_TOOL para o schema).
+    """
+    client = _get_client()
+    response = client.messages.create(
+        model=model,
+        max_tokens=4096,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_prompt}],
+        tools=[_MODULES_TOOL],
+        tool_choice={"type": "tool", "name": "return_modules"},
+    )
+
+    for block in response.content:
+        if block.type == "tool_use" and block.name == "return_modules":
+            return block.input
+
+    raise RuntimeError("Claude não retornou os módulos no formato esperado.")
+
+
 # Schema da tool para o plano de estudos — mesma técnica de tool-forcing do quiz.
 _STUDY_PLAN_TOOL = {
     "name": "return_study_plan",

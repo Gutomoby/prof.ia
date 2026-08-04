@@ -32,14 +32,9 @@ export default function LandingPage() {
           <Link href="/login" className={buttonVariants("default", "lg", "px-8")}>
             Entrar no app
           </Link>
-          <a
-            href="https://github.com/Gutomoby/prof.ia"
-            target="_blank"
-            rel="noopener noreferrer"
-            className={buttonVariants("outline", "lg", "px-8")}
-          >
-            Ver código no GitHub
-          </a>
+          <Link href="/criar-conta" className={buttonVariants("outline", "lg", "px-8")}>
+            Criar conta
+          </Link>
         </div>
       </section>
 
@@ -83,13 +78,7 @@ export default function LandingPage() {
       </section>
 
       <footer className="border-t py-8 text-center text-sm text-muted-foreground">
-        Feito com ❤️ por{" "}
-        <a
-          href="https://github.com/Gutomoby"
-          className="underline-offset-2 hover:underline"
-        >
-          @Gutomoby
-        </a>
+        Kango — o seu companheiro de estudos.
       </footer>
     </main>
   );
