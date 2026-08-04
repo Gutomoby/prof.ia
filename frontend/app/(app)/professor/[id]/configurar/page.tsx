@@ -1,25 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { FileStack, Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { FileText, Loader2, Trash2, Type, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { EmptyState } from "@/components/ui/empty-state";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { MetricText } from "@/components/ui/metric-text";
+import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import type { DocumentItem } from "@/lib/types";
+
+/*
+  Tela 16 · Material · upload.
+
+  O cabeçalho (volta, nome da matéria, abas) vem do layout da sala em
+  professor/[id]/layout.tsx — aqui mora só o conteúdo.
+
+  Uma diferença que o handoff não tem como mostrar: a linha ativa do desenho diz
+  "Lendo · página 3 de 8", e esse dado não existe. O upload em
+  backend/routers/documentos.py é síncrono — extrai, indexa e só então responde
+  —, e a tabela `documents` não tem contagem de páginas nem coluna de status.
+  Enquanto a requisição está no ar a linha aparece com o mesmo tratamento visual
+  (fundo índigo a 8%, ícone cheio, spinner), dizendo o que de fato se sabe:
+  que está lendo. Página a página exige indexação assíncrona com status
+  persistido — item 5 do consolidado de backend no plano.
+*/
+
+type Aba = "pdf" | "texto";
+
+function AreaUpload({
+  titulo,
+  nota,
+  children,
+}: {
+  titulo: string;
+  nota: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-grupo border-[1.5px] border-dashed border-indigo/45 px-[18px] py-[22px] text-center",
+        "vidro-abas"
+      )}
+    >
+      <span className="mx-auto flex h-[52px] w-[52px] items-center justify-center rounded-chip bg-indigo/12 text-indigo">
+        <Upload className="h-6 w-6" />
+      </span>
+      <p className="mt-3 text-linha font-semibold">{titulo}</p>
+      <p className="mt-[3px] text-nota text-tinta-fraca">{nota}</p>
+      <div className="mt-3.5">{children}</div>
+    </div>
+  );
+}
 
 export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
 
+  const [aba, setAba] = useState<Aba>("pdf");
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
+  const inputRef = useRef<HTMLInputElement>(null);
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
@@ -31,6 +76,9 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // Nome do que está sendo lido agora — alimenta a linha ativa da lista.
+  const lendo = pdfLoading ? pdfFile?.name : textLoading ? textName : null;
 
   async function refreshDocuments() {
     setLoadingList(true);
@@ -58,8 +106,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     try {
       await api.uploadPdf(professorId, pdfFile);
       setPdfFile(null);
-      const input = document.getElementById("pdf-input") as HTMLInputElement | null;
-      if (input) input.value = "";
+      if (inputRef.current) inputRef.current.value = "";
       await refreshDocuments();
     } catch (err) {
       setPdfError(err instanceof ApiError ? err.message : "Falha ao enviar o PDF.");
@@ -98,114 +145,160 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Adicionar PDF</CardTitle>
-            <CardDescription>O texto é extraído e indexado automaticamente.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handlePdfSubmit} className="space-y-4">
-              <Input
-                id="pdf-input"
-                type="file"
-                accept=".pdf"
-                onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
-              />
-              {pdfError && <InlineAlert>{pdfError}</InlineAlert>}
-              <Button type="submit" disabled={!pdfFile} loading={pdfLoading}>
-                {pdfLoading ? "Enviando..." : "Enviar PDF"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+    <div className="mx-auto flex max-w-[560px] flex-col gap-4">
+      <p className="text-corpo text-tinta-fraca">
+        O Kango lê o arquivo inteiro e só cobra o que está nele.
+      </p>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Adicionar texto</CardTitle>
-            <CardDescription>Cole anotações, resumos ou transcrições.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleTextSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="text-name">Nome</Label>
-                <Input
-                  id="text-name"
-                  required
-                  placeholder="Ex.: Resumo aula 3"
-                  value={textName}
-                  onChange={(e) => setTextName(e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="text-content">Conteúdo</Label>
-                <Textarea
-                  id="text-content"
-                  required
-                  rows={5}
-                  value={textContent}
-                  onChange={(e) => setTextContent(e.target.value)}
-                />
-              </div>
-              {textError && <InlineAlert>{textError}</InlineAlert>}
-              <Button type="submit" loading={textLoading}>
-                {textLoading ? "Salvando..." : "Salvar texto"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <Segmented
+        aria-label="Tipo de material"
+        value={aba}
+        onValueChange={(v) => setAba(v as Aba)}
+        options={[
+          { value: "pdf", label: "PDF" },
+          { value: "texto", label: "Texto" },
+        ]}
+      />
 
-      <div className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">Materiais adicionados</h2>
-
-        {loadingList && (
-          <div className="space-y-2">
-            <Skeleton className="h-14 rounded-xl" />
-            <Skeleton className="h-14 rounded-xl" />
-          </div>
-        )}
-
-        {!loadingList && listError && <InlineAlert>{listError}</InlineAlert>}
-        {deleteError && <InlineAlert>{deleteError}</InlineAlert>}
-
-        {!loadingList && !listError && documents.length === 0 && (
-          <Card>
-            <EmptyState
-              icon={FileStack}
-              title="Nenhum material enviado ainda"
-              description="Envie um PDF ou cole um texto acima para o quiz poder usar esse conteúdo."
+      {aba === "pdf" ? (
+        <form onSubmit={handlePdfSubmit}>
+          <AreaUpload
+            titulo={pdfFile ? pdfFile.name : "Escolher PDF"}
+            nota={pdfFile ? "Toque em enviar para o Kango ler" : "Do Arquivos, do seu computador ou tirando foto"}
+          >
+            <input
+              ref={inputRef}
+              id="pdf-input"
+              type="file"
+              accept=".pdf"
+              className="sr-only"
+              onChange={(e) => setPdfFile(e.target.files?.[0] ?? null)}
             />
-          </Card>
+            {pdfFile ? (
+              <Capsule type="submit" block loading={pdfLoading}>
+                {pdfLoading ? "Lendo..." : "Enviar PDF"}
+              </Capsule>
+            ) : (
+              // Cápsula de rótulo: abre o seletor de arquivo sem aninhar
+              // <button> dentro de <label>.
+              <label
+                htmlFor="pdf-input"
+                className={cn(
+                  "flex h-capsula-tonal w-full cursor-pointer items-center justify-center rounded-capsula",
+                  "bg-indigo text-linha font-semibold text-papel shadow-capsula",
+                  "transition-all duration-180 ease-out hover:bg-[hsl(226_57%_32%)] active:scale-[0.98]",
+                  "focus-within:shadow-foco-forte"
+                )}
+              >
+                Escolher arquivo
+              </label>
+            )}
+          </AreaUpload>
+          {pdfError && <div className="mt-3"><InlineAlert>{pdfError}</InlineAlert></div>}
+        </form>
+      ) : (
+        <form onSubmit={handleTextSubmit} className="flex flex-col gap-4">
+          <InsetList superficie="solido">
+            <label className="relative flex min-h-linha-campo items-center gap-4 px-4">
+              <span className="flex-none text-linha">Nome</span>
+              <input
+                required
+                value={textName}
+                onChange={(e) => setTextName(e.target.value)}
+                placeholder="Resumo aula 3"
+                className="min-w-0 flex-1 bg-transparent text-right text-linha focus:outline-none placeholder:text-borda-forte"
+              />
+              <span aria-hidden className="pointer-events-none absolute bottom-0 left-4 right-0 h-[0.5px] bg-borda" />
+            </label>
+            <div className="px-4 py-3">
+              <textarea
+                required
+                rows={6}
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                placeholder="Cole aqui a anotação, o resumo ou a transcrição da aula."
+                className="w-full resize-y bg-transparent text-corpo focus:outline-none placeholder:text-borda-forte"
+              />
+            </div>
+          </InsetList>
+          {textError && <InlineAlert>{textError}</InlineAlert>}
+          <Capsule type="submit" block loading={textLoading}>
+            {textLoading ? "Lendo..." : "Salvar texto"}
+          </Capsule>
+        </form>
+      )}
+
+      {deleteError && <InlineAlert>{deleteError}</InlineAlert>}
+
+      <div className="mt-1.5">
+        {loadingList && !lendo ? (
+          <>
+            <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+              O que o Kango já leu
+            </p>
+            <Skeleton className="h-[120px] rounded-grupo" />
+          </>
+        ) : listError ? (
+          <InlineAlert>{listError}</InlineAlert>
+        ) : documents.length === 0 && !lendo ? (
+          <p className="px-rotulo-secao text-nota text-tinta-fraca">
+            O Kango ainda não leu nada desta matéria. Envie a apostila, um resumo ou uma prova antiga
+            para ele poder cobrar.
+          </p>
+        ) : (
+          <InsetList
+            label="O que o Kango já leu"
+            footnote="As questões saem só desses materiais, nada que o seu professor não passou."
+          >
+            {lendo && (
+              <InsetRow
+                active
+                altura="dupla"
+                icon={<Loader2 className="animate-spin" />}
+                iconTone="indigo"
+                title={lendo}
+                subtitle={<span className="text-indigo">Lendo o arquivo...</span>}
+              />
+            )}
+            {documents.map((doc) => (
+              <InsetRow
+                key={doc.id}
+                altura="dupla"
+                icon={doc.type === "pdf" ? <FileText /> : <Type />}
+                title={doc.name}
+                subtitle={
+                  <>
+                    {doc.type === "pdf" ? "PDF" : "Texto"} ·{" "}
+                    <MetricText tone="fraca">
+                      {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                    </MetricText>
+                  </>
+                }
+                trailing={
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(doc.id)}
+                    disabled={deletingId === doc.id}
+                    aria-label={`Apagar ${doc.name}`}
+                    className={cn(
+                      "flex h-toque w-toque items-center justify-center rounded-capsula text-erro",
+                      "transition-colors duration-140 ease-out hover:bg-erro/12",
+                      "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
+                      "disabled:opacity-50"
+                    )}
+                  >
+                    {deletingId === doc.id ? (
+                      <Loader2 className="h-[17px] w-[17px] animate-spin" />
+                    ) : (
+                      <Trash2 className="h-[17px] w-[17px]" />
+                    )}
+                  </button>
+                }
+              />
+            ))}
+          </InsetList>
         )}
-
-        {!loadingList &&
-          !listError &&
-          documents.length > 0 &&
-          documents.map((doc) => (
-            <Card key={doc.id}>
-              <div className="flex items-center justify-between p-4">
-                <div>
-                  <p className="text-sm font-medium">{doc.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {doc.type === "pdf" ? "PDF" : "Texto"} · {new Date(doc.created_at).toLocaleDateString("pt-BR")}
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(doc.id)}
-                  loading={deletingId === doc.id}
-                  aria-label={`Excluir ${doc.name}`}
-                >
-                  {deletingId !== doc.id && <Trash2 className="h-4 w-4" />}
-                </Button>
-              </div>
-            </Card>
-          ))}
       </div>
-
     </div>
   );
 }

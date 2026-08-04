@@ -31,9 +31,17 @@ const alturaClasses: Record<RowAltura, string> = {
   dupla: "min-h-linha-dupla", // 60 — com subtítulo
 };
 
+// Duas formas de ícone convivem nas telas. O quadrado de 30px é o padrão do
+// guia; o simples é o da Biblioteca (tela 17), onde a linha é só arquivo e data
+// e um quadrado colorido por linha viraria um mosaico. A escolha muda também a
+// sangria do separador, que alinha com o texto: 58px depois do quadrado, 45px
+// depois do ícone simples.
+type IconVariant = "quadrado" | "simples";
+
 export interface InsetRowProps {
   icon?: React.ReactNode;
   iconTone?: RowTone;
+  iconVariant?: IconVariant;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /** Valor à direita. String/número entram em mono automaticamente. */
@@ -53,6 +61,7 @@ export interface InsetRowProps {
 export function InsetRow({
   icon,
   iconTone = "inativo",
+  iconVariant = "quadrado",
   title,
   subtitle,
   value,
@@ -72,9 +81,11 @@ export function InsetRow({
       {icon && (
         <span
           className={cn(
-            "flex h-[30px] w-[30px] flex-none items-center justify-center rounded-icone",
+            "flex flex-none items-center justify-center",
             "[&>svg]:h-[17px] [&>svg]:w-[17px]",
-            iconToneClasses[iconTone]
+            iconVariant === "quadrado"
+              ? cn("h-[30px] w-[30px] rounded-icone", iconToneClasses[iconTone])
+              : "text-tinta-fraca"
           )}
           aria-hidden
         >
@@ -102,14 +113,15 @@ export function InsetRow({
 
       {trailing && <span className="flex-none text-tinta-fraca">{trailing}</span>}
 
-      {/* Separador absoluto: entra a 58px quando há ícone (30 do quadrado + 12
-          do gap + 16 da margem) e a 16px quando não há. */}
+      {/* Separador absoluto, sempre alinhado ao texto: 58px com o quadrado
+          (16 da margem + 30 do quadrado + 12 do gap), 45px com o ícone simples
+          (16 + 17 + 12) e 16px sem ícone nenhum. */}
       <span
         aria-hidden
         data-sep
         className={cn(
           "pointer-events-none absolute bottom-0 right-0 h-[0.5px] bg-borda",
-          icon ? "left-[58px]" : "left-4"
+          !icon ? "left-4" : iconVariant === "quadrado" ? "left-[58px]" : "left-[45px]"
         )}
       />
     </>

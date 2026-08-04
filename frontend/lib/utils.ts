@@ -22,6 +22,7 @@ const twMerge = extendTailwindMerge({
             "enunciado",
             "enunciado-lg",
             "titulo-cartao",
+            "titulo-vazio",
             "linha",
             "corpo",
             "nota",

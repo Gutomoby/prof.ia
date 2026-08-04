@@ -106,6 +106,9 @@ const config: Config = {
         // Só o enunciado cresce no desktop; o resto dos tokens é o mesmo.
         "enunciado-lg": ["34px", { lineHeight: "41px", letterSpacing: "-0.2px", fontWeight: "700" }],
         "titulo-cartao": ["22px", { lineHeight: "27px", letterSpacing: "-0.26px", fontWeight: "700" }],
+        // Vazio dentro de uma tela que já tem large title (telas 18 e 12): fica
+        // entre o título de estado (30, tela inteira centrada) e o de cartão.
+        "titulo-vazio": ["24px", { lineHeight: "30px", letterSpacing: "0.2px", fontWeight: "700" }],
         // Sem line-height: a altura de linha de lista vem do min-height.
         linha: ["17px", { letterSpacing: "-0.43px" }],
         corpo: ["15px", { lineHeight: "1.5" }],

@@ -2,21 +2,19 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, GraduationCap, ChevronRight } from "lucide-react";
+import { Plus, GraduationCap } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { InsetList, InsetRow } from "@/components/ui/inset-list";
-import { MetricText, toneDaNota } from "@/components/ui/metric-text";
+import { InsetList } from "@/components/ui/inset-list";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MateriaRow } from "@/components/professor/MateriaRow";
 import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
-import { professorColor } from "@/lib/professor-color";
-import { pctInteiro } from "@/lib/utils";
 import type { ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
 
 export default function EstudarPage() {
@@ -167,47 +165,20 @@ export default function EstudarPage() {
             {professors.map((p) => {
               const score = scores[p.id];
               const temDados = score && score.topics.length > 0;
-              const semMaterial = documentCounts[p.id] === 0;
-              const color = professorColor(p.id);
 
               return (
-                <InsetRow
+                <MateriaRow
                   key={p.id}
-                  href={`/professor/${p.id}`}
-                  title={
-                    <span className="flex items-center gap-2">
-                      {/* Cor de matéria só como ponto de 8px. */}
-                      <span className={`inline-block h-2 w-2 shrink-0 rounded-full ${color.bg}`} />
-                      <span className="truncate">{p.name}</span>
-                    </span>
-                  }
-                  subtitle={
-                    detailsLoading
-                      ? p.discipline
-                      : temDados
-                        ? p.discipline
-                        : // Estado vazio é convite, não beco sem saída: diz o que
-                          // fazer em vez de só "sem dados".
-                          semMaterial
-                          ? `Sem material ainda — ensine o ${p.name}`
-                          : "Faça o diagnóstico inicial"
-                  }
-                  value={
-                    detailsLoading ? (
-                      <Skeleton className="h-4 w-10" />
-                    ) : temDados ? (
-                      (() => {
-                        // Um valor só para cor e texto — ver pctInteiro().
-                        const dominio = pctInteiro(score.overall_mastery_pct);
-                        return (
-                          <MetricText className="text-corpo" weight="bold" tone={toneDaNota(dominio)}>
-                            {dominio}%
-                          </MetricText>
-                        );
-                      })()
-                    ) : undefined
-                  }
-                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                  id={p.id}
+                  nome={p.name}
+                  disciplina={p.discipline}
+                  // Enquanto os detalhes carregam, a linha aparece só com nome e
+                  // disciplina: os dois já vieram da primeira chamada e são o
+                  // que o usuário usa pra escolher. Skeleton aqui faria a lista
+                  // pular de altura quando as pílulas chegassem.
+                  dominioPct={temDados ? score.overall_mastery_pct : null}
+                  streakDias={score?.streak_days ?? 0}
+                  semMaterial={documentCounts[p.id] === 0}
                 />
               );
             })}
