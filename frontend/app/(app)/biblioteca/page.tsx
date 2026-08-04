@@ -149,7 +149,7 @@ export default function BibliotecaPage() {
               trailing={<ChevronRight className="h-[18px] w-[18px]" />}
             />
             <InsetRow
-              href="/dashboard"
+              href="/materias"
               icon={<GraduationCap />}
               title="Ver minhas matérias"
               subtitle="Comece pela que mais te preocupa"

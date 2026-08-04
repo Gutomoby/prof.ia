@@ -30,6 +30,15 @@ XP_ATIVIDADE_CONCLUIDA = 10
 XP_MATERIAL_INDEXADO = 20
 XP_TOPICO_DOMINADO = 50
 
+# Meta diária em LIÇÕES, que é como a home (tela 20) fala com o usuário:
+# "1 de 2 lições", "Falta 1 lição pra fechar o dia". A meta em XP continua
+# existindo ao lado — ela mede esforço do dia inteiro, inclusive material
+# indexado, e é a que /perfil/configuracoes deixa ajustar.
+#
+# Constante, não coluna: o design fixa 2 e não há tela para mudar isso. Quando
+# a Fase G trouxer a tela de meta, isto vira coluna com este valor de padrão.
+META_DIARIA_LICOES = 2
+
 # XP acumulado necessário para alcançar os níveis 2, 3, 4, 5 e 6.
 LEVEL_THRESHOLDS = [250, 600, 1100, 1800, 2700]
 # Depois da tabela acima, cada nível custa um valor fixo.
@@ -155,6 +164,37 @@ def get_or_create_progress(user_id: str) -> dict:
         return inserted.data[0]
     # Corrida rara (duas requisições criando ao mesmo tempo): relê a linha.
     return sb.table("user_progress").select("*").eq("user_id", user_id).limit(1).execute().data[0]
+
+
+def licoes_hoje(user_id: str) -> int:
+    """Lições concluídas hoje — quizzes respondidos, no fuso do usuário.
+
+    Derivado de activity_results em vez de virar contador em user_progress: um
+    contador precisaria zerar à meia-noite e ficaria fora de sincronia se uma
+    atividade fosse apagada. Aqui a fonte é o próprio histórico.
+
+    A janela de 2 dias no filtro é folga de fuso: `created_at` está em UTC e o
+    dia local pode começar antes ou depois dele. O corte exato fica no Python,
+    com to_local_date — o filtro serve só para não varrer a tabela inteira.
+    """
+    professor_ids = user_professor_ids(user_id)
+    if not professor_ids:
+        return 0
+
+    sb = get_supabase()
+    desde = (datetime.now(timezone.utc) - timedelta(days=2)).isoformat()
+    res = (
+        sb.table("activity_results")
+        .select("created_at")
+        .in_("professor_id", professor_ids)
+        .eq("activity_type", "quiz")
+        .not_.is_("score_pct", "null")
+        .gte("created_at", desde)
+        .execute()
+    )
+
+    hoje = today_local()
+    return sum(1 for row in (res.data or []) if to_local_date(row["created_at"]) == hoje)
 
 
 def xp_today_of(row: dict) -> int:

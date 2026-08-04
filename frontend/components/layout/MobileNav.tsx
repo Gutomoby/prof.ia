@@ -47,7 +47,7 @@ export function MobileNav() {
         // /professor/* é conteúdo de Estudar, então também acende ali.
         const isActive =
           tab.href === "/dashboard"
-            ? pathname === "/dashboard" || pathname.startsWith("/professor")
+            ? pathname === "/dashboard" || pathname === "/materias" || pathname.startsWith("/professor")
             : pathname.startsWith(tab.href);
 
         return (

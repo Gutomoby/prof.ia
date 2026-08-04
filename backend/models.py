@@ -207,6 +207,8 @@ class UserProgress(BaseModel):
     last_activity_date: date | None
     daily_goal_xp: int = Field(..., description="Meta diária de XP escolhida pelo usuário.")
     xp_hoje: int = Field(..., description="XP acumulado hoje (fuso do usuário).")
+    meta_licoes: int = Field(..., description="Lições por dia que fecham a meta da home.")
+    licoes_hoje: int = Field(..., description="Lições concluídas hoje (fuso do usuário).")
 
 
 class DailyGoalUpdate(BaseModel):

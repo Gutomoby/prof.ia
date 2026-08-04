@@ -160,6 +160,10 @@ export interface UserProgress {
   last_activity_date: string | null;
   daily_goal_xp: number;
   xp_hoje: number;
+  /** Meta da home, em lições. A meta em XP acima mede o esforço do dia inteiro
+   *  (inclusive material indexado) e é a que a tela de configurações ajusta. */
+  meta_licoes: number;
+  licoes_hoje: number;
 }
 
 // ---------------------------------------------------------------------------

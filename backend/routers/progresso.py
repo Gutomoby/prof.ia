@@ -13,7 +13,13 @@ from fastapi import APIRouter
 
 from models import DailyGoalUpdate, UserProgress
 from services.config import settings
-from services.progress import get_or_create_progress, level_for_xp, xp_today_of
+from services.progress import (
+    META_DIARIA_LICOES,
+    get_or_create_progress,
+    level_for_xp,
+    licoes_hoje,
+    xp_today_of,
+)
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/progresso", tags=["progresso"])
@@ -31,6 +37,10 @@ def _serialize(row: dict) -> dict:
         "last_activity_date": row["last_activity_date"],
         "daily_goal_xp": row.get("daily_goal_xp") or 50,
         "xp_hoje": xp_today_of(row),
+        # A home fala em lições; a tela de configurações, em XP. As duas metas
+        # convivem e medem coisas diferentes — ver META_DIARIA_LICOES.
+        "meta_licoes": META_DIARIA_LICOES,
+        "licoes_hoje": licoes_hoje(row["user_id"]),
     }
 
 
