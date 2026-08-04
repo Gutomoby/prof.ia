@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, FileText, Flame, GraduationCap, Play, Plus, Type } from "lucide-react";
+import { ChevronRight, FileText, Flame, GraduationCap, Play, Plus, Type, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -261,22 +261,33 @@ export default function EstudarPage() {
         </div>
       </div>
 
-      {/* Chips: trocam a matéria em foco sem sair da home. */}
-      {professors.length > 1 && (
-        <div className="-mx-margem flex gap-2 overflow-x-auto px-margem pb-0.5">
-          {professors.map((p) => (
-            <ChipMateria
-              key={p.id}
-              professor={p}
-              ativo={p.id === selecionada.id}
-              onClick={() => {
-                setSelectedId(p.id);
-                setAba("trilha");
-              }}
-            />
-          ))}
-        </div>
-      )}
+      {/* Chips: trocam a matéria em foco sem sair da home. O "+" no fim é a
+          porta de criar matéria — na home antiga ela era um botão no cabeçalho,
+          e sem ele aqui a tela vira um beco. */}
+      <div className="-mx-margem flex gap-2 overflow-x-auto px-margem pb-0.5">
+        {professors.map((p) => (
+          <ChipMateria
+            key={p.id}
+            professor={p}
+            ativo={p.id === selecionada.id}
+            onClick={() => {
+              setSelectedId(p.id);
+              setAba("trilha");
+            }}
+          />
+        ))}
+        <Link
+          href="/professor/novo"
+          className={cn(
+            "flex h-8 flex-none items-center gap-1.5 rounded-capsula px-3 text-nota font-medium",
+            "vidro-abas text-indigo transition-colors duration-140 ease-out hover:bg-white/90",
+            "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+          )}
+        >
+          <Plus className="h-[15px] w-[15px]" />
+          Nova matéria
+        </Link>
+      </div>
 
       <Segmented
         aria-label={`Seções de ${selecionada.name}`}
@@ -315,7 +326,7 @@ export default function EstudarPage() {
               </div>
             )}
 
-            <div className="mt-4">
+            <div className="mt-4 flex flex-col gap-2">
               {step.kind === "subir-material" ? (
                 <Link
                   href={`/professor/${selecionada.id}/configurar`}
@@ -330,6 +341,14 @@ export default function EstudarPage() {
                   {generating ? "Gerando..." : "Começar lição"}
                 </Capsule>
               )}
+              {/* A sala é onde moram Ajustes, Progresso e o histórico completo.
+                  Sem esta saída a home não chega neles. */}
+              <Link
+                href={`/professor/${selecionada.id}`}
+                className={capsuleVariants("texto", true)}
+              >
+                Ver a matéria
+              </Link>
             </div>
           </GlassCard>
         ))}
@@ -360,29 +379,39 @@ export default function EstudarPage() {
           </InsetList>
         ))}
 
-      {aba === "material" &&
-        (material.length === 0 ? (
-          <p className="px-rotulo-secao text-nota text-tinta-fraca">
-            O Kango ainda não leu nada desta matéria.
-          </p>
-        ) : (
-          <InsetList>
-            {material.map((doc) => (
-              <InsetRow
-                key={doc.id}
-                href={`/professor/${selecionada.id}/configurar`}
-                icon={doc.type === "pdf" ? <FileText /> : <Type />}
-                iconVariant="simples"
-                title={doc.name}
-                value={
-                  <MetricText className="text-nota" tone="fraca">
-                    {new Date(doc.created_at).toLocaleDateString("pt-BR")}
-                  </MetricText>
-                }
-              />
-            ))}
-          </InsetList>
-        ))}
+      {/* A aba Material sempre termina em "Subir material": com ou sem arquivo,
+          esta é a porta de ensinar o Kango a partir da home. */}
+      {aba === "material" && (
+        <InsetList
+          footnote={
+            material.length === 0
+              ? "O Kango ainda não leu nada desta matéria."
+              : undefined
+          }
+        >
+          {material.map((doc) => (
+            <InsetRow
+              key={doc.id}
+              href={`/professor/${selecionada.id}/configurar`}
+              icon={doc.type === "pdf" ? <FileText /> : <Type />}
+              iconVariant="simples"
+              title={doc.name}
+              value={
+                <MetricText className="text-nota" tone="fraca">
+                  {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                </MetricText>
+              }
+            />
+          ))}
+          <InsetRow
+            href={`/professor/${selecionada.id}/configurar`}
+            icon={<Upload />}
+            iconTone="indigo"
+            title={<span className="text-indigo">Subir material</span>}
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+        </InsetList>
+      )}
 
       {/* Meta do dia e a fala do Kango, lado a lado. */}
       <div className="flex gap-3">
