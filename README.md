@@ -23,10 +23,11 @@ Tudo com RAG sobre os PDFs e textos que **você** sobe.
 
 Kango é um app de estudos *self-hosted* onde cada usuário cria um **"professor virtual"** especializado em uma matéria. O professor:
 
-- 💬 **Conversa** com você sobre o conteúdo (chat com streaming)
-- 📝 **Gera atividades** em 4 modos: Quiz, Simulado, Prova, Reforço
-- 📊 **Pontua** seus erros por tópico e tipo de questão
+- 📝 **Gera quizzes** com correção imediata e revisão questão a questão
+- 📊 **Pontua** seus erros por tópico e mostra a trilha do que você domina
 - 🧭 **Recomenda** o que estudar a seguir, baseado nos seus pontos fracos
+- 🔥 **Acompanha** XP, nível e sequência diária entre todas as matérias
+- 💬 **Conversa** com você sobre o conteúdo *(chat em construção)*
 
 Tudo apoiado em **RAG**: o professor responde com base nos PDFs e textos que **você** subiu — não em "conhecimento geral" da IA.
 
@@ -63,24 +64,26 @@ Tudo apoiado em **RAG**: o professor responde com base nos PDFs e textos que **v
 ## 🗂️ Estrutura
 
 ```
-professor-ia/
+kango/  (repo: prof.ia)
 ├── frontend/                    # Next.js 14 (App Router)
 │   ├── app/
 │   │   ├── (auth)/login/        # tela de login
 │   │   └── (app)/               # rotas autenticadas
-│   │       ├── page.tsx         # home: lista de professores
-│   │       └── professor/[id]/  # chat, quiz, simulado, prova, reforço, score
-│   ├── components/{ui,chat,atividade,score}/
-│   └── lib/{supabase.ts,api.ts,utils.ts}
+│   │       ├── dashboard/       # home: "o que fazer hoje" + matérias
+│   │       ├── calendario/      # calendário cross-matéria
+│   │       ├── biblioteca/      # acervo global de materiais
+│   │       └── professor/[id]/  # visão geral, progresso, quiz, material, ajustes
+│   ├── components/{ui,layout,professor,atividade,score,calendario,progress}/
+│   └── lib/                     # api.ts · supabase.ts · next-step.ts · professor-color.ts
 │
 ├── backend/                     # FastAPI
 │   ├── main.py                  # CORS + healthcheck + routers
-│   ├── routers/                 # professores, documentos, chat, atividades, score
-│   ├── services/                # rag.py · claude.py · pdf.py
+│   ├── routers/                 # professores · documentos · atividades · score
+│   │                            # progresso · calendario · chat (stub)
+│   ├── services/                # rag.py · claude.py · pdf.py · scoring.py · progress.py
 │   └── models.py                # schemas Pydantic
 │
-└── supabase/migrations/
-    └── 001_initial.sql          # 5 tabelas + pgvector + RLS + match_chunks()
+└── supabase/migrations/         # 001 inicial · 002 planos · 003 calendário + progressão
 ```
 
 ---
@@ -163,25 +166,68 @@ npm run dev
 
 ## 🎯 Tipos de atividade
 
-| Tipo | Questões | Timer | Correção | Modelo |
-|---|---|---|---|---|
-| **Quiz** | 5–8 múltipla escolha | ❌ | imediata | Haiku 4.5 |
-| **Simulado** | 10–15 múltipla escolha | ⏱️ 1 min/questão | só no final | Haiku 4.5 |
-| **Prova** | 5–8 + 2 discursivas | ⏱️ | IA (Sonnet) | Sonnet 4 |
-| **Reforço** | 3–5 focadas em pontos fracos | ❌ | imediata | Haiku 4.5 |
+> **Hoje só o Quiz está no ar.** Os demais modos evoluem para `Aprender` / `Exercitar` / `Desafiar` + "Prova Final" na Fase C do roadmap Kango (abaixo).
+
+| Tipo | Questões | Timer | Correção | Modelo | Status |
+|---|---|---|---|---|---|
+| **Quiz** | 5–8 múltipla escolha | ❌ | imediata | Haiku 4.5 | ✅ no ar |
+| **Simulado** | 10–15 múltipla escolha | ⏱️ 1 min/questão | só no final | Haiku 4.5 | Fase C |
+| **Prova** | 5–8 + 2 discursivas | ⏱️ | IA (Sonnet) | Sonnet 4 | Fase C |
+| **Reforço** | 3–5 focadas em pontos fracos | ❌ | imediata | Haiku 4.5 | Fase C |
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Andamento e Roadmap
 
-- [x] **Fase 1** — Estrutura, configs, schema SQL, .env.example
-- [x] **Fase 2** — RAG completo (chunking, embeddings, busca vetorial, upload PDF/texto)
-- [ ] **Fase 3** — Chat com streaming (SSE)
-- [ ] **Fase 4** — Telas: criar professor, configurar material, chat
-- [ ] **Fase 5** — Atividades (quiz → simulado → prova → reforço)
-- [ ] **Fase 6** — Score + recomendação por IA
-- [ ] **Fase 7** — Auth Supabase + middleware
-- [ ] **Fase 8** — Deploy Vercel + Railway
+### ✅ Já no ar (produção: Vercel + Railway)
+
+- **RAG completo** — upload de PDF/texto, chunking, embeddings locais (zero custo), busca vetorial
+- **Professores por matéria** — criar, editar e apagar (tela Ajustes)
+- **Quiz por IA** — correção imediata, revisão questão a questão, histórico
+- **Score por tópico** + plano de estudos gerado por IA
+- **Home "o que fazer hoje"** — próximo passo global consolidando todas as matérias
+- **Trilha serpenteante** de tópicos por professor
+- **Calendário cross-matéria** — dias estudados + provas e eventos próprios
+- **Biblioteca global** de materiais
+- **Progressão** — XP, níveis e sequência diária (contada no fuso do usuário)
+- **Auth Supabase**, navegação mobile, temas claro/escuro (WCAG AA), deploy contínuo
+
+### 🚨 Urgente — Rebranding Kango (Fase A)
+
+- [x] Nome novo no app, na API e no repositório
+- [x] Identidade visual: azul cobalto (foco) + âmbar (gamificação), temas claro/escuro
+- [x] CORS preparado para o domínio novo via env `EXTRA_CORS_ORIGINS` (entra sem deploy)
+- [ ] Logo oficial — wordmark provisório centralizado em `components/layout/Brand.tsx`
+- [ ] Assets do mascote Kango na UI
+- [ ] Migração do domínio
+
+### 🔜 Fase B — Experiência e UI
+
+- [ ] Integração maior Material → Trilha → Quizzes (fluxo unificado)
+- [ ] Melhorar pós-processamento do material (resultado visual)
+- [ ] Visualização de módulos: tela dedicada por professor
+- [ ] Questões mais difíceis do módulo viram **Prova Final**
+- [ ] Tutorial embarcado na tela de configurar o professor
+- [ ] Seletor de dificuldade/complexidade visível nas telas
+- [ ] Segregar visualmente configuração × ambiente de estudo
+- [ ] Carregamento inicial: de ~4s para quase instantâneo
+
+### 🔜 Fase C — Arquitetura core
+
+- [ ] Três modos de quiz: **Aprender** · **Exercitar** · **Desafiar** *(educacional)*
+- [ ] Login fácil — social login / magic link *(facilidade)*
+- [ ] Novos quizzes gerados todo dia + trilha reprocessada automaticamente *(oxigenação)*
+- [ ] Várias opções de IA por tipo de task *(eficiência)*
+- [ ] Modo Kids e modo normal *(aderência)*
+- [ ] Modo Sala de Aula — PDF com todo o material *(armazenamento)*
+- [ ] Modo Apostila — trilha inteira, via Sonnet
+- [ ] Chat com o professor (hoje o backend é só um stub)
+
+### 🔜 Fase D — Engajamento e retenção
+
+- [ ] Streak com base em horários
+- [ ] Recompensa de meta batida (badges + animações)
+- [ ] Notificações push, widget e e-mail
 
 ---
 
