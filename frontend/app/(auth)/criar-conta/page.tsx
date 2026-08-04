@@ -3,20 +3,27 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MailCheck } from "lucide-react";
+import { ChevronLeft, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { InlineAlert } from "@/components/ui/inline-alert";
-import { Brand } from "@/components/layout/Brand";
+import { AuthShell, AuthCard } from "@/components/auth/AuthShell";
+import { FieldGroup, Field, ToggleSenha, Divisor } from "@/components/auth/AuthField";
+import { SocialButtons } from "@/components/auth/SocialButtons";
+import { Capsule } from "@/components/ui/capsule";
+import { MetricText } from "@/components/ui/metric-text";
 
+/*
+  Telas 02 (celular) e 48 (desktop).
+
+  O campo "Nome" existe no design e não existia no cadastro: vai em
+  user_metadata.full_name, que é onde o Perfil vai buscar depois (hoje ele
+  mostra o e-mail porque não havia nome).
+*/
 export default function CriarContaPage() {
   const router = useRouter();
+  const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirm, setConfirm] = useState("");
+  const [verSenha, setVerSenha] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
@@ -29,17 +36,16 @@ export default function CriarContaPage() {
       setError("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }
-    if (password !== confirm) {
-      setError("As senhas não coincidem.");
-      return;
-    }
 
     setLoading(true);
     const supabase = createClient();
     const { data, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/login` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/login`,
+        data: { full_name: nome.trim() || undefined },
+      },
     });
     setLoading(false);
 
@@ -64,92 +70,118 @@ export default function CriarContaPage() {
 
   if (awaitingConfirm) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-2xl">
-            <MailCheck className="h-6 w-6 text-success" />
-            Confira seu e-mail
-          </CardTitle>
-          <CardDescription>
-            Enviamos um link de confirmação para <strong>{email}</strong>. Depois de
-            confirmar, é só entrar.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Link href="/login" className="text-sm font-medium text-primary underline-offset-2 hover:underline">
-            Voltar para o login
-          </Link>
-        </CardContent>
-      </Card>
+      <AuthShell fundo="criar">
+        <AuthCard largura={440}>
+          <div className="flex flex-1 flex-col justify-center md:flex-none">
+            <div className="flex flex-col items-center text-center">
+              <span className="flex h-[62px] w-[62px] items-center justify-center rounded-alerta bg-acerto/12">
+                <MailCheck className="h-7 w-7 text-acerto" />
+              </span>
+              <h1 className="mt-4 text-[28px] font-bold leading-[34px] tracking-[0.3px]">Olhe o seu e-mail</h1>
+              <p className="mt-2.5 text-corpo text-tinta-fraca">
+                Mandei o link para <strong className="font-semibold text-tinta">{email}</strong>. Ele vale por 1
+                hora.
+              </p>
+            </div>
+            <Link
+              href="/login"
+              className="mt-[18px] rounded-chip text-center text-[16px] font-medium text-indigo focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+            >
+              Voltar para entrar
+            </Link>
+          </div>
+        </AuthCard>
+      </AuthShell>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="text-center lg:hidden">
-        <Brand className="text-3xl" />
-        <p className="mt-1 text-sm text-muted-foreground">O seu companheiro de estudos</p>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Criar conta</CardTitle>
-          <CardDescription>Leva menos de um minuto.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                minLength={8}
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Pelo menos 8 caracteres.</p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirm">Confirmar senha</Label>
-              <Input
-                id="confirm"
-                type="password"
-                required
-                autoComplete="new-password"
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-              />
-            </div>
-            {error && <InlineAlert>{error}</InlineAlert>}
-            <Button type="submit" size="lg" className="w-full" loading={loading}>
-              {loading ? "Criando..." : "Criar conta"}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <p className="text-center text-sm text-muted-foreground">
-        Já tem conta?{" "}
+    <AuthShell
+      fundo="criar"
+      topRight={
+        <>
+          Já tem conta?{" "}
+          <Link href="/login" className="font-semibold text-indigo hover:underline">
+            Entrar
+          </Link>
+        </>
+      }
+    >
+      <AuthCard largura={460}>
         <Link
           href="/login"
-          className="font-medium text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex flex-none items-center gap-1.5 rounded-chip pt-[60px] text-linha font-medium text-indigo focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte md:pt-0 md:text-[16px]"
         >
-          Entrar
+          <ChevronLeft className="h-[19px] w-[19px] md:h-[18px] md:w-[18px]" />
+          Voltar
         </Link>
-      </p>
-    </div>
+
+        <div className="flex-none pt-[18px] md:pt-0">
+          <h1 className="text-titulo-grande md:text-titulo-estado">Criar conta</h1>
+          <p className="mt-1.5 text-corpo text-tinta-fraca">
+            Seu material, sua sequência e seu progresso ficam salvos na conta.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="contents">
+          <FieldGroup className="mt-5 md:mt-0">
+            <Field
+              label="Nome"
+              type="text"
+              autoComplete="name"
+              placeholder="Como te chamar"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+            />
+            <Field
+              label="E-mail"
+              type="email"
+              required
+              autoComplete="email"
+              placeholder="voce@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+            <Field
+              label="Senha"
+              type={verSenha ? "text" : "password"}
+              required
+              minLength={8}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              trailing={<ToggleSenha visivel={verSenha} onToggle={() => setVerSenha((v) => !v)} />}
+            />
+          </FieldGroup>
+
+          <p className="mt-2 flex-none px-margem text-nota text-tinta-fraca md:mt-0 md:px-0">
+            Mínimo de <MetricText tone="fraca">8</MetricText> caracteres.
+          </p>
+
+          {error && (
+            <p className="mt-2 flex-none text-nota text-erro" role="alert">
+              {error}
+            </p>
+          )}
+
+          <Capsule type="submit" block loading={loading} className="mt-[18px] md:mt-0">
+            Criar conta
+          </Capsule>
+        </form>
+
+        <div className="my-[22px] flex-none md:my-0">
+          <Divisor />
+        </div>
+
+        <SocialButtons onError={setError} />
+
+        <div className="min-h-3.5 flex-1 md:hidden" />
+        <p className="flex-none pb-[34px] text-center text-[12.5px] leading-[1.45] text-tinta-fraca md:pb-0">
+          Criando a conta você aceita os{" "}
+          <span className="font-semibold text-indigo">termos</span> e a{" "}
+          <span className="font-semibold text-indigo">privacidade</span>.
+        </p>
+      </AuthCard>
+    </AuthShell>
   );
 }
