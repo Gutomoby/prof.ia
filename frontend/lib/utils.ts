@@ -1,5 +1,37 @@
 import { type ClassValue, clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/*
+  O tailwind-merge só conhece os nomes de tamanho de fonte de fábrica (xs, sm,
+  base, lg…). Diante de `text-nota` ele não sabe se é tamanho ou cor, e chuta
+  COR — então num cn() o `text-nota` era descartado por conflito com
+  `text-tinta`, e a linha caía para 16px em vez de 13px. Silencioso: nada
+  quebra, o texto só sai do tamanho errado.
+
+  Registrar os tokens Kango no grupo "font-size" resolve na raiz. Toda vez que
+  a escala tipográfica ganhar um nome em tailwind.config.ts, ele entra aqui.
+*/
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [
+        {
+          text: [
+            "titulo-grande",
+            "titulo-estado",
+            "enunciado",
+            "enunciado-lg",
+            "titulo-cartao",
+            "linha",
+            "corpo",
+            "nota",
+            "rotulo",
+          ],
+        },
+      ],
+    },
+  },
+});
 
 // Helper padrão do shadcn/ui — combina classes condicionais e remove duplicatas
 // de forma compatível com Tailwind. Use em todos os componentes:

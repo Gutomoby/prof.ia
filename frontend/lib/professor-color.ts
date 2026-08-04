@@ -16,15 +16,18 @@ export interface ProfessorColor {
   bg: string;
   /** A mesma cor como texto, para rótulos sobre o fundo da página. */
   text: string;
+  /** A mesma cor a 12% — fundo do avatar de matéria na sidebar do desktop.
+      Tonal, nunca sólido: a cor de matéria não pode virar fundo de cartão. */
+  soft: string;
 }
 
 const PALETTE: ProfessorColor[] = [
-  { bg: "bg-indigo-700", text: "text-indigo-700 dark:text-indigo-300" },
-  { bg: "bg-teal-700", text: "text-teal-700 dark:text-teal-300" },
-  { bg: "bg-amber-700", text: "text-amber-700 dark:text-amber-300" },
-  { bg: "bg-rose-700", text: "text-rose-700 dark:text-rose-300" },
-  { bg: "bg-fuchsia-700", text: "text-fuchsia-700 dark:text-fuchsia-300" },
-  { bg: "bg-green-700", text: "text-green-700 dark:text-green-300" },
+  { bg: "bg-indigo-700", text: "text-indigo-700 dark:text-indigo-300", soft: "bg-indigo-700/12" },
+  { bg: "bg-teal-700", text: "text-teal-700 dark:text-teal-300", soft: "bg-teal-700/12" },
+  { bg: "bg-amber-700", text: "text-amber-700 dark:text-amber-300", soft: "bg-amber-700/12" },
+  { bg: "bg-rose-700", text: "text-rose-700 dark:text-rose-300", soft: "bg-rose-700/12" },
+  { bg: "bg-fuchsia-700", text: "text-fuchsia-700 dark:text-fuchsia-300", soft: "bg-fuchsia-700/12" },
+  { bg: "bg-green-700", text: "text-green-700 dark:text-green-300", soft: "bg-green-700/12" },
 ];
 
 export function professorColor(professorId: string): ProfessorColor {

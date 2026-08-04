@@ -20,6 +20,54 @@
   folha de personagem do Kango, e segue a preferência do sistema
   (darkMode: "media" no tailwind.config.ts).
 */
+/*
+  ─────────────────────────────────────────────────────────────────────────
+  Kango · identidade visual v2 (design_handoff_kango_ui)
+
+  Camada ADITIVA: os tokens shadcn abaixo (--background, --primary, …) ficam
+  intactos porque as telas atuais dependem deles. Os tokens Kango entram como
+  um conjunto paralelo com os nomes semânticos do handoff, e as telas migram
+  um fluxo por vez (etapas 2 a 8 da ordem sugerida no README).
+
+  Os valores são canais HSL sem a função hsl() de propósito: é o que permite
+  ao Tailwind aplicar o modificador de opacidade (bg-indigo/8), e o sistema
+  inteiro é tonal — estado é o acento a 8/10/12/14%, nunca uma cor sólida
+  nova.
+
+  Sem variante escura: as 81 telas do handoff são todas claras e o modo
+  escuro não foi desenhado ("Pendências de design"). Estes tokens portanto
+  não respondem a prefers-color-scheme — quem usa Kango renderiza claro.
+  ─────────────────────────────────────────────────────────────────────────
+*/
+@layer base {
+  :root {
+    /* Fundo de toda tela. Branco quente, nunca #fff puro. */
+    --papel: 60 20% 98%;
+    /* Título, linha de lista, número grande. */
+    --tinta: 220 13% 9%;
+    /* Rótulo, subtítulo, data. 4,6:1 no papel, passa AA. */
+    --tinta-fraca: 218 9% 40%;
+    /* Ação principal, aba ativa, progresso, link. */
+    --indigo: 226 57% 38%;
+    /* Certo, dominado, sequência viva, >=70%. */
+    --acerto: 152 60% 26%;
+    /* Errado, prova no calendário, alerta, <40%. */
+    --erro: 0 72% 40%;
+    /* Trilho de segmented, chip neutro, ícone de linha inativo. */
+    --cinza-tonal: 60 10% 94%;
+    /* Separador de 0,5px, trilha vazia, contorno de campo. */
+    --borda: 60 9% 88%;
+    /* Não está na tabela do README: é o tracejado do nó bloqueado da trilha,
+       um degrau mais escuro que --borda para o traço não sumir no papel. */
+    --borda-forte: 60 9% 82%;
+
+    /* SF Pro e SF Mono vêm do sistema — nenhuma fonte para baixar. Fora da
+       Apple, system-ui mantém a métrica próxima. */
+    --font-sans: -apple-system, "SF Pro Text", "SF Pro Display", system-ui, sans-serif;
+    --font-mono: ui-monospace, "SF Mono", "SFMono-Regular", Menlo, monospace;
+  }
+}
+
 @layer base {
   :root {
     --background: 210 40% 98%;
@@ -92,6 +140,77 @@
     font-family: var(--font-mono), ui-monospace, monospace;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
+  }
+}
+
+/*
+  Liquid Glass. Só o material (fundo translúcido + desfoque) mora aqui, porque
+  backdrop-filter não tem utilitário composto no Tailwind. O brilho e a sombra
+  ficam em shadow-vidro / shadow-vidro-flutuante para continuarem sobrescrevíveis
+  na classe do componente.
+
+  Opacidade por função. Nunca abaixo de .74: texto de 13px perde contraste.
+*/
+@layer components {
+  .vidro-cartao,
+  .vidro-hud,
+  .vidro-abas,
+  .vidro-sidebar {
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  /* .86 — cartão com texto pequeno */
+  .vidro-cartao {
+    background: rgba(255, 255, 255, 0.86);
+  }
+  /* .80 — pílula de HUD */
+  .vidro-hud {
+    background: rgba(255, 255, 255, 0.8);
+  }
+  /* .74 — barra de abas, flutua sobre o conteúdo, por isso blur maior */
+  .vidro-abas {
+    background: rgba(255, 255, 255, 0.74);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+  /* .58 — sidebar do desktop. O README e o guia dizem .55, mas a tela 52 usa
+     .58 (24 ocorrências no arquivo, contra 2 de .55). Valor das telas. */
+  .vidro-sidebar {
+    background: rgba(255, 255, 255, 0.58);
+    backdrop-filter: blur(24px) saturate(180%);
+    -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  /* Papéis de parede das telas de conta. Cada fluxo tem o seu degradê, medido
+     no HTML; só o "entrar" muda de ângulo no desktop (175° → 165°, tela 46). */
+  .fundo-conta-entrar {
+    background: linear-gradient(175deg, hsl(60 20% 98%) 0%, hsl(226 26% 96%) 55%, hsl(60 18% 97%) 100%);
+  }
+  @media (min-width: 768px) {
+    .fundo-conta-entrar {
+      background: linear-gradient(165deg, hsl(60 20% 98%) 0%, hsl(226 20% 96%) 52%, hsl(60 18% 97%) 100%);
+    }
+  }
+  .fundo-conta-criar,
+  .fundo-conta-recuperar {
+    background: linear-gradient(175deg, hsl(60 20% 98%) 0%, hsl(226 24% 96%) 55%, hsl(60 18% 97%) 100%);
+  }
+  .fundo-conta-erro {
+    background: linear-gradient(175deg, hsl(60 20% 98%) 0%, hsl(0 22% 96%) 55%, hsl(60 18% 97%) 100%);
+  }
+
+  /* Papel de parede: degradê de 175° do papel para um tom frio no rodapé, mais
+     halos radiais ancorados FORA da borda. É o halo que faz o vidro existir —
+     sobre branco chapado o material some. Quem usar precisa de overflow-hidden
+     no root da tela para o halo não empurrar a largura. */
+  .papel-de-parede {
+    background:
+      /* Halos em px, não em %: numa tela longa o raio percentual vira lavagem
+         de cor no fundo inteiro em vez de halo. */
+      radial-gradient(620px circle at -60px -80px, hsl(var(--indigo) / 0.16), transparent 70%),
+      radial-gradient(560px circle at calc(100% + 80px) 140px, hsl(174 77% 26% / 0.12), transparent 70%),
+      radial-gradient(600px circle at calc(100% - 60px) calc(100% + 60px), hsl(32 90% 44% / 0.1), transparent 70%),
+      linear-gradient(175deg, hsl(var(--papel)) 0%, hsl(60 14% 96%) 60%, hsl(226 22% 97%) 100%);
   }
 }
 

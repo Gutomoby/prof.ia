@@ -1,17 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-// next/font faz self-host do arquivo da fonte no build — sem request externo em runtime.
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-
-// Só para números (classe .metric). Texto corrido continua em Inter — a mono
-// existe para as métricas alinharem em coluna e o app ter cara de caderneta.
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  weight: ["500", "700"],
-  variable: "--font-mono",
-});
+// Sem next/font: a identidade Kango pede SF Pro no texto e SF Mono nas
+// métricas, e as duas vêm do sistema via -apple-system / ui-monospace. Não há
+// arquivo para baixar nem para self-hostar, então a pilha inteira mora em
+// --font-sans / --font-mono em globals.css. Fora da Apple, system-ui assume e
+// mantém a métrica próxima.
 
 // Metadados que aparecem na aba do navegador e em compartilhamentos
 export const metadata: Metadata = {
@@ -39,7 +33,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning className={`${inter.variable} ${jetbrainsMono.variable}`}>
+    <html lang="pt-BR" suppressHydrationWarning>
+      {/* antialiased é obrigatório, não estético: é o -webkit-font-smoothing
+          que dá a finura do texto da Apple. Sem ele a SF engorda. */}
       <body className="min-h-screen bg-background font-sans antialiased">
         {children}
       </body>
