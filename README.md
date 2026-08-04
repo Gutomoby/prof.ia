@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🎓 ProfessorIA
+# 🦘 Kango
+
+**O seu companheiro de estudos** *(ex-ProfessorIA)*
 
 **Crie um professor virtual de qualquer matéria — alimentado pelo seu próprio material.**
 
@@ -19,7 +21,7 @@ Tudo com RAG sobre os PDFs e textos que **você** sobe.
 
 ## ✨ O que é 
 
-ProfessorIA é um app de estudos *self-hosted* onde cada usuário cria um **"professor virtual"** especializado em uma matéria. O professor:
+Kango é um app de estudos *self-hosted* onde cada usuário cria um **"professor virtual"** especializado em uma matéria. O professor:
 
 - 💬 **Conversa** com você sobre o conteúdo (chat com streaming)
 - 📝 **Gera atividades** em 4 modos: Quiz, Simulado, Prova, Reforço

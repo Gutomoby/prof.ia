@@ -3,69 +3,76 @@
 @tailwind utilities;
 
 /*
-  Tema "caderneta": fundo de papel (não branco puro), texto em tinta e um
-  índigo de caneta como acento. Os neutros puxam levemente para o quente
-  (matiz 60) para o papel não parecer cinza de template; o acento e o texto
-  puxam para o frio, que é o contraste que dá a leitura de tinta sobre papel.
+  Tema "Kango": off-white slate como papel, azul cobalto como cor de foco e
+  um âmbar de gamificação (--action) reservado para CTAs de estudo, streak,
+  medalhas e recompensas — é a cor do mascote e só aparece onde há dopamina
+  envolvida, para não perder o efeito.
 
-  Todos os pares de texto foram verificados em WCAG AA (>= 4.5:1) nos dois
-  temas, e --input tem 3:1 contra o fundo por ser contorno de componente
-  (WCAG 1.4.11), não separador decorativo — por isso é bem mais escuro que
-  --border.
+  Ajustes de acessibilidade sobre a paleta de referência (WCAG AA >= 4.5:1
+  para texto, 1.4.11 >= 3:1 para contorno de componente):
+  - success usa o degrau escuro do verde menta (#10B981 puro dá 2.5:1 como
+    texto sobre branco);
+  - destructive usa o degrau 600 do vermelho coral (#EF4444 dá 3.8:1);
+  - --action carrega texto ESCURO (--action-foreground), nunca branco:
+    branco sobre âmbar/laranja reprova em qualquer degrau vibrante.
 
-  O tema escuro segue a preferência do sistema (darkMode: "media" no
-  tailwind.config.ts). Antes ele existia mas nunca era ativado: nada
-  colocava a classe .dark no <html>.
+  O tema escuro deriva da mesma paleta sobre o azul-marinho profundo da
+  folha de personagem do Kango, e segue a preferência do sistema
+  (darkMode: "media" no tailwind.config.ts).
 */
 @layer base {
   :root {
-    --background: 60 20% 98%;
-    --foreground: 220 13% 9%;
+    --background: 210 40% 98%;
+    --foreground: 215 25% 27%;
     --card: 0 0% 100%;
-    --card-foreground: 220 13% 9%;
+    --card-foreground: 215 25% 27%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 13% 9%;
-    --primary: 226 57% 38%;
-    --primary-foreground: 60 20% 98%;
-    --secondary: 60 10% 94%;
-    --secondary-foreground: 220 13% 9%;
-    --muted: 60 10% 94%;
-    --muted-foreground: 218 9% 40%;
-    --accent: 60 12% 93%;
-    --accent-foreground: 220 13% 9%;
-    --destructive: 0 72% 40%;
-    --destructive-foreground: 60 20% 98%;
-    --success: 152 60% 26%;
-    --success-foreground: 60 20% 98%;
-    --border: 60 9% 88%;
-    --input: 220 10% 56%;
-    --ring: 226 57% 38%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 95%;
+    --secondary-foreground: 215 25% 27%;
+    --muted: 210 40% 95%;
+    --muted-foreground: 215 19% 35%;
+    --accent: 214 32% 93%;
+    --accent-foreground: 215 25% 27%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 163 94% 24%;
+    --success-foreground: 0 0% 100%;
+    --action: 38 92% 50%;
+    --action-foreground: 24 92% 14%;
+    --border: 214 32% 91%;
+    --input: 215 16% 52%;
+    --ring: 221 83% 53%;
     --radius: 0.75rem;
   }
 
   @media (prefers-color-scheme: dark) {
     :root {
-      --background: 220 14% 8%;
-      --foreground: 60 10% 96%;
-      --card: 220 13% 11%;
-      --card-foreground: 60 10% 96%;
-      --popover: 220 13% 11%;
-      --popover-foreground: 60 10% 96%;
-      --primary: 226 78% 70%;
-      --primary-foreground: 220 14% 8%;
-      --secondary: 220 12% 18%;
-      --secondary-foreground: 60 10% 96%;
-      --muted: 220 12% 18%;
-      --muted-foreground: 218 12% 68%;
-      --accent: 220 12% 20%;
-      --accent-foreground: 60 10% 96%;
-      --destructive: 0 63% 65%;
-      --destructive-foreground: 220 14% 8%;
-      --success: 152 50% 58%;
-      --success-foreground: 152 60% 8%;
-      --border: 220 10% 20%;
-      --input: 220 10% 40%;
-      --ring: 226 78% 70%;
+      --background: 226 50% 10%;
+      --foreground: 214 32% 91%;
+      --card: 226 42% 14%;
+      --card-foreground: 214 32% 91%;
+      --popover: 226 42% 14%;
+      --popover-foreground: 214 32% 91%;
+      --primary: 217 92% 65%;
+      --primary-foreground: 226 50% 10%;
+      --secondary: 226 35% 18%;
+      --secondary-foreground: 214 32% 91%;
+      --muted: 226 35% 17%;
+      --muted-foreground: 217 18% 70%;
+      --accent: 226 35% 20%;
+      --accent-foreground: 214 32% 91%;
+      --destructive: 0 84% 68%;
+      --destructive-foreground: 226 50% 10%;
+      --success: 158 60% 55%;
+      --success-foreground: 158 80% 10%;
+      --action: 43 96% 58%;
+      --action-foreground: 24 92% 14%;
+      --border: 226 30% 22%;
+      --input: 222 16% 46%;
+      --ring: 217 92% 65%;
     }
   }
 }

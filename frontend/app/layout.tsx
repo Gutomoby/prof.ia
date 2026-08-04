@@ -15,16 +15,18 @@ const jetbrainsMono = JetBrains_Mono({
 
 // Metadados que aparecem na aba do navegador e em compartilhamentos
 export const metadata: Metadata = {
-  title: "ProfessorIA",
-  description: "Seu professor virtual de qualquer matéria, com base no seu próprio material.",
+  title: "Kango",
+  description:
+    "Kango, o seu companheiro de estudos: quizzes, trilhas e progresso a partir do seu próprio material.",
 };
 
 // Informa ao navegador que o app tem os dois temas, para que controles nativos
 // (barras de rolagem, campos de formulário) acompanhem.
+// Hexes = --background dos dois temas em globals.css.
 export const viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#fbfbf9" },
-    { media: "(prefers-color-scheme: dark)", color: "#121317" },
+    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
+    { media: "(prefers-color-scheme: dark)", color: "#0d1326" },
   ],
 };
 

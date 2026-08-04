@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { Brand } from "@/components/layout/Brand";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -38,8 +39,10 @@ export default function LoginPage() {
     <main className="flex min-h-screen items-center justify-center p-8">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle className="text-2xl">🎓 ProfessorIA</CardTitle>
-          <CardDescription>Entre com sua conta para continuar.</CardDescription>
+          <CardTitle className="text-2xl">
+            <Brand />
+          </CardTitle>
+          <CardDescription>O seu companheiro de estudos. Entre para continuar.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

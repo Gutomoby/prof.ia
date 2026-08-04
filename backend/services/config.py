@@ -56,6 +56,15 @@ class Settings(BaseSettings):
     # em UTC e a sequência quebraria um dia antes da hora.
     APP_TIMEZONE: str = "America/Sao_Paulo"
 
+    # --- CORS ---
+    # Origens extras além das fixas em main.py, separadas por vírgula.
+    # Existe para a migração de domínio (kango): quando o domínio novo entrar
+    # no ar, basta setar esta env no Railway — sem deploy de código.
+    EXTRA_CORS_ORIGINS: str = ""
+
+    def extra_cors_origins(self) -> list[str]:
+        return [o.strip() for o in self.EXTRA_CORS_ORIGINS.split(",") if o.strip()]
+
 
 # Instância única importada pelos outros módulos.
 # O parsing acontece aqui, então erros de config aparecem no startup.

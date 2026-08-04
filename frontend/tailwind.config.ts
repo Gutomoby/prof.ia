@@ -55,6 +55,12 @@ const config: Config = {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
         },
+        // Cor de ação/gamificação (âmbar do Kango): CTAs de estudo, streak,
+        // medalhas. Sempre com action-foreground (texto escuro) por contraste.
+        action: {
+          DEFAULT: "hsl(var(--action))",
+          foreground: "hsl(var(--action-foreground))",
+        },
       },
       fontFamily: {
         sans: ["var(--font-inter)", "system-ui", "sans-serif"],

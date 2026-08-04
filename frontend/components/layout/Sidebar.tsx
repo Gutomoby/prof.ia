@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CalendarDays, Flame, Home, Library, LogOut, Plus, Zap } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { api } from "@/lib/api";
+import { Brand } from "./Brand";
 import { useQuizGuard } from "./QuizGuardContext";
 import { cn } from "@/lib/utils";
 import { professorColor } from "@/lib/professor-color";
@@ -53,8 +54,8 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
 
   return (
     <aside className="hidden w-64 flex-col border-r bg-muted/40 p-4 md:flex">
-      <Link href="/dashboard" onClick={handleLinkClick} className="px-1 text-xl font-bold">
-        🎓 ProfessorIA
+      <Link href="/dashboard" onClick={handleLinkClick} className="px-1">
+        <Brand className="text-xl" />
       </Link>
 
       <nav className="mt-6 space-y-1">

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Brand } from "@/components/layout/Brand";
 
 // Landing page (rota /). Server Component — sem JS no client além do que o
 // Next manda automaticamente. Em produção fica leve e funciona sem auth.
@@ -14,14 +15,17 @@ export default function LandingPage() {
           MVP em construção · Fases 1 e 2 prontas
         </span>
 
-        <h1 className="text-4xl font-bold tracking-tight md:text-6xl">
-          🎓 ProfessorIA
+        <h1 className="text-4xl md:text-6xl">
+          <Brand />
         </h1>
+        <p className="mt-3 text-lg font-medium text-primary md:text-xl">
+          O seu companheiro de estudos
+        </p>
 
         <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-          Crie um professor virtual de qualquer matéria — alimentado pelo seu
-          próprio material. Tire dúvidas, gere quizzes, simulados e provas, e
-          acompanhe sua evolução por tópico.
+          O Kango está sempre ao seu lado para transformar seus estudos em uma
+          jornada leve, divertida e cheia de conquistas — com quizzes, trilhas
+          e progresso gerados a partir do seu próprio material.
         </p>
 
         <div className="mt-10 flex flex-col gap-3 sm:flex-row">

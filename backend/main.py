@@ -1,5 +1,5 @@
 """
-Ponto de entrada do backend FastAPI do ProfessorIA.
+Ponto de entrada do backend FastAPI do Kango (ex-ProfessorIA).
 
 Para rodar localmente:
     uvicorn main:app --reload --port 8000
@@ -13,21 +13,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from routers import professores, documentos, chat, atividades, score, progresso, calendario
+from services.config import settings
 
 # Instância principal da aplicação. O título aparece no /docs (Swagger UI).
 app = FastAPI(
-    title="ProfessorIA API",
-    description="Backend do ProfessorIA: RAG, chat e atividades baseadas em material do usuário.",
-    version="0.1.0",
+    title="Kango API",
+    description="Backend do Kango: RAG, quizzes e progressão baseados no material do usuário.",
+    version="0.2.0",
 )
 
 # CORS: libera o frontend Next.js (em dev e em produção) a chamar a API.
+# O domínio novo do Kango entra via EXTRA_CORS_ORIGINS (env no Railway),
+# sem precisar de deploy de código.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://profia-rose.vercel.app",
+        *settings.extra_cors_origins(),
     ],
     allow_credentials=True,
     allow_methods=["*"],
