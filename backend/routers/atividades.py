@@ -19,7 +19,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import ActivityGenerateRequest, ActivitySubmitRequest, QuestionCheckRequest
-from services.claude import MODEL_HAIKU, generate_json
+from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_json
 from services.config import settings
 from services.progress import (
     XP_ATIVIDADE_CONCLUIDA,
@@ -139,6 +139,7 @@ def gerar_atividade(payload: ActivityGenerateRequest):
         "Cada questão precisa ter exatamente 4 alternativas, apenas uma correta. "
         "Baseie as questões prioritariamente no material de contexto do system prompt; "
         "se ele não cobrir o tópico, use conhecimento geral da matéria. "
+        f"{NOTACAO_MATEMATICA} "
         "Use a tool return_quiz para responder."
     )
 

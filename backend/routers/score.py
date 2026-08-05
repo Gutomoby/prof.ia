@@ -12,7 +12,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from services.claude import MODEL_HAIKU, generate_study_plan
+from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_study_plan
 from services.rag import search_chunks
 from services.scoring import answered_activities, compute_streak, to_local_date, topic_stats
 from services.supabase_client import get_supabase
@@ -142,6 +142,7 @@ def generate_plan(professor_id: UUID):
     user_prompt = (
         f"Monte um plano de estudos para esse aluno de {professor['discipline']}. "
         f"{topicos_desc} {exam_desc} "
+        f"{NOTACAO_MATEMATICA} "
         "Use a tool return_study_plan para responder."
     )
 

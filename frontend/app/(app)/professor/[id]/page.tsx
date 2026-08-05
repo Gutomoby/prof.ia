@@ -12,6 +12,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TopicNode } from "@/components/ui/topic-node";
+import { MathText } from "@/components/ui/math-text";
 import { computeNextStep } from "@/lib/next-step";
 import { faltamPontos, montarTrilha } from "@/lib/trilha";
 import { useStartQuiz } from "@/lib/use-start-quiz";
@@ -140,10 +141,12 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           <Zap className="h-3.5 w-3.5" />
           Próximo passo
         </p>
-        <p className="mt-[7px] text-[19px] font-bold leading-tight tracking-[-0.02em] text-tinta">
+        <MathText as="p" className="mt-[7px] text-[19px] font-bold leading-tight tracking-[-0.02em] text-tinta">
           {step.title}
-        </p>
-        <p className="mt-1 text-pretty text-[14px] leading-[1.45] text-tinta">{step.description}</p>
+        </MathText>
+        <MathText as="p" className="mt-1 text-pretty text-[14px] leading-[1.45] text-tinta">
+          {step.description}
+        </MathText>
 
         {startError && (
           <div className="mt-3">
@@ -186,7 +189,7 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
               <TopicNode
                 key={no.id}
                 estado={no.estado}
-                nome={no.nome}
+                nome={<MathText>{no.nome}</MathText>}
                 // Sem tentativa não há acurácia: um "0%" no anel leria como
                 // "você zerou", quando o capítulo sequer foi aberto.
                 pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}

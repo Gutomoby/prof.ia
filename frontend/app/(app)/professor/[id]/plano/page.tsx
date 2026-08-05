@@ -9,6 +9,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MathText } from "@/components/ui/math-text";
 import { useSetHeaderAction } from "@/components/layout/HeaderActionContext";
 import { cn } from "@/lib/utils";
 import type { StudyPlan } from "@/lib/types";
@@ -39,7 +40,9 @@ function PassoNumerado({ n, texto, ultimo }: { n: number; texto: string; ultimo:
       <span className="mt-0.5 flex h-[26px] w-[26px] flex-none items-center justify-center rounded-capsula bg-indigo text-[13px] font-semibold text-papel">
         <MetricText weight="semibold">{n}</MetricText>
       </span>
-      <span className="flex-1 text-pretty text-[16px] leading-[1.35] tracking-[-0.43px]">{texto}</span>
+      <MathText className="flex-1 text-pretty text-[16px] leading-[1.35] tracking-[-0.43px]">
+        {texto}
+      </MathText>
       {!ultimo && (
         <span
           aria-hidden
@@ -64,7 +67,9 @@ function PassoDoMes({
       <span className="mt-0.5 flex h-[26px] w-[26px] flex-none items-center justify-center text-tinta-fraca [&>svg]:h-[19px] [&>svg]:w-[19px]">
         {icone}
       </span>
-      <span className="flex-1 text-pretty text-[16px] leading-[1.35] tracking-[-0.43px]">{texto}</span>
+      <MathText className="flex-1 text-pretty text-[16px] leading-[1.35] tracking-[-0.43px]">
+        {texto}
+      </MathText>
       {!ultimo && (
         <span
           aria-hidden
@@ -182,7 +187,9 @@ export default function PlanoPage({ params }: { params: { id: string } }) {
 
       {/* Resumo em tonal índigo: é a leitura do Kango, não um dado da matéria. */}
       <div className="mt-4 rounded-cartao bg-indigo/8 p-4">
-        <p className="text-pretty text-[16px] leading-[1.5] text-tinta">{resumo}</p>
+        <MathText as="p" className="text-pretty text-[16px] leading-[1.5] text-tinta">
+          {resumo}
+        </MathText>
       </div>
 
       {prioridades.length > 0 && (
@@ -201,7 +208,7 @@ export default function PlanoPage({ params }: { params: { id: string } }) {
                   i < 2 ? "bg-erro/10 text-erro" : "bg-cinza-tonal text-tinta-fraca"
                 )}
               >
-                {p}
+                <MathText>{p}</MathText>
               </span>
             ))}
           </div>

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
+// KaTeX: as fórmulas que a IA escreve são renderizadas em components/ui/
+// math-text.tsx. O CSS é global porque a marcação sai do KaTeX em qualquer
+// tela que mostre enunciado, alternativa ou explicação.
+import "katex/dist/katex.min.css";
 
 // Sem next/font: a identidade Kango pede SF Pro no texto e SF Mono nas
 // métricas, e as duas vêm do sistema via -apple-system / ui-monospace. Não há

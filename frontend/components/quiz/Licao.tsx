@@ -10,6 +10,7 @@ import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
 import { ProgressBar } from "@/components/ui/gauge";
 import { QuizOption } from "@/components/quiz/QuizOption";
+import { MathText } from "@/components/ui/math-text";
 import { cn } from "@/lib/utils";
 import type { GeneratedActivity, QuestionCheckResult } from "@/lib/types";
 
@@ -145,7 +146,9 @@ export function Licao({
           </span>
         </div>
 
-        <h2 className="mt-3.5 text-pretty text-enunciado text-tinta">{questao.enunciado}</h2>
+        <MathText as="p" className="mt-3.5 text-pretty text-enunciado text-tinta">
+          {questao.enunciado}
+        </MathText>
       </div>
 
       <div className="mt-5">
@@ -216,19 +219,28 @@ export function Licao({
                     acertou ? "text-acerto" : "text-erro"
                   )}
                 >
-                  {acertou
-                    ? "Certíssimo"
-                    : `Quase. A resposta é ${
-                        questao.alternativas[respondida.resultado.resposta_correta]
-                      }.`}
+                  {acertou ? (
+                    "Certíssimo"
+                  ) : (
+                    <>
+                      Quase. A resposta é{" "}
+                      <MathText>
+                        {questao.alternativas[respondida.resultado.resposta_correta]}
+                      </MathText>
+                      .
+                    </>
+                  )}
                 </p>
                 {respondida.resultado.explicacao && (
                   // Preso ao rodapé, o painel não pode crescer sem limite: as
                   // explicações do modelo às vezes passam de um parágrafo e
                   // empurrariam o "Continuar" para fora da tela.
-                  <p className="mt-1 max-h-[34vh] overflow-y-auto text-pretty text-[14px] leading-[1.45] text-tinta">
+                  <MathText
+                    as="p"
+                    className="mt-1 max-h-[34vh] overflow-y-auto text-pretty text-[14px] leading-[1.45] text-tinta"
+                  >
                     {respondida.resultado.explicacao}
-                  </p>
+                  </MathText>
                 )}
               </div>
             </div>

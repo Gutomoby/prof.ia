@@ -2,6 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MathText } from "@/components/ui/math-text";
 
 /*
   Alternativa da lição. É uma linha de inset list (56px, sem padding vertical),
@@ -56,7 +57,7 @@ export function QuizOption({
           state === "incorrect" && "line-through decoration-[hsl(var(--erro)/0.5)]"
         )}
       >
-        {label}
+        <MathText>{label}</MathText>
       </span>
 
       {state === "correct" && (

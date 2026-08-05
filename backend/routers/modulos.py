@@ -18,7 +18,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import Module
-from services.claude import generate_modules
+from services.claude import NOTACAO_MATEMATICA, generate_modules
 from services.config import settings
 from services.supabase_client import get_supabase
 
@@ -143,7 +143,9 @@ def gerar_modules(professor_id: UUID):
         "Organize o material abaixo em 3 a 8 módulos. Para cada módulo dê um "
         "título curto (como capítulo de livro), uma descrição de 1-2 frases e a "
         "lista de tópicos cobertos — cada tópico específico o suficiente para "
-        "virar questão de quiz. Use a tool return_modules para responder.\n\n"
+        "virar questão de quiz. "
+        f"{NOTACAO_MATEMATICA} "
+        "Use a tool return_modules para responder.\n\n"
         f"MATERIAL:\n{digest}"
     )
 

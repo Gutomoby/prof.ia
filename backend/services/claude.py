@@ -98,6 +98,26 @@ _MODULES_TOOL = {
 }
 
 
+# Notação matemática — regra única para tudo que a IA escreve e a tela mostra.
+#
+# O frontend renderiza LaTeX com KaTeX (components/ui/math-text.tsx), mas só
+# dentro de cifrões. Sem esta instrução o modelo alternava três notações, às
+# vezes na mesma frase: Unicode ("qₓ", "ℓ₄₀"), ASCII ("A_x^(m)", "A-barra_x") e
+# expoente cru ("(1-qₓ)^t"). As duas últimas apareciam literais na tela.
+#
+# Medido no material de Atuária em produção antes da regra: de 53 tópicos de
+# módulo, 28 vinham em notação tipo-LaTeX solta e 6 em Unicode.
+NOTACAO_MATEMATICA = (
+    "NOTAÇÃO MATEMÁTICA: escreva toda fórmula, variável com índice e expoente "
+    "em LaTeX entre cifrões — $q_x$, $_tp_x$, $\\bar{A}_x$, $A_x^{(m)}$, "
+    "$\\mu_{x+t}$, $\\ell_x$, $\\delta$, $\\int_0^1 f(t)\\,dt$. "
+    "Vale também no meio de frase: 'a força $\\mu_{x+t}$ cresce'. "
+    "NUNCA use subscrito ou sobrescrito em Unicode (qₓ, ℓ₄₀, ᵗ), nem _ ou ^ "
+    "fora dos cifrões, nem 'barra' escrito por extenso. "
+    "Texto comum fica fora dos cifrões."
+)
+
+
 def generate_modules(system_prompt: str, user_prompt: str, model: str = MODEL_SONNET) -> dict:
     """Pede ao Claude a divisão do material em módulos, via tool-forcing.
 

@@ -8,6 +8,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
+import { MathText } from "@/components/ui/math-text";
 import { pctInteiro } from "@/lib/utils";
 import type { ActivitySubmitResult } from "@/lib/types";
 
@@ -50,7 +51,9 @@ export function ResultadoLicao({
         Lição concluída
       </p>
 
-      <h1 className="mt-1.5 text-pretty text-titulo-grande text-tinta">{topico ?? "Quiz geral"}</h1>
+      <MathText as="p" className="mt-1.5 text-pretty text-titulo-grande text-tinta">
+        {topico ?? "Quiz geral"}
+      </MathText>
 
       <Gauge
         className="mt-[22px]"
@@ -102,7 +105,7 @@ export function ResultadoLicao({
                 : "Você dominou tópicos novos"}
             </p>
             <p className="mt-[3px] text-pretty text-[14px] leading-[1.4] text-tinta-fraca">
-              {result.topicos_dominados.join(" · ")}
+              <MathText>{result.topicos_dominados.join(" · ")}</MathText>
             </p>
           </div>
         </GlassCard>

@@ -14,6 +14,7 @@ import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText, toneDaNota } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Segmented } from "@/components/ui/segmented";
+import { MathText } from "@/components/ui/math-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { computeNextStep } from "@/lib/next-step";
 import { professorColor } from "@/lib/professor-color";
@@ -311,7 +312,9 @@ export default function EstudarPage() {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-tinta-fraca">
                   {step.kind === "revisar-topico" ? "Continuar de onde parou" : "Comece por aqui"}
                 </p>
-                <p className="mt-[3px] text-titulo-cartao text-tinta">{step.title}</p>
+                <MathText as="p" className="mt-[3px] text-titulo-cartao text-tinta">
+                  {step.title}
+                </MathText>
                 {step.kind !== "subir-material" && (
                   <p className="mt-1 text-nota text-tinta-fraca">
                     <MetricText tone="fraca">{QUESTOES_POR_LICAO}</MetricText> questões

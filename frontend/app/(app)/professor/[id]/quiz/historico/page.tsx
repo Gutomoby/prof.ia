@@ -10,6 +10,7 @@ import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MathText } from "@/components/ui/math-text";
 import { cn, pctInteiro } from "@/lib/utils";
 import { DIFFICULTY_LABELS, type ActivityHistoryItem, type Professor } from "@/lib/types";
 
@@ -204,7 +205,7 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
                     : "vidro-cartao font-medium text-tinta shadow-hairline hover:bg-white"
                 )}
               >
-                <span className="max-w-[10rem] truncate">{nome}</span>
+                <MathText className="max-w-[10rem] truncate">{nome}</MathText>
                 <MetricText>{n}</MetricText>
               </button>
             );
@@ -245,7 +246,7 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
                     key={a.id}
                     href={terminou ? `/professor/${professorId}/quiz/historico/${a.id}` : undefined}
                     altura="dupla"
-                    title={a.topic || "Tópico geral"}
+                    title={<MathText>{a.topic || "Tópico geral"}</MathText>}
                     subtitle={
                       <>
                         <MetricText tone="fraca">

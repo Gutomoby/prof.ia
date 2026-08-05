@@ -12,6 +12,7 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreTrendChart } from "@/components/score/ScoreTrendChart";
+import { MathText } from "@/components/ui/math-text";
 import { cn, pctInteiro } from "@/lib/utils";
 import type { ScoreSummary } from "@/lib/types";
 
@@ -177,7 +178,7 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
             return (
               <InsetRow
                 key={t.topico}
-                title={t.topico}
+                title={<MathText>{t.topico}</MathText>}
                 value={
                   <Pill tone={tonePilulaDaNota(pct)}>
                     <MetricText>{pct}%</MetricText>

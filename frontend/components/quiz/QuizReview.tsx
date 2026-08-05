@@ -4,6 +4,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { InsetList } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { cn, pctInteiro } from "@/lib/utils";
+import { MathText } from "@/components/ui/math-text";
 import type { SubmittedQuestionResult } from "@/lib/types";
 
 /*
@@ -41,7 +42,7 @@ function LinhaResposta({
       ) : (
         <X className="h-4 w-4 flex-none text-erro" strokeWidth={3} />
       )}
-      <span className={cn("flex-1 text-corpo", acerto && "font-semibold")}>{texto}</span>
+      <MathText className={cn("flex-1 text-corpo", acerto && "font-semibold")}>{texto}</MathText>
       {rotulo && (
         <span
           className={cn(
@@ -59,9 +60,9 @@ function LinhaResposta({
 function QuestaoErrada({ q }: { q: SubmittedQuestionResult }) {
   return (
     <div className="relative px-4 pb-4 pt-3.5">
-      <p className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
+      <MathText as="p" className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
         {q.enunciado}
-      </p>
+      </MathText>
 
       <div className="mt-2.5 flex flex-col gap-1.5">
         {q.resposta_usuario !== null && (
@@ -79,9 +80,9 @@ function QuestaoErrada({ q }: { q: SubmittedQuestionResult }) {
       </div>
 
       {q.explicacao && (
-        <p className="mt-2.5 text-pretty text-nota leading-[1.45] text-tinta-fraca">
+        <MathText as="p" className="mt-2.5 text-pretty text-nota leading-[1.45] text-tinta-fraca">
           {q.explicacao}
-        </p>
+        </MathText>
       )}
 
       <span
@@ -173,9 +174,9 @@ export function QuizReview({
                 .filter((q) => q.correta)
                 .map((q, i) => (
                   <div key={i} className="relative px-4 pb-4 pt-3.5">
-                    <p className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
+                    <MathText as="p" className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
                       {q.enunciado}
-                    </p>
+                    </MathText>
                     <div className="mt-2.5">
                       <LinhaResposta
                         texto={q.alternativas[q.resposta_correta]}

@@ -11,6 +11,7 @@ import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Segmented } from "@/components/ui/segmented";
+import { MathText } from "@/components/ui/math-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStartQuiz } from "@/lib/use-start-quiz";
 import { cn, pctInteiro } from "@/lib/utils";
@@ -155,7 +156,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                         : "bg-cinza-tonal font-medium text-tinta-fraca hover:bg-borda"
                     )}
                   >
-                    <span className="max-w-[13rem] truncate">{t.topico}</span>
+                    <MathText className="max-w-[13rem] truncate">{t.topico}</MathText>
                     {i === 0 && <MetricText weight="bold">{pctInteiro(t.accuracy_pct)}%</MetricText>}
                   </button>
                 );
@@ -186,7 +187,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                 key={m.id}
                 altura="dupla"
                 icon={<Layers />}
-                title={m.name}
+                title={<MathText>{m.name}</MathText>}
                 subtitle={
                   m.n_tentativas === 0 ? (
                     "Nunca tentado"
@@ -246,7 +247,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                 key={h.id}
                 href={`/professor/${professorId}/quiz/historico/${h.id}`}
                 altura="dupla"
-                title={h.topic || "Tópico geral"}
+                title={<MathText>{h.topic || "Tópico geral"}</MathText>}
                 subtitle={
                   <>
                     <MetricText tone="fraca">
