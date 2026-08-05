@@ -45,8 +45,19 @@ export function ResultadoLicao({
   const dominou = result.topicos_dominados.length > 0;
 
   return (
-    <div className="mx-auto flex max-w-[520px] flex-col items-center text-center">
-      <p className="flex items-center gap-[7px] text-rotulo uppercase text-tinta-fraca">
+    /*
+      57 · Resultado no computador. A coluna de 520px vira uma de 760 com o
+      anel e o texto lado a lado: em tela larga, o anel sozinho no topo
+      empurraria o resto para baixo da dobra.
+
+      A ordem do DOM continua a do celular (rótulo, tópico, anel), e o que
+      muda no md é só o arranjo — o anel sobe para a esquerda com `order`,
+      dentro da mesma linha.
+    */
+    <div className="mx-auto flex max-w-[520px] flex-col items-center text-center md:max-w-[760px]">
+      <div className="flex w-full flex-col items-center md:flex-row md:items-center md:gap-8 md:text-left">
+        <div className="min-w-0 md:order-2 md:flex-1">
+      <p className="flex items-center gap-[7px] text-rotulo uppercase text-tinta-fraca md:justify-start">
         <span aria-hidden className="h-2 w-2 flex-none rounded-capsula bg-indigo" />
         Lição concluída
       </p>
@@ -54,9 +65,10 @@ export function ResultadoLicao({
       <MathText as="p" className="mt-1.5 text-pretty text-titulo-grande text-tinta">
         {topico ?? "Quiz geral"}
       </MathText>
+        </div>
 
       <Gauge
-        className="mt-[22px]"
+        className="mt-[22px] md:order-1 md:mt-0 md:flex-none"
         value={result.score_pct}
         size="resultado"
         tone="nota"
@@ -69,8 +81,9 @@ export function ResultadoLicao({
       >
         {`${pctInteiro(result.score_pct)}%`}
       </Gauge>
+      </div>
 
-      <div className="mt-[22px] flex w-full gap-2.5">
+      <div className="mt-[22px] flex w-full gap-2.5 md:gap-4">
         <GlassCard nivel="hud" radius="cartao" className="flex-1 px-3 py-3.5 text-center">
           <Zap className="mx-auto h-[19px] w-[19px] text-indigo" />
           <MetricText as="p" weight="bold" className="mt-1 text-[22px] leading-none">
@@ -117,13 +130,16 @@ export function ResultadoLicao({
         </div>
       )}
 
-      <div className="mt-6 w-full">
-        <Capsule block loading={gerando} onClick={onRepetir}>
+      {/* No computador as duas ações ficam na mesma linha (57): a principal
+          estica e a saída fica ao lado, em vez de empilhadas no meio de uma
+          tela de 900px de altura. */}
+      <div className="mt-6 flex w-full flex-col md:flex-row md:items-center md:gap-3.5">
+        <Capsule block loading={gerando} onClick={onRepetir} className="md:flex-1">
           {gerando ? "Gerando..." : "Próxima lição"}
         </Capsule>
         <Link
           href={`/professor/${professorId}`}
-          className={capsuleVariants("texto", true, "mt-3")}
+          className={capsuleVariants("texto", true, "mt-3 md:mt-0 md:w-auto md:flex-none md:px-6")}
         >
           Voltar à trilha
         </Link>

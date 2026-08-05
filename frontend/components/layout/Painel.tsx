@@ -21,12 +21,25 @@ import { cn } from "@/lib/utils";
 /** Linha de blocos: pilha no celular, lado a lado no computador. */
 export function PainelLinha({
   className,
+  inverso = false,
   children,
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: React.HTMLAttributes<HTMLDivElement> & {
+  /**
+   * Inverte só a POSIÇÃO no computador, mantendo a ordem do DOM. Serve para
+   * o bloco que abre a pilha no celular (um resumo, um placar) e que no
+   * computador mora na direita: sem isso seria preciso escolher entre a
+   * ordem certa de leitura e o lugar certo na tela.
+   */
+  inverso?: boolean;
+}) {
   return (
     <div
-      className={cn("flex flex-col gap-3 md:flex-row md:items-stretch md:gap-5", className)}
+      className={cn(
+        "flex flex-col gap-3 md:items-stretch md:gap-5",
+        inverso ? "md:flex-row-reverse" : "md:flex-row",
+        className
+      )}
       {...props}
     >
       {children}

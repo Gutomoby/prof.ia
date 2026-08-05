@@ -1,5 +1,6 @@
 import { Check, X } from "lucide-react";
 import { Gauge } from "@/components/ui/gauge";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { GlassCard } from "@/components/ui/glass-card";
 import { InsetList } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
@@ -114,8 +115,17 @@ export function QuizReview({
   const seg = tempoSegundos ? tempoSegundos % 60 : null;
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-4">
-      <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4">
+    /*
+      58 · Revisão no computador: as questões ficam na coluna larga e o placar
+      vai para a auxiliar de 340px.
+
+      `inverso` existe por causa deste caso: no celular o placar ABRE a pilha,
+      no computador ele mora à direita. Sem ele seria preciso escolher entre a
+      ordem certa de leitura (placar primeiro) e o lugar certo na tela.
+    */
+    <PainelLinha inverso className="mx-auto w-full max-w-[560px] md:max-w-none">
+      <PainelAuxiliar largura={340}>
+      <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4 md:flex-col md:items-start md:gap-3.5">
         <Gauge value={scorePct} size={72} tone="nota" />
         <div className="min-w-0 flex-1">
           <p className="text-linha font-bold text-tinta">
@@ -145,7 +155,9 @@ export function QuizReview({
           )}
         </div>
       </GlassCard>
+      </PainelAuxiliar>
 
+      <PainelPrincipal className="gap-4">
       {erradas.length > 0 ? (
         <div>
           <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-erro">
@@ -197,6 +209,7 @@ export function QuizReview({
       )}
 
       {footer}
-    </div>
+      </PainelPrincipal>
+    </PainelLinha>
   );
 }

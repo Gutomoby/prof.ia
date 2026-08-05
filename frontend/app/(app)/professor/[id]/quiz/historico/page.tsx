@@ -7,6 +7,7 @@ import { Capsule } from "@/components/ui/capsule";
 import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { Tabela, TabelaLinha, type Coluna } from "@/components/ui/tabela";
 import { MetricText } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,6 +74,16 @@ function Estatistica({ valor, rotulo }: { valor: React.ReactNode; rotulo: string
     </div>
   );
 }
+
+// Larguras da 59: só o tópico estica. A definição serve o cabeçalho e as
+// células ao mesmo tempo — ver components/ui/tabela.
+const COLUNAS: Coluna[] = [
+  { rotulo: "Tópico", largura: "min-w-0 flex-1" },
+  { rotulo: "Data", largura: "w-[88px] flex-none" },
+  { rotulo: "Tempo", largura: "w-[96px] flex-none" },
+  { rotulo: "Nível", largura: "w-[88px] flex-none" },
+  { rotulo: "Nota", largura: "w-[110px] flex-none", fim: true },
+];
 
 export default function TentativasPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
@@ -166,7 +177,7 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col">
+    <div className="mx-auto flex w-full max-w-[560px] flex-col md:max-w-none">
       <p className="text-[14px] text-tinta-fraca">
         <MetricText weight="bold">{items.length}</MetricText>{" "}
         {items.length === 1 ? "quiz" : "quizzes"}
@@ -234,7 +245,58 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
             : "Nenhuma tentativa ainda. Gere o primeiro quiz na aba Quiz."}
         </p>
       ) : (
-        grupos.map(([rotulo, lista]) => (
+        <>
+          {/*
+            59 · Tentativas no computador: tabela, não a lista agrupada.
+
+            As duas convivem em vez de uma virar a outra porque são desenhos
+            diferentes, não o mesmo em tamanhos diferentes. No celular a data
+            entra no subtítulo e o agrupamento por período ("Esta semana") é
+            que orienta; no computador cada dado ganha coluna e o período sai,
+            porque a coluna Data já ordena a leitura.
+          */}
+          <div className="mt-[22px] hidden md:block">
+            <Tabela colunas={COLUNAS}>
+              {filtrados.map((a) => {
+                const tempo = duracao(a.time_seconds);
+                const terminou = a.score_pct !== null;
+                return (
+                  <TabelaLinha
+                    key={a.id}
+                    colunas={COLUNAS}
+                    href={terminou ? `/professor/${professorId}/quiz/historico/${a.id}` : undefined}
+                    celulas={[
+                      <MathText key="t">{a.topic || "Tópico geral"}</MathText>,
+                      <MetricText key="d" tone="fraca">
+                        {new Date(a.created_at).toLocaleDateString("pt-BR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </MetricText>,
+                      tempo ? (
+                        <MetricText key="p" tone="fraca">
+                          {tempo.min !== null ? `${tempo.min}:${String(tempo.seg).padStart(2, "0")}` : `0:${String(tempo.seg).padStart(2, "0")}`}
+                        </MetricText>
+                      ) : (
+                        <span key="p">—</span>
+                      ),
+                      <span key="c">{a.difficulty ? DIFFICULTY_LABELS[a.difficulty] : "—"}</span>,
+                      terminou ? (
+                        <Pill key="n" tone={tonePilulaDaNota(pctInteiro(a.score_pct as number))}>
+                          <MetricText>{pctInteiro(a.score_pct as number)}%</MetricText>
+                        </Pill>
+                      ) : (
+                        <Pill key="n">não terminou</Pill>
+                      ),
+                    ]}
+                  />
+                );
+              })}
+            </Tabela>
+          </div>
+
+          <div className="md:hidden">
+        {grupos.map(([rotulo, lista]) => (
           <div key={rotulo} className="mt-[22px]">
             <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">{rotulo}</p>
             <InsetList>
@@ -288,7 +350,9 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
               })}
             </InsetList>
           </div>
-        ))
+        ))}
+          </div>
+        </>
       )}
 
       {restantes > 0 && (

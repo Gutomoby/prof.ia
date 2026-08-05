@@ -11,6 +11,7 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MonthGrid, dateKey } from "@/components/calendario/MonthGrid";
 import { DayPanel } from "@/components/calendario/DayPanel";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { professorColor } from "@/lib/professor-color";
 import { cn, localDateKey } from "@/lib/utils";
 import type {
@@ -131,7 +132,13 @@ export default function CalendarioPage() {
   const noMesAtual = year === hoje.getFullYear() && month === hoje.getMonth();
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    /*
+      60 · Calendário no computador: o mês ocupa a coluna larga e o painel do
+      dia vira a auxiliar de 372px, ao lado. No celular os dois continuam
+      empilhados, o mês em cima e o dia embaixo — que é a ordem em que se lê
+      quando não cabem lado a lado.
+    */
+    <div className="mx-auto w-full max-w-[720px] md:max-w-none">
       <PageHeader
         title="Calendário"
         subtitle={
@@ -169,6 +176,8 @@ export default function CalendarioPage() {
         </div>
       )}
 
+      <PainelLinha>
+        <PainelPrincipal>
       <GlassCard nivel="cartao" radius="grupo" className="p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <button
@@ -227,7 +236,10 @@ export default function CalendarioPage() {
         </div>
       )}
 
-      <div className="mt-[22px]">
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={372} className="mt-[22px] md:mt-0">
+      <div>
         <DayPanel
           dateKey={selected}
           activities={activitiesByDay[selected] ?? []}
@@ -268,6 +280,8 @@ export default function CalendarioPage() {
           </div>
         );
       })()}
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }
