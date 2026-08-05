@@ -86,7 +86,9 @@ export default function QuizHistoricoDetailPage({
   }
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-4">
+    // A largura da revisão é do PAINEL, não da página: preso em 560px, o
+    // painel dava 340 para a auxiliar e sobrava um filete para as questões.
+    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4 md:max-w-none">
       <p className="-mt-2 text-[14px] text-tinta-fraca">
         {detail.topic || "Tópico geral"} ·{" "}
         <MetricText tone="fraca">
