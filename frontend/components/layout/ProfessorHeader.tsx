@@ -56,25 +56,48 @@ export function ProfessorHeader({
     if (!confirmNavigate()) e.preventDefault();
   }
 
-  // O nome da matéria é o título: as abas dizem em que seção você está, o
-  // large title diz de quem é a sala. Revisão e Ajustes saem desse padrão
-  // porque são destinos, não seções.
-  const titulo = isHistoricoDetail ? "Revisão" : isAjustes ? "Ajustes" : professor.name;
+  // O large title é o nome da SEÇÃO, e o link de volta nomeia a matéria — é o
+  // que o handoff faz (tela 16 "Material", tela 22 "Fazer um quiz"). Só a
+  // visão geral leva o nome do professor, porque ali a seção é a própria sala
+  // (tela 21).
+  //
+  // A Fase A tinha feito o inverso, com a matéria fixa no título; nas telas de
+  // seção isso deixava o título repetindo o que o link de volta já dizia, e a
+  // aba ativa como única pista de onde você está.
+  const TITULOS: Record<string, string> = {
+    progresso: "Progresso",
+    quiz: "Fazer um quiz",
+    material: "Material",
+  };
+  const emSecao = Boolean(ativa && ativa !== "geral");
+  const naSecao = emSecao || isHistoricoDetail || isAjustes;
+  const titulo = isHistoricoDetail
+    ? "Revisão"
+    : isAjustes
+      ? "Ajustes"
+      : emSecao
+        ? TITULOS[ativa as string]
+        : professor.name;
 
   return (
     <div className="mb-4">
       <PageHeader
         title={titulo}
-        backHref={
-          isHistoricoDetail || isAjustes ? `/professor/${professor.id}` : "/dashboard"
-        }
-        backLabel={isHistoricoDetail || isAjustes ? professor.name : "Estudar"}
+        // Da seção o caminho de volta é a sala, não a home: é o que o link
+        // "‹ ● Prof. Atuária" do handoff faz. Só a visão geral volta para
+        // Estudar, porque dali a sala é o começo.
+        backHref={naSecao ? `/professor/${professor.id}` : "/dashboard"}
+        backLabel={naSecao ? professor.name : "Estudar"}
+        // A disciplina só acompanha o título na visão geral. Nas seções o
+        // título já é a seção, e cada tela põe o próprio subtítulo.
         subtitle={
-          <span className="flex items-center gap-2">
-            {/* Cor de matéria sempre como ponto, nunca como fundo. */}
-            <span aria-hidden className={cn("h-2 w-2 flex-none rounded-capsula", color.bg)} />
-            {professor.discipline}
-          </span>
+          naSecao ? undefined : (
+            <span className="flex items-center gap-2">
+              {/* Cor de matéria sempre como ponto, nunca como fundo. */}
+              <span aria-hidden className={cn("h-2 w-2 flex-none rounded-capsula", color.bg)} />
+              {professor.discipline}
+            </span>
+          )
         }
         // Canto superior direito, na linha do link de volta — é onde o handoff
         // põe a engrenagem (telas 16 e 21). Antes era uma cápsula branca larga

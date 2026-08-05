@@ -2,26 +2,64 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { History as HistoryIcon, RotateCcw } from "lucide-react";
+import { Check, ChevronRight, Clock, Layers, RotateCcw, Search, Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Capsule, capsuleVariants } from "@/components/ui/capsule";
+import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { EmptyState } from "@/components/ui/empty-state";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { MetricText } from "@/components/ui/metric-text";
+import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
+import { ProgressBar } from "@/components/ui/gauge";
+import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
 import { QuizReview } from "@/components/quiz/QuizReview";
-import { ModuleList } from "@/components/quiz/ModuleList";
-import { DifficultyPicker, DIFFICULTY_LABELS } from "@/components/quiz/DifficultyPicker";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
 import { pendingQuizKey } from "@/lib/use-start-quiz";
-import { pctInteiro, scoreBadgeVariant } from "@/lib/utils";
-import type { ActivityHistoryItem, ActivitySubmitResult, Difficulty, GeneratedActivity } from "@/lib/types";
+import { cn, pctInteiro } from "@/lib/utils";
+import {
+  DIFFICULTY_LABELS,
+  type ActivityHistoryItem,
+  type ActivitySubmitResult,
+  type Difficulty,
+  type GeneratedActivity,
+  type Module,
+  type ScoreSummary,
+} from "@/lib/types";
 
-type View = "idle" | "respondendo" | "resultado";
+/*
+  Tela 22 · Fazer um quiz, e 23 · Gerando o quiz (o mesmo caminho, esperando).
+
+  Responder e resultado (telas 37 a 39) continuam como estavam: sao a Fase D e
+  tem desenho proprio.
+
+  Duas coisas do desenho que este app tem e a tela 22 nao mostra, e que eu
+  mantive em vez de remover:
+
+  - Dificuldade. E funcionalidade que ja existe (routers/atividades.py recebe
+    `difficulty`), e o plano ja previa transforma-la em Segmented na Fase D.
+  - Modulos. A trilha da tela 21 aponta para ca justamente para o aluno fazer o
+    quiz do capitulo; sem a lista, aquele caminho morre.
+
+  Sobre a tela 23: o desenho tem uma lista de tres passos com check verde em
+  "Achou os trechos do seu material". Esses passos existem no backend
+  (search_chunks -> geracao -> validacao), mas a geracao e uma requisicao so:
+  o cliente nao observa em qual passo esta. Pintar um check sem saber seria
+  afirmar um fato que ninguem verificou, entao aqui os tres passos aparecem
+  como o que vai acontecer, com a barra indeterminada marcando a espera.
+*/
+
+type View = "idle" | "gerando" | "respondendo" | "resultado";
+
+// Deriva de DIFFICULTY_LABELS para o seletor e o histórico não divergirem —
+// a ordem é a do produto (mais fácil primeiro), não a do objeto.
+const DIFICULDADES: { value: Difficulty; label: string }[] = (
+  ["facil", "medio", "dificil"] as const
+).map((value) => ({ value, label: DIFFICULTY_LABELS[value] }));
 
 export default function QuizPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
@@ -32,6 +70,8 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [difficulty, setDifficulty] = useState<Difficulty>("medio");
   const [generating, setGenerating] = useState(false);
   const [genError, setGenError] = useState<string | null>(null);
+  // Do que o quiz em geração é — alimenta o título da tela 23.
+  const [gerandoDe, setGerandoDe] = useState<string | null>(null);
 
   const [activity, setActivity] = useState<GeneratedActivity | null>(null);
   const [answers, setAnswers] = useState<Record<string, number>>({});
@@ -44,6 +84,9 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [history, setHistory] = useState<ActivityHistoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState<string | null>(null);
+
+  const [modules, setModules] = useState<Module[]>([]);
+  const [summary, setSummary] = useState<ScoreSummary | null>(null);
 
   useEffect(() => {
     setUnsaved(view === "respondendo");
@@ -69,10 +112,11 @@ export default function QuizPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     refreshHistory();
+    api.listModules(professorId).then((r) => setModules(r.items)).catch(() => setModules([]));
+    api.getScoreSummary(professorId).then(setSummary).catch(() => setSummary(null));
 
-    // "Tentar novamente" a partir da tela de revisitar histórico já gera o
-    // quiz por lá (pra ter o mesmo comportamento imediato do botão na tela
-    // de resultado) e deixa o resultado aqui via sessionStorage.
+    // "Tentar novamente" a partir da revisão do histórico já gera o quiz por lá
+    // e deixa o resultado aqui via sessionStorage.
     const pendingRaw = sessionStorage.getItem(pendingQuizKey(professorId));
     if (pendingRaw) {
       sessionStorage.removeItem(pendingQuizKey(professorId));
@@ -84,15 +128,17 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         setStartedAt(Date.now());
         setView("respondendo");
       } catch {
-        // payload inválido — ignora e deixa o usuário gerar um quiz normalmente
+        // payload inválido — o usuário gera um quiz normalmente
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
-  async function startQuiz(opts: { topic?: string | null; moduleId?: string | null }) {
+  async function startQuiz(opts: { topic?: string | null; moduleId?: string | null; rotulo?: string }) {
     setGenError(null);
     setGenerating(true);
+    setGerandoDe(opts.rotulo ?? opts.topic ?? null);
+    setView("gerando");
     try {
       const generated = await api.generateAtividade({
         professor_id: professorId,
@@ -107,6 +153,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
       setView("respondendo");
     } catch (err) {
       setGenError(err instanceof ApiError ? err.message : "Falha ao gerar o quiz.");
+      setView("idle");
     } finally {
       setGenerating(false);
     }
@@ -122,11 +169,7 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setSubmitting(true);
     try {
       const time_seconds = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
-      const res = await api.submitAtividade({
-        activity_id: activity.activity_id,
-        answers,
-        time_seconds,
-      });
+      const res = await api.submitAtividade({ activity_id: activity.activity_id, answers, time_seconds });
       setResult(res);
       setView("resultado");
       refreshHistory();
@@ -149,146 +192,276 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const answeredCount = activity ? activity.questions.filter((_, i) => answers[String(i)] !== undefined).length : 0;
 
   const answeredHistory = history.filter((h) => h.score_pct != null);
-  const pendingHistory = history.filter((h) => h.score_pct == null);
 
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      {view === "idle" && (
-        <>
-          {/* Dificuldade é global na tela: vale para módulos e tópico livre. */}
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <span className="text-sm font-medium text-muted-foreground">Dificuldade das questões</span>
-            <DifficultyPicker value={difficulty} onChange={setDifficulty} disabled={generating} />
+  // Sugestões de tópico: os mais fracos primeiro, que é o que o desenho
+  // destaca. O primeiro chip vem com a acurácia porque é o convite.
+  const sugestoes = (summary?.topics ?? [])
+    .filter((t) => t.status === "pendente")
+    .sort((a, b) => a.accuracy_pct - b.accuracy_pct)
+    .slice(0, 4);
+
+  // ── 23 · Gerando o quiz ──────────────────────────────────────────────────
+  if (view === "gerando") {
+    return (
+      <div className="mx-auto flex min-h-[70vh] max-w-[520px] flex-col items-center text-center">
+        <div className="flex w-full justify-end">
+          <button
+            type="button"
+            onClick={() => setView("idle")}
+            className="rounded-chip px-2 py-1 text-[17px] font-medium text-indigo hover:bg-indigo/6 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+          >
+            Cancelar
+          </button>
+        </div>
+
+        <div className="flex flex-1 flex-col items-center justify-center">
+          <KangoPlaceholder px={132} estado="folheando o material" />
+
+          <h1 className="mt-6 text-pretty text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-tinta">
+            {gerandoDe ? <>Montando seu quiz de {gerandoDe}</> : "Montando seu quiz"}
+          </h1>
+          <p className="mt-2 text-corpo text-tinta-fraca">
+            Leva uns <MetricText tone="fraca">10</MetricText> segundos.
+          </p>
+
+          <div className="mt-6 w-full">
+            <InsetList>
+              {[
+                "Procurar os trechos do seu material",
+                "Escrever as questões",
+                "Conferir as respostas",
+              ].map((passo) => (
+                <InsetRow key={passo} title={<span className="text-tinta-fraca">{passo}</span>} />
+              ))}
+            </InsetList>
           </div>
 
+          <ProgressBar
+            className="mt-4 w-full animate-pulse"
+            value={100}
+            aria-label="Gerando o quiz"
+          />
+          <p className="mt-2.5 text-nota text-tinta-fraca">
+            As questões saem só do material que você enviou.
+          </p>
+        </div>
+
+        <p className="flex items-center gap-3 pb-6 pt-8 text-left text-nota leading-[1.4] text-tinta-fraca">
+          <Sparkles className="h-[17px] w-[17px] flex-none text-acerto" />
+          Dica: acertar <MetricText tone="fraca">70%</MetricText> de um tópico duas vezes marca ele
+          como dominado.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-[560px]">
+      {view === "idle" && (
+        <div className="flex flex-col gap-[22px]">
           {genError && <InlineAlert>{genError}</InlineAlert>}
 
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium text-muted-foreground">Módulos do material</h2>
-            <ModuleList
-              professorId={professorId}
-              starting={generating}
-              onStart={(moduleId) => startQuiz({ moduleId })}
+          <InsetList label="Tipo de atividade">
+            <InsetRow
+              active
+              altura="dupla"
+              icon={<Check />}
+              iconTone="indigo"
+              title="Quiz"
+              subtitle={
+                <>
+                  <MetricText tone="fraca">5 a 8</MetricText> questões · você vê o acerto na hora
+                </>
+              }
+              trailing={<Check className="h-5 w-5 text-indigo" />}
+            />
+            <InsetRow
+              disabled
+              altura="dupla"
+              icon={<Clock />}
+              title={<span className="text-tinta-fraca">Reforço, Simulado e Prova</span>}
+              subtitle="Em breve, por enquanto tudo é quiz"
+            />
+          </InsetList>
+
+          <div>
+            <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+              Dificuldade
+            </p>
+            <Segmented
+              aria-label="Dificuldade das questões"
+              value={difficulty}
+              onValueChange={(v) => setDifficulty(v as Difficulty)}
+              options={DIFICULDADES}
             />
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Quiz por tópico livre</CardTitle>
-              <CardDescription>Deixe o tópico em branco para a IA escolher.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  startQuiz({ topic: topic || null });
-                }}
-                className="space-y-4"
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="topic">Tópico (opcional)</Label>
-                  <Input
-                    id="topic"
-                    placeholder="Ex.: Tábuas de Mortalidade"
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                  />
-                </div>
-                <Button type="submit" size="lg" className="w-full" loading={generating}>
-                  {generating ? "Gerando..." : "Gerar quiz"}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-3">
-            <h2 className="text-sm font-medium text-muted-foreground">Histórico</h2>
-
-            {historyLoading && (
-              <div className="space-y-2">
-                <Skeleton className="h-16 rounded-xl" />
-                <Skeleton className="h-16 rounded-xl" />
+          <div>
+            <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+              Sobre qual tópico?
+            </p>
+            <GlassCard nivel="cartao" radius="grupo" className="p-4">
+              <div className="flex h-10 items-center gap-2.5 rounded-chip bg-cinza-tonal px-3">
+                <Search className="h-4 w-4 flex-none text-tinta-fraca" aria-hidden />
+                <input
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Ex.: Tábuas de Mortalidade"
+                  aria-label="Tópico do quiz"
+                  className="min-w-0 flex-1 bg-transparent text-[16px] text-tinta focus:outline-none placeholder:text-borda-forte"
+                />
               </div>
-            )}
 
-            {!historyLoading && historyError && (
+              {sugestoes.length > 0 && (
+                <div className="mt-2.5 flex flex-wrap gap-2">
+                  {sugestoes.map((t, i) => {
+                    const escolhido = topic === t.topico;
+                    return (
+                      <button
+                        key={t.topico}
+                        type="button"
+                        onClick={() => setTopic(escolhido ? "" : t.topico)}
+                        aria-pressed={escolhido}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-capsula px-[11px] py-1.5 text-nota",
+                          "transition-colors duration-140 ease-out",
+                          "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
+                          escolhido || i === 0
+                            ? "bg-indigo/10 font-semibold text-indigo"
+                            : "bg-cinza-tonal font-medium text-tinta-fraca hover:bg-borda"
+                        )}
+                      >
+                        <span className="max-w-[13rem] truncate">{t.topico}</span>
+                        {i === 0 && (
+                          <MetricText weight="bold">{pctInteiro(t.accuracy_pct)}%</MetricText>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </GlassCard>
+            <p className="mt-2 px-rotulo-secao text-nota leading-[1.4] text-tinta-fraca">
+              Deixe em branco e o Kango escolhe o tópico em que você está mais fraco.
+            </p>
+          </div>
+
+          <Capsule
+            block
+            loading={generating}
+            onClick={() => startQuiz({ topic: topic || null, rotulo: topic || undefined })}
+          >
+            <Sparkles className="h-[17px] w-[17px]" />
+            Gerar quiz
+          </Capsule>
+
+          {modules.length > 0 && (
+            <InsetList
+              label="Ou o capítulo inteiro"
+              footnote="Quiz do módulo cobre todos os tópicos do capítulo, com 8 a 10 questões."
+            >
+              {modules
+                .slice()
+                .sort((a, b) => a.position - b.position)
+                .map((m) => (
+                  <InsetRow
+                    key={m.id}
+                    altura="dupla"
+                    icon={<Layers />}
+                    title={m.name}
+                    subtitle={
+                      m.n_tentativas === 0 ? (
+                        "Nunca tentado"
+                      ) : (
+                        <>
+                          <MetricText tone="fraca">{m.n_tentativas}</MetricText>{" "}
+                          {m.n_tentativas === 1 ? "tentativa" : "tentativas"}
+                        </>
+                      )
+                    }
+                    value={
+                      m.melhor_score_pct === null ? undefined : (
+                        <Pill tone={tonePilulaDaNota(pctInteiro(m.melhor_score_pct))}>
+                          <MetricText>{pctInteiro(m.melhor_score_pct)}%</MetricText>
+                        </Pill>
+                      )
+                    }
+                    onClick={() => startQuiz({ moduleId: m.id, rotulo: m.name })}
+                    trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                  />
+                ))}
+            </InsetList>
+          )}
+
+          <div>
+            <div className="mb-2 flex items-baseline justify-between gap-3 px-rotulo-secao">
+              <p className="text-rotulo uppercase text-tinta-fraca">Suas tentativas</p>
+              {answeredHistory.length > 0 && (
+                <span className="text-nota font-semibold text-tinta-fraca">
+                  <MetricText tone="fraca">{answeredHistory.length}</MetricText> no total
+                </span>
+              )}
+            </div>
+
+            {historyLoading ? (
+              <Skeleton className="h-[104px] rounded-grupo" />
+            ) : historyError ? (
               <InlineAlert>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <span>{historyError}</span>
-                  <Button variant="outline" size="sm" onClick={refreshHistory}>
+                  <Capsule variant="secundaria" onClick={refreshHistory}>
                     Tentar novamente
-                  </Button>
+                  </Capsule>
                 </div>
               </InlineAlert>
-            )}
-
-            {!historyLoading && !historyError && history.length === 0 && (
-              <Card>
-                <EmptyState icon={HistoryIcon} title="Nenhuma tentativa ainda" description="Gere seu primeiro quiz acima." />
-              </Card>
-            )}
-
-            {!historyLoading &&
-              !historyError &&
-              answeredHistory.map((h) => (
-                <Link key={h.id} href={`/professor/${professorId}/quiz/historico/${h.id}`} className="block">
-                  <Card className="transition-colors hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <div className="flex items-center justify-between gap-4 p-4">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{h.topic || "Tópico geral"}</p>
-                        <p className="text-xs text-muted-foreground">
+            ) : answeredHistory.length === 0 ? (
+              <p className="px-rotulo-secao text-nota text-tinta-fraca">
+                Nenhuma tentativa ainda. Gere o primeiro quiz aqui em cima.
+              </p>
+            ) : (
+              <InsetList>
+                {answeredHistory.slice(0, 8).map((h) => (
+                  <InsetRow
+                    key={h.id}
+                    href={`/professor/${professorId}/quiz/historico/${h.id}`}
+                    altura="dupla"
+                    title={h.topic || "Tópico geral"}
+                    subtitle={
+                      <>
+                        <MetricText tone="fraca">
                           {new Date(h.created_at).toLocaleDateString("pt-BR")}
-                          {h.difficulty ? ` · ${DIFFICULTY_LABELS[h.difficulty]}` : ""}
-                        </p>
-                      </div>
-                      <Badge
-                        variant={scoreBadgeVariant(pctInteiro(h.score_pct as number))}
-                        className="metric"
-                      >
-                        {pctInteiro(h.score_pct as number)}%
-                      </Badge>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
-
-            {!historyLoading &&
-              !historyError &&
-              pendingHistory.map((h) => (
-                <Card key={h.id}>
-                  <div className="flex items-center justify-between gap-4 p-4">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-muted-foreground">{h.topic || "Tópico geral"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {new Date(h.created_at).toLocaleDateString("pt-BR")}
-                      </p>
-                    </div>
-                    <Badge variant="neutral">Não finalizado</Badge>
-                  </div>
-                </Card>
-              ))}
+                        </MetricText>
+                        {h.difficulty ? ` · ${DIFFICULTY_LABELS[h.difficulty]}` : ""}
+                      </>
+                    }
+                    value={
+                      <Pill tone={tonePilulaDaNota(pctInteiro(h.score_pct as number))}>
+                        <MetricText>{pctInteiro(h.score_pct as number)}%</MetricText>
+                      </Pill>
+                    }
+                    trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                  />
+                ))}
+              </InsetList>
+            )}
           </div>
-        </>
+        </div>
       )}
 
+      {/* Responder e resultado seguem na casca antiga — são a Fase D. */}
       {view === "respondendo" && activity && (
         <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <div
-              role="progressbar"
-              aria-valuenow={answeredCount}
-              aria-valuemin={0}
-              aria-valuemax={activity.questions.length}
+            <ProgressBar
+              className="flex-1"
+              value={(answeredCount / activity.questions.length) * 100}
               aria-label="Progresso do quiz"
-              className="h-1.5 flex-1 rounded-full bg-muted"
-            >
-              <div
-                className="h-1.5 rounded-full bg-primary transition-all duration-300"
-                style={{ width: `${(answeredCount / activity.questions.length) * 100}%` }}
-              />
-            </div>
-            <span className="shrink-0 text-xs metric text-muted-foreground">
-              {answeredCount} de {activity.questions.length} respondidas
+            />
+            <span className="shrink-0 text-nota text-tinta-fraca">
+              <MetricText tone="fraca">
+                {answeredCount}/{activity.questions.length}
+              </MetricText>{" "}
+              respondidas
             </span>
           </div>
 
@@ -340,16 +513,16 @@ export default function QuizPage({ params }: { params: { id: string } }) {
                     startQuiz(
                       activity?.module_id
                         ? { moduleId: activity.module_id }
-                        : { topic: activity?.topic ?? null }
+                        : { topic: activity?.topic ?? null, rotulo: activity?.topic ?? undefined }
                     )
                   }
                 >
                   <RotateCcw className="h-4 w-4" />
                   Tentar novamente
                 </Button>
-                <Button variant="outline" className="flex-1" size="lg" onClick={handleReset}>
+                <Link href={`/professor/${professorId}/quiz`} onClick={handleReset} className={capsuleVariants("secundaria")}>
                   Novo quiz
-                </Button>
+                </Link>
               </div>
             </div>
           }

@@ -37,6 +37,15 @@ export interface QuizQuestion {
 
 export type Difficulty = "facil" | "medio" | "dificil";
 
+// Rótulo de cada dificuldade. Vive junto do tipo porque é vocabulário do
+// domínio, usado no seletor da tela 22 e no histórico de tentativas — antes
+// morava no DifficultyPicker, que saiu quando o seletor virou Segmented.
+export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
+  facil: "Fácil",
+  medio: "Médio",
+  dificil: "Difícil",
+};
+
 export interface GeneratedActivity {
   activity_id: string;
   topic: string | null;
