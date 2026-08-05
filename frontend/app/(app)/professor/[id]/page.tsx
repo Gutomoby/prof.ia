@@ -214,7 +214,10 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           <Zap className="h-3.5 w-3.5" />
           Próximo passo
         </p>
-        <MathText as="p" className="mt-[7px] text-[19px] font-bold leading-tight tracking-[-0.02em] text-tinta">
+        <MathText
+          as="p"
+          className="mt-[7px] text-[19px] font-bold leading-tight tracking-[-0.02em] text-tinta md:mt-2.5 md:text-titulo-cartao"
+        >
           {step.title}
         </MathText>
         <MathText as="p" className="mt-1 text-pretty text-[14px] leading-[1.45] text-tinta">
@@ -231,16 +234,24 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
             botão desce para o pé em vez de flutuar no meio. */}
         <div className="hidden flex-1 md:block" />
 
-        <div className="mt-3.5">
+        {/* No celular a cápsula ocupa a linha inteira, como toda ação
+            principal de tela estreita. No computador ela volta ao tamanho do
+            texto: uma cápsula de 900px de largura não é botão, é faixa. */}
+        <div className="mt-3.5 md:mt-4">
           {step.kind === "subir-material" ? (
             <Link
               href={`/professor/${professorId}/configurar`}
-              className={capsuleVariants("principal", true)}
+              className={capsuleVariants("principal", true, "md:w-fit")}
             >
               {step.ctaLabel}
             </Link>
           ) : (
-            <Capsule block loading={generating} onClick={() => start(step.topic)}>
+            <Capsule
+              block
+              className="md:w-fit"
+              loading={generating}
+              onClick={() => start(step.topic)}
+            >
               {!generating && <Play className="h-[15px] w-[15px] fill-papel" />}
               {generating ? "Gerando..." : "Começar agora"}
             </Capsule>
