@@ -160,7 +160,7 @@ export function DiagnosticoPronto({
               detalheIndigo
               badge={
                 <Badge className="bg-indigo">
-                  <MetricText weight="bold" className="text-[12px] text-papel">
+                  <MetricText tone="papel" weight="bold" className="text-[12px]">
                     {foco.pct}%
                   </MetricText>
                 </Badge>

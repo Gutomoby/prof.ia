@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 // Palavra NUNCA entra em mono — se o conteúdo tem texto junto ("240/400 XP"),
 // só o número vai dentro do MetricText e o "XP" fica fora, em SF Pro.
 
-type MetricTone = "tinta" | "fraca" | "indigo" | "acerto" | "erro";
+type MetricTone = "tinta" | "fraca" | "indigo" | "acerto" | "erro" | "papel";
 
 const toneClasses: Record<MetricTone, string> = {
   tinta: "text-tinta",
@@ -16,6 +16,11 @@ const toneClasses: Record<MetricTone, string> = {
   indigo: "text-indigo",
   acerto: "text-acerto",
   erro: "text-erro",
+  // Número sobre cor cheia: cápsula índigo ativa, dia de hoje no calendário,
+  // medalha do diagnóstico. Sem ele o tom padrão (tinta) vence o texto papel
+  // do container e o número sai preto sobre índigo, enquanto a palavra ao
+  // lado herda o branco — o defeito que se vê antes de se entender.
+  papel: "text-papel",
 };
 
 export interface MetricTextProps extends React.HTMLAttributes<HTMLSpanElement> {

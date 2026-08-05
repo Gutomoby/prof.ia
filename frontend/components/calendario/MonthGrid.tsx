@@ -125,11 +125,9 @@ export function MonthGrid({
               >
                 <MetricText
                   className="text-nota"
-                  tone={isToday ? "tinta" : temProva ? "erro" : "tinta"}
+                  // O miolo índigo do dia de hoje pede número em papel.
+                  tone={isToday ? "papel" : temProva ? "erro" : "tinta"}
                   weight={isToday || isSelected ? "bold" : "normal"}
-                  // O miolo índigo pede texto papel; MetricText não tem esse
-                  // tom porque em nenhum outro lugar número fica sobre cor cheia.
-                  style={isToday ? { color: "hsl(var(--papel))" } : undefined}
                 >
                   {cell.day}
                 </MetricText>

@@ -223,7 +223,13 @@ export default function ConfiguracoesPage() {
                       }
                     >
                       {salvandoMeta === xp && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                      <MetricText weight={ativa ? "bold" : "normal"}>{xp}</MetricText> XP
+                      <MetricText
+                        tone={ativa ? "papel" : "fraca"}
+                        weight={ativa ? "bold" : "normal"}
+                      >
+                        {xp}
+                      </MetricText>{" "}
+                      XP
                     </button>
                   );
                 })}
