@@ -8,7 +8,6 @@ import { PassoMaterial, type DadosMaterial } from "@/components/onboarding/Passo
 import { PassoLendo } from "@/components/onboarding/PassoLendo";
 import { PassoNotificacoes, podePedirNotificacao } from "@/components/onboarding/PassoNotificacoes";
 import { PassoPronto } from "@/components/onboarding/PassoPronto";
-import { usePrimeiroAcesso } from "@/components/onboarding/usePrimeiroAcesso";
 import type { Professor } from "@/lib/types";
 
 /*
@@ -53,10 +52,21 @@ export default function ComecarPage() {
   const [notificacoes, setNotificacoes] = useState<NotificationPermission | null>(null);
   const [gerandoDiagnostico, setGerandoDiagnostico] = useState(false);
 
-  // O fluxo guiado é da PRIMEIRA matéria. Quem já tem uma cai no formulário
-  // da tela 15, que é a porta de "mais uma matéria" — inclusive quem volta
-  // para cá pelo histórico depois de terminar.
-  const checando = usePrimeiroAcesso({ destino: "/professor/novo", ativo: professor === null });
+  /*
+    Esta rota NÃO tem a guarda de primeiro acesso, e é de propósito.
+
+    Quem guarda é a porta: /boas-vindas redireciona quem já tem matéria, e o
+    único link para cá dentro do app é o vazio das telas 12 e 14, que só
+    existe com a lista zerada. Ou seja: com matéria na conta, nenhum caminho
+    do app leva ao fluxo guiado — que é a regra pedida.
+
+    O que sobra é digitar /comecar na barra de endereços, e isso é sempre
+    deliberado. Fechar também essa porta custaria caro: enquanto o backend
+    for single-user (MVP_USER_ID em routers/professores.py, onde
+    GET /professores devolve a mesma lista para qualquer conta), a lista
+    nunca volta a ficar vazia — e as telas 05 a 11 ficariam impossíveis de
+    revisar em produção sem apagar a matéria de alguém.
+  */
 
   async function salvarMateria(dados: DadosMateria) {
     setErroMateria(null);
@@ -165,11 +175,6 @@ export default function ComecarPage() {
     // a volta apontando para a tela 11 em vez do resultado padrão.
     router.push(`/licao/${professor.id}?diagnostico=1`);
   }
-
-  // Nada de tela enquanto a guarda não responde: além de não piscar o
-  // formulário para quem vai ser redirecionado, é o que garante que ninguém
-  // crie matéria antes de a checagem terminar.
-  if (checando) return null;
 
   if (passo === "materia") {
     return (

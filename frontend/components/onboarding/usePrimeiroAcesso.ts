@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 /*
-  Guarda do primeiro acesso: as telas 05 a 10 só existem enquanto não há
+  Guarda da PORTA do primeiro acesso: a tela 05 só se abre enquanto não há
   matéria nenhuma.
+
+  Guardar a porta basta para a regra "o onboarding aparece uma vez": o único
+  outro caminho para o fluxo dentro do app é o vazio das telas 12 e 14, que
+  por definição só existe com a lista zerada. A rota /comecar em si fica
+  aberta a quem digita a URL — o porquê está escrito lá.
 
   O sinal é o estado real (GET /professores devolve lista vazia?), não uma
   marca de "já viu o onboarding" guardada à parte. São dois motivos: não há
