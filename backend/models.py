@@ -286,3 +286,24 @@ class CalendarActivity(BaseModel):
 class CalendarResponse(BaseModel):
     activities: list[CalendarActivity]
     events: list[CalendarEvent]
+
+
+# ---------------------------------------------------------------------------
+# Conquistas (tela 34) — derivadas do histórico, ver services/achievements.py
+# ---------------------------------------------------------------------------
+
+
+class Achievement(BaseModel):
+    id: str = Field(..., description="Casa com o catálogo de copy do frontend.")
+    ganha: bool
+    data: date | None = Field(
+        None, description="Dia em que o critério foi cumprido pela primeira vez."
+    )
+    atual: int = Field(..., description="Onde a pessoa está, na unidade do alvo.")
+    alvo: int
+
+
+class AchievementList(BaseModel):
+    items: list[Achievement]
+    ganhas: int
+    total: int

@@ -13,18 +13,18 @@ import { ProgressBar } from "@/components/ui/gauge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompartilharProgresso } from "@/components/perfil/CompartilharProgresso";
 import { cn } from "@/lib/utils";
-import type { UserProgress } from "@/lib/types";
+import type { AchievementList, UserProgress } from "@/lib/types";
 
 /*
   Tela 33 · Perfil.
 
-  Conquistas (as 9 medalhas e o "4 de 9") continuam de fora: não há tabela,
-  rota nem tipo — procurei no backend inteiro. Derivar no cliente seria
-  inventar um sistema de conquistas, não mostrar um. Preferi a tela menor e
-  verdadeira a caixas com número fixo.
+  As conquistas entraram (tela 34) como uma linha com o contador, e não como
+  a fileira de medalhas do desenho: a fileira mostra quatro discos coloridos
+  sem dizer o que cada um é, e quem quer saber precisa entrar mesmo assim. A
+  linha leva ao mesmo lugar e cabe ao lado das outras duas.
 
-  "Compartilhar meu progresso" (tela 36) entrou: a imagem é desenhada no
-  cliente com os números que esta tela já busca, sem depender de rota nova.
+  "Compartilhar meu progresso" (tela 36) é desenhada no cliente com os
+  números que esta tela já busca, sem depender de rota nova.
 
   "Estudando desde" sai do created_at do usuário no Supabase, que é a data de
   cadastro de verdade.
@@ -61,9 +61,13 @@ export default function PerfilPage() {
   const [materia, setMateria] = useState<string | null>(null);
   const [dominioPct, setDominioPct] = useState<number | null>(null);
   const [compartilhando, setCompartilhando] = useState(false);
+  const [conquistas, setConquistas] = useState<AchievementList | null>(null);
 
   useEffect(() => {
     api.getProgress().then(setProgress).catch(() => setProgress(null)).finally(() => setLoading(false));
+
+    // O contador some se a chamada falhar; a linha continua levando à tela.
+    api.listConquistas().then(setConquistas).catch(() => setConquistas(null));
 
     createClient()
       .auth.getUser()
@@ -190,6 +194,14 @@ export default function PerfilPage() {
             do titulo, mas com a linha embaixo ficavam duas entradas para o
             mesmo lugar — a linha ganha por ser a que se le. */}
         <InsetList className="mt-2">
+          <InsetRow
+            href="/perfil/conquistas"
+            icon={<Trophy />}
+            iconTone="acerto"
+            title="Conquistas"
+            value={conquistas ? `${conquistas.ganhas}/${conquistas.total}` : undefined}
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
           <InsetRow
             icon={<Share2 />}
             iconTone="indigo"

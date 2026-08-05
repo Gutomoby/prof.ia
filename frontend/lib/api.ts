@@ -24,6 +24,7 @@ import type {
   CalendarResponse,
   CalendarEvent,
   EventKind,
+  AchievementList,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -288,6 +289,15 @@ export function deleteEvent(eventId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Conquistas
+// ---------------------------------------------------------------------------
+
+// Derivadas do histórico a cada chamada — não há o que criar nem atualizar.
+export function listConquistas() {
+  return request<AchievementList>("/conquistas");
+}
+
+// ---------------------------------------------------------------------------
 // Biblioteca (acervo global)
 // ---------------------------------------------------------------------------
 
@@ -322,4 +332,5 @@ export const api = {
   createEvent,
   deleteEvent,
   listAllDocuments,
+  listConquistas,
 };

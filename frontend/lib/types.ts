@@ -223,3 +223,25 @@ export interface DocumentWithProfessor extends DocumentItem {
   professor_name: string;
   discipline: string;
 }
+
+// ---------------------------------------------------------------------------
+// Conquistas (tela 34) — GET /conquistas
+// ---------------------------------------------------------------------------
+
+// O backend devolve só a verdade (ganha, quando, onde a pessoa está). Nome,
+// frase e ícone de cada uma moram no catálogo do frontend, junto do design —
+// ver components/perfil/catalogo-conquistas.ts.
+export interface Achievement {
+  id: string;
+  ganha: boolean;
+  /** Dia em que o critério foi cumprido pela primeira vez (YYYY-MM-DD). */
+  data: string | null;
+  atual: number;
+  alvo: number;
+}
+
+export interface AchievementList {
+  items: Achievement[];
+  ganhas: number;
+  total: number;
+}

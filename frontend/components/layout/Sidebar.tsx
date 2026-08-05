@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { CalendarDays, Flame, Library, Plus, Settings, Target } from "lucide-react";
+import { CalendarDays, Flame, Library, Plus, Settings, Target, Trophy } from "lucide-react";
 import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { Brand } from "./Brand";
@@ -20,11 +20,9 @@ import type { ProfessorListItem, UserProgress } from "@/lib/types";
   Não é a barra de abas na vertical: as matérias são a navegação principal
   aqui, e "Estudar" não vira item porque a sidebar já mostra o conteúdo dele.
 
-  Duas peças do design ficaram de fora desta fase, de propósito, por não terem
-  o que fazer ainda:
-   - a busca ⌘K, que não tem endpoint nem tela;
-   - "Conquistas", cuja rota não existe (Fase G).
-  Chrome que não faz nada é pior que chrome ausente.
+  A busca ⌘K do design continua de fora, por não ter endpoint nem tela.
+  Chrome que não faz nada é pior que chrome ausente. "Conquistas" entrou
+  quando a tela 34 passou a existir.
 */
 
 // Iniciais da matéria para o avatar: "Prof. Atuária" -> "At". Pula o "Prof."
@@ -197,6 +195,7 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
           {[
             { href: "/biblioteca", label: "Biblioteca", icon: Library },
             { href: "/calendario", label: "Calendário", icon: CalendarDays },
+            { href: "/perfil/conquistas", label: "Conquistas", icon: Trophy },
           ].map((item) => {
             const Icon = item.icon;
             const isActive = pathname.startsWith(item.href);
