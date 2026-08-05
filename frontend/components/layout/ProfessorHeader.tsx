@@ -44,6 +44,8 @@ export function ProfessorHeader({
   // A LISTA de tentativas (tela 24) é destino próprio, alcançado do Quiz — sem
   // barra na régua de seções, e voltando para o Quiz, não para a sala.
   const isHistoricoLista = /\/historico$/.test(pathname);
+  // O plano (tela 31) tambem e destino proprio, alcancado do Progresso.
+  const isPlano = pathname.includes("/plano");
   // Ajustes não vira aba: com 4 abas a régua já fica no limite em 360px.
   const isAjustes = pathname.includes("/ajustes");
   const color = professorColor(professor.id);
@@ -77,8 +79,10 @@ export function ProfessorHeader({
     material: "Material",
   };
   const emSecao = Boolean(ativa && ativa !== "geral");
-  const naSecao = emSecao || isHistoricoDetail || isAjustes;
-  const titulo = isHistoricoLista
+  const naSecao = emSecao || isHistoricoDetail || isAjustes || isPlano;
+  const titulo = isPlano
+    ? "Plano de estudos"
+    : isHistoricoLista
     ? "Tentativas"
     : isHistoricoDetail
       ? "Revisão"
@@ -96,13 +100,15 @@ export function ProfessorHeader({
         // "‹ ● Prof. Atuária" do handoff faz. Só a visão geral volta para
         // Estudar, porque dali a sala é o começo.
         backHref={
-          isHistoricoLista
+          isPlano
+            ? `/professor/${professor.id}/inicio`
+            : isHistoricoLista
             ? `/professor/${professor.id}/quiz`
             : naSecao
               ? `/professor/${professor.id}`
               : "/dashboard"
         }
-        backLabel={isHistoricoLista ? "Quiz" : naSecao ? professor.name : "Estudar"}
+        backLabel={isPlano ? "Progresso" : isHistoricoLista ? "Quiz" : naSecao ? professor.name : "Estudar"}
         // A disciplina só acompanha o título na visão geral. Nas seções o
         // título já é a seção, e cada tela põe o próprio subtítulo.
         subtitle={
@@ -139,7 +145,7 @@ export function ProfessorHeader({
         }
       />
 
-      {ativa && !isAjustes && !isHistoricoDetail && !isHistoricoLista && (
+      {ativa && !isAjustes && !isHistoricoDetail && !isHistoricoLista && !isPlano && (
         <div className="md:max-w-[560px]">
           <Segmented
             aria-label={`Seções de ${professor.name}`}
