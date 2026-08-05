@@ -267,6 +267,9 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
               <label
                 htmlFor="pdf-input"
                 className={cn(
+                  // A área de upload ocupa a coluna inteira no computador; a
+                  // cápsula dentro dela, não — ver a 56.
+                  "md:mx-auto md:w-[260px]",
                   "flex h-capsula-tonal w-full cursor-pointer items-center justify-center rounded-capsula",
                   "bg-indigo text-linha font-semibold text-papel shadow-capsula",
                   "transition-all duration-180 ease-out hover:bg-[hsl(226_57%_32%)] active:scale-[0.98]",

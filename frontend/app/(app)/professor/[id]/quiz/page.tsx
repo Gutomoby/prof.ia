@@ -178,10 +178,22 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         </p>
       </div>
 
-      <Capsule block onClick={() => start(topic || null, { difficulty })}>
-        <Sparkles className="h-[17px] w-[17px]" />
-        Gerar quiz
-      </Capsule>
+      {/* No computador a cápsula volta ao tamanho do texto e a nota vem ao
+          lado, como na 55 — a mesma cápsula esticada em 760px viraria faixa. */}
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+        <Capsule
+          block
+          className="md:w-fit md:flex-none"
+          onClick={() => start(topic || null, { difficulty })}
+        >
+          <Sparkles className="h-[17px] w-[17px]" />
+          Gerar quiz
+        </Capsule>
+        <p className="hidden text-nota leading-[1.45] text-tinta-fraca md:block">
+          As questões saem só dos materiais desta matéria. Leva uns{" "}
+          <MetricText tone="fraca">10</MetricText> segundos.
+        </p>
+      </div>
 
       {modules.length > 0 && (
         <InsetList
