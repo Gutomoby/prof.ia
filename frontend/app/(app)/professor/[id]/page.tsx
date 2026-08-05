@@ -187,7 +187,9 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
                 key={no.id}
                 estado={no.estado}
                 nome={no.nome}
-                pct={no.pct ?? 0}
+                // Sem tentativa não há acurácia: um "0%" no anel leria como
+                // "você zerou", quando o capítulo sequer foi aberto.
+                pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                 conector={i < trilha.length - 1}
                 href={no.estado === "bloqueado" ? undefined : `/professor/${professorId}/quiz`}
                 detalhe={
