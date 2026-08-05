@@ -184,14 +184,21 @@ function desenhaCartao(
 
   // Nível sempre; matéria só quando marcada. O número vai em mono, o resto
   // não — palavra nunca entra em mono, nem desenhada em canvas.
+  //
+  // Quem encolhe é a MATÉRIA, nunca o "· Nível N": cortando a linha inteira,
+  // um nome comprido de verdade ("EAC0464 - Avaliação Atuarial das
+  // Provisões") come o rótulo e o número aparece grudado nas reticências.
   ctx.globalAlpha = 0.85;
-  ctx.font = `400 13px ${SANS}`;
-  const materia = marcados.materia && dados.materia ? `${dados.materia} · ` : "";
   const nivel = String(dados.nivel);
   ctx.font = `400 13px ${MONO}`;
   const larguraNivel = ctx.measureText(nivel).width;
   ctx.font = `400 13px ${SANS}`;
-  const prefixo = cabe(ctx, `${materia}Nível `, larguraTexto - larguraNivel);
+  const rotulo = "Nível ";
+  let prefixo = rotulo;
+  if (marcados.materia && dados.materia) {
+    const sobra = larguraTexto - larguraNivel - ctx.measureText(` · ${rotulo}`).width;
+    prefixo = `${cabe(ctx, dados.materia, sobra)} · ${rotulo}`;
+  }
   const larguraPrefixo = ctx.measureText(prefixo).width;
   ctx.fillText(prefixo, xTexto, P + 42);
   ctx.font = `400 13px ${MONO}`;
