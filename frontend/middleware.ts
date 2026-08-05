@@ -37,6 +37,7 @@ export async function middleware(request: NextRequest) {
   const isProtected =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/professor") ||
+    pathname.startsWith("/licao") ||
     pathname.startsWith("/perfil");
   // Logado não tem o que fazer no login/criar conta. /recuperar-senha e
   // /atualizar-senha ficam FORA disso: o link de recovery autentica o usuário,
@@ -59,5 +60,13 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/professor/:path*", "/perfil/:path*", "/login", "/criar-conta"],
+  matcher: [
+    "/dashboard/:path*",
+    "/materias",
+    "/professor/:path*",
+    "/licao/:path*",
+    "/perfil/:path*",
+    "/login",
+    "/criar-conta",
+  ],
 };

@@ -1,36 +1,36 @@
-import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, ApiError } from "./api";
-
-export function pendingQuizKey(professorId: string) {
-  return `pending-quiz-${professorId}`;
-}
+import type { Difficulty } from "./types";
 
 /**
- * Gera um quiz e leva o usuário direto pra tela de responder.
+ * Leva o aluno para a lição em tela cheia.
  *
- * O quiz gerado é entregue via sessionStorage porque a tela /quiz já lê essa
- * chave no mount e pula direto pra `view="respondendo"` — mesmo caminho que o
- * botão "Tentar novamente" do histórico usa. Assim, qualquer CTA de "próximo
- * passo" cai na atividade rodando, sem passar pelo formulário de geração.
+ * Antes isto gerava o quiz aqui e entregava o resultado para /quiz por
+ * sessionStorage. Agora quem gera é a própria rota /licao/[id]: o escopo viaja
+ * na URL e a espera (tela 23) acontece já dentro do modo foco, sem a casca do
+ * app em volta.
+ *
+ * Mantém a forma antiga (`start`, `generating`, `error`) para as telas que o
+ * chamam não precisarem mudar. `generating` fica sempre falso porque não há
+ * mais o que esperar aqui — a navegação é imediata, e quem mostra a espera é a
+ * tela de destino.
  */
 export function useStartQuiz(professorId: string) {
   const router = useRouter();
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function start(topic: string | null) {
-    setError(null);
-    setGenerating(true);
-    try {
-      const generated = await api.generateAtividade({ professor_id: professorId, topic });
-      sessionStorage.setItem(pendingQuizKey(professorId), JSON.stringify(generated));
-      router.push(`/professor/${professorId}/quiz`);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Falha ao gerar o quiz.");
-      setGenerating(false);
-    }
+  function start(
+    topic: string | null,
+    opts?: { moduleId?: string; difficulty?: Difficulty; rotulo?: string }
+  ) {
+    const params = new URLSearchParams();
+    if (topic) params.set("topic", topic);
+    if (opts?.moduleId) params.set("module", opts.moduleId);
+    if (opts?.difficulty) params.set("dif", opts.difficulty);
+    const rotulo = opts?.rotulo ?? topic;
+    if (rotulo) params.set("rotulo", rotulo);
+
+    const qs = params.toString();
+    router.push(`/licao/${professorId}${qs ? `?${qs}` : ""}`);
   }
 
-  return { start, generating, error };
+  return { start, generating: false, error: null as string | null };
 }
