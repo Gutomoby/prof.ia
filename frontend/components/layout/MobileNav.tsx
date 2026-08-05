@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { CalendarDays, GraduationCap, Library, User } from "lucide-react";
 import { useQuizGuard } from "./QuizGuardContext";
@@ -25,6 +26,35 @@ export function MobileNav() {
   const pathname = usePathname();
   const { unsaved } = useQuizGuard();
 
+  /*
+    Some enquanto o teclado está aberto.
+
+    A barra é `position: fixed`, e no iOS o fixed se prende à viewport de
+    LAYOUT, que não encolhe com o teclado. Resultado: ela fica pairando no meio
+    do conteúdo, cobrindo justamente o campo que a pessoa foi preencher.
+
+    `interactiveWidget: resizes-content` (no viewport do layout raiz) resolve a
+    geometria nos navegadores que o suportam; esconder a barra resolve em todos
+    e ainda devolve espaço de tela — que é o que a pessoa quer enquanto digita.
+  */
+  const [digitando, setDigitando] = useState(false);
+
+  useEffect(() => {
+    const ehCampo = (el: EventTarget | null) =>
+      el instanceof HTMLElement &&
+      (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
+
+    const aoFocar = (e: FocusEvent) => ehCampo(e.target) && setDigitando(true);
+    const aoDesfocar = () => setDigitando(false);
+
+    document.addEventListener("focusin", aoFocar);
+    document.addEventListener("focusout", aoDesfocar);
+    return () => {
+      document.removeEventListener("focusin", aoFocar);
+      document.removeEventListener("focusout", aoDesfocar);
+    };
+  }, []);
+
   function handleLinkClick(e: React.MouseEvent) {
     if (unsaved && !window.confirm("Sair sem enviar? Suas respostas serão perdidas.")) {
       e.preventDefault();
@@ -38,8 +68,13 @@ export function MobileNav() {
       className={cn(
         "vidro-abas shadow-vidro-flutuante",
         "fixed inset-x-4 bottom-[max(12px,env(safe-area-inset-bottom))] z-30",
-        "flex h-16 items-center rounded-capsula px-1.5 md:hidden"
+        "flex h-16 items-center rounded-capsula px-1.5 md:hidden",
+        // Sem display:none: `hidden` mataria a transição e a barra voltaria
+        // piscando quando o campo perde o foco.
+        "transition-opacity duration-180 ease-out",
+        digitando && "pointer-events-none opacity-0"
       )}
+      aria-hidden={digitando}
     >
       {TABS.map((tab) => {
         const Icon = tab.icon;

@@ -96,41 +96,28 @@
     --radius: 0.75rem;
   }
 
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 226 50% 10%;
-      --foreground: 214 32% 91%;
-      --card: 226 42% 14%;
-      --card-foreground: 214 32% 91%;
-      --popover: 226 42% 14%;
-      --popover-foreground: 214 32% 91%;
-      --primary: 217 92% 65%;
-      --primary-foreground: 226 50% 10%;
-      --secondary: 226 35% 18%;
-      --secondary-foreground: 214 32% 91%;
-      --muted: 226 35% 17%;
-      --muted-foreground: 217 18% 70%;
-      --accent: 226 35% 20%;
-      --accent-foreground: 214 32% 91%;
-      --destructive: 0 84% 68%;
-      --destructive-foreground: 226 50% 10%;
-      --success: 158 60% 55%;
-      --success-foreground: 158 80% 10%;
-      --action: 43 96% 58%;
-      --action-foreground: 24 92% 14%;
-      --border: 226 30% 22%;
-      --input: 222 16% 46%;
-      --ring: 217 92% 65%;
-    }
-  }
+  /*
+    NÃO existe tema escuro. As 81 telas do handoff são claras e os tokens Kango
+    não respondem a prefers-color-scheme ("Pendências de design" no plano).
+
+    O bloco escuro do shadcn morava aqui e virava --background: 226 50% 10%, um
+    azul-marinho. Como o <body> usa esse token, no iPhone em modo escuro o
+    overscroll do Safari revelava azul atrás das telas claras. Enquanto o escuro
+    não for DESENHADO, ele não pode existir pela metade.
+  */
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+  /* O papel vai no html também: é o que o iOS mostra ao esticar além do fim
+     da página. Sem isso o overscroll pega o fundo do navegador. */
+  html {
+    background-color: hsl(var(--papel));
+  }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-papel text-tinta;
   }
 
   /* Toda métrica do app (domínio, XP, sequência, nota, dia do calendário) usa
@@ -152,6 +139,16 @@
   Opacidade por função. Nunca abaixo de .74: texto de 13px perde contraste.
 */
 @layer components {
+  /*
+    Altura de tela que o iOS respeita. 100vh no Safari é a viewport com a barra
+    ESCONDIDA, então a página fica mais alta que o visível e sobra rolagem no
+    fim. 100dvh acompanha a barra; o vh fica de reserva para navegador antigo.
+  */
+  .altura-tela {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
   .vidro-cartao,
   .vidro-hud,
   .vidro-abas,

@@ -18,15 +18,16 @@ export const metadata: Metadata = {
     "Kango, o seu companheiro de estudos: quizzes, trilhas e progresso a partir do seu próprio material.",
 };
 
-// Informa ao navegador que o app tem os dois temas, para que controles nativos
-// (barras de rolagem, campos de formulário) acompanhem.
-// Hexes = --background dos dois temas em globals.css.
+// Uma cor só, o papel: não há tema escuro para acompanhar. Declarar o
+// azul-marinho aqui pintava a barra do Safari de azul num app inteiro claro.
 export const viewport = {
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8fafc" },
-    { media: "(prefers-color-scheme: dark)", color: "#0d1326" },
-  ],
-};
+  themeColor: "#fbfbf7",
+  colorScheme: "light",
+  // Faz o teclado ENCOLHER a viewport de layout em vez de deslizar por cima
+  // dela. Sem isso, tudo que é `position: fixed` (a barra de abas, o painel de
+  // resposta da lição) fica pairando no meio do conteúdo quando o campo abre.
+  interactiveWidget: "resizes-content",
+} as const;
 
 // Layout raiz: envolve TODAS as rotas (públicas e autenticadas).
 // Não coloque sidebar/nav aqui — esses ficam em (app)/layout.tsx,
@@ -40,7 +41,7 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       {/* antialiased é obrigatório, não estético: é o -webkit-font-smoothing
           que dá a finura do texto da Apple. Sem ele a SF engorda. */}
-      <body className="min-h-screen bg-background font-sans antialiased">
+      <body className="altura-tela bg-papel font-sans antialiased">
         {children}
       </body>
     </html>

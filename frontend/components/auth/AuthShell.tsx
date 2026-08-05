@@ -69,7 +69,7 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className={cn("relative min-h-screen overflow-hidden text-tinta", FUNDO_CLASSE[fundo])}>
+    <main className={cn("altura-tela relative overflow-hidden text-tinta", FUNDO_CLASSE[fundo])}>
       {HALOS[fundo].map(([pos, bg], i) => (
         <div key={i} aria-hidden className={cn("absolute rounded-capsula", pos)} style={{ background: bg }} />
       ))}
@@ -112,7 +112,7 @@ export function AuthCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative flex min-h-screen flex-col px-margem md:items-center md:justify-center md:px-10">
+    <div className="altura-tela relative flex flex-col px-margem md:items-center md:justify-center md:px-10">
       {/* Um nó só, com classes responsivas: renderizar duas árvores duplicaria
           os campos do formulário e os id/htmlFor. */}
       <div

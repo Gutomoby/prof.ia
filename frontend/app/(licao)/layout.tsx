@@ -16,8 +16,8 @@ import { QuizGuardProvider } from "@/components/layout/QuizGuardContext";
 export default function LicaoLayout({ children }: { children: React.ReactNode }) {
   return (
     <QuizGuardProvider>
-      <div className="papel-de-parede min-h-screen overflow-hidden text-tinta">
-        <main className="mx-auto min-h-screen w-full max-w-[860px] px-margem pb-[34px] pt-[60px] md:px-[26px] md:pt-[34px]">
+      <div className="papel-de-parede altura-tela overflow-hidden text-tinta">
+        <main className="altura-tela mx-auto w-full max-w-[860px] px-margem pb-[34px] pt-[60px] md:px-[26px] md:pt-[34px]">
           {children}
         </main>
       </div>

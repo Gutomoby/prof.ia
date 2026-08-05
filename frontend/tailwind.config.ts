@@ -3,9 +3,10 @@ import colors from "tailwindcss/colors";
 
 // Configuração do Tailwind compatível com shadcn/ui (variáveis CSS via HSL)
 const config: Config = {
-  // Segue a preferência do sistema operacional. Antes era "class", mas nada
-  // no app colocava a classe .dark no <html> — o tema escuro nunca ligava.
-  darkMode: "media",
+  // "class", e nada no app põe a classe: as variantes dark: que sobraram em
+  // componentes shadcn ficam inertes. Era "media", e com isso metade do app
+  // escurecia sozinha num design que só tem telas claras.
+  darkMode: "class",
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",

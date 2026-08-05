@@ -24,7 +24,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <QuizGuardProvider>
       {/* overflow-hidden no root: o halo do papel de parede não empurra a
           largura. min-h-screen em vez de h-screen para a página rolar normal. */}
-      <div className="papel-de-parede flex min-h-screen overflow-hidden text-tinta">
+      <div className="papel-de-parede altura-tela flex overflow-hidden text-tinta">
         <Sidebar professors={professors} />
         {/* No celular o padding de baixo abre espaço para a barra flutuante
             (64px + 12px de margem + área segura). No desktop, o ritmo do
