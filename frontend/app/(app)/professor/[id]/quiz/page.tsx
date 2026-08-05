@@ -396,10 +396,13 @@ export default function QuizPage({ params }: { params: { id: string } }) {
           <div>
             <div className="mb-2 flex items-baseline justify-between gap-3 px-rotulo-secao">
               <p className="text-rotulo uppercase text-tinta-fraca">Suas tentativas</p>
-              {answeredHistory.length > 0 && (
-                <span className="text-nota font-semibold text-tinta-fraca">
-                  <MetricText tone="fraca">{answeredHistory.length}</MetricText> no total
-                </span>
+              {history.length > 0 && (
+                <Link
+                  href={`/professor/${professorId}/quiz/historico`}
+                  className="text-nota font-semibold text-indigo hover:underline focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+                >
+                  Ver todas (<MetricText tone="indigo">{history.length}</MetricText>)
+                </Link>
               )}
             </div>
 

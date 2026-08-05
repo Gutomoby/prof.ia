@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { ProfessorHeader } from "@/components/layout/ProfessorHeader";
+import { HeaderActionProvider } from "@/components/layout/HeaderActionContext";
 import { InlineAlert } from "@/components/ui/inline-alert";
 
 export default async function ProfessorLayout({
@@ -13,10 +14,12 @@ export default async function ProfessorLayout({
   try {
     const professor = await api.getProfessor(params.id);
     return (
-      <>
+      // O provider precisa envolver o cabecalho E a pagina: e a pagina que
+      // registra a acao do canto, e o cabecalho que a renderiza.
+      <HeaderActionProvider>
         <ProfessorHeader professor={professor} />
         {children}
-      </>
+      </HeaderActionProvider>
     );
   } catch (err) {
     // Só afirma "não encontrado" quando o backend de fato disse 404 — qualquer

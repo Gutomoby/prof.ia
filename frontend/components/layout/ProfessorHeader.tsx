@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Settings } from "lucide-react";
 import { PageHeader } from "./PageHeader";
 import { useQuizGuard } from "./QuizGuardContext";
+import { useHeaderAction } from "./HeaderActionContext";
 import { Segmented } from "@/components/ui/segmented";
 import { professorColor } from "@/lib/professor-color";
 import { cn } from "@/lib/utils";
@@ -34,9 +35,15 @@ export function ProfessorHeader({
   const pathname = usePathname();
   const router = useRouter();
   const { unsaved } = useQuizGuard();
+  // Quando a tela registra uma acao propria ("Salvar"), ela ocupa o canto no
+  // lugar da engrenagem — o handoff nunca mostra os dois juntos.
+  const acaoDaTela = useHeaderAction();
 
   const ativa = tabAtiva(pathname);
   const isHistoricoDetail = pathname.includes("/historico/");
+  // A LISTA de tentativas (tela 24) é destino próprio, alcançado do Quiz — sem
+  // barra na régua de seções, e voltando para o Quiz, não para a sala.
+  const isHistoricoLista = /\/historico$/.test(pathname);
   // Ajustes não vira aba: com 4 abas a régua já fica no limite em 360px.
   const isAjustes = pathname.includes("/ajustes");
   const color = professorColor(professor.id);
@@ -71,13 +78,15 @@ export function ProfessorHeader({
   };
   const emSecao = Boolean(ativa && ativa !== "geral");
   const naSecao = emSecao || isHistoricoDetail || isAjustes;
-  const titulo = isHistoricoDetail
-    ? "Revisão"
-    : isAjustes
-      ? "Ajustes"
-      : emSecao
-        ? TITULOS[ativa as string]
-        : professor.name;
+  const titulo = isHistoricoLista
+    ? "Tentativas"
+    : isHistoricoDetail
+      ? "Revisão"
+      : isAjustes
+        ? "Ajustes"
+        : emSecao
+          ? TITULOS[ativa as string]
+          : professor.name;
 
   return (
     <div className="mb-4">
@@ -86,8 +95,14 @@ export function ProfessorHeader({
         // Da seção o caminho de volta é a sala, não a home: é o que o link
         // "‹ ● Prof. Atuária" do handoff faz. Só a visão geral volta para
         // Estudar, porque dali a sala é o começo.
-        backHref={naSecao ? `/professor/${professor.id}` : "/dashboard"}
-        backLabel={naSecao ? professor.name : "Estudar"}
+        backHref={
+          isHistoricoLista
+            ? `/professor/${professor.id}/quiz`
+            : naSecao
+              ? `/professor/${professor.id}`
+              : "/dashboard"
+        }
+        backLabel={isHistoricoLista ? "Quiz" : naSecao ? professor.name : "Estudar"}
         // A disciplina só acompanha o título na visão geral. Nas seções o
         // título já é a seção, e cada tela põe o próprio subtítulo.
         subtitle={
@@ -104,7 +119,7 @@ export function ProfessorHeader({
         // no slot de ação, que no celular caía para baixo do subtítulo e
         // disputava atenção com a cápsula principal da tela.
         topRight={
-          isAjustes ? undefined : (
+          acaoDaTela ?? (isAjustes ? undefined : (
             <Link
               href={`/professor/${professor.id}/ajustes`}
               onClick={handleLinkClick}
@@ -120,11 +135,11 @@ export function ProfessorHeader({
             >
               <Settings className="h-5 w-5" />
             </Link>
-          )
+          ))
         }
       />
 
-      {ativa && !isAjustes && !isHistoricoDetail && (
+      {ativa && !isAjustes && !isHistoricoDetail && !isHistoricoLista && (
         <div className="md:max-w-[560px]">
           <Segmented
             aria-label={`Seções de ${professor.name}`}
