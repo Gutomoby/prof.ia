@@ -2,13 +2,23 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CalendarDays, Play, TrendingDown, TrendingUp, Zap } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  FileUp,
+  FileWarning,
+  Play,
+  TrendingDown,
+  TrendingUp,
+  Type,
+  Zap,
+} from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Gauge } from "@/components/ui/gauge";
 import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TopicNode } from "@/components/ui/topic-node";
@@ -92,6 +102,46 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           </Capsule>
         </div>
       </InlineAlert>
+    );
+  }
+
+  // 13 · Matéria sem material. Sem arquivo o Kango não tem o que cobrar, e a
+  // sala inteira (domínio, trilha, próximo passo) fica sem lastro — então ela
+  // dá lugar ao caminho de ensinar.
+  if (documents.length === 0) {
+    return (
+      <div className="mx-auto flex max-w-[560px] flex-col gap-[22px]">
+        <div className="rounded-grupo bg-acerto/10 p-4">
+          <p className="flex items-center gap-2 text-corpo font-semibold text-acerto">
+            <FileWarning className="h-4 w-4 flex-none" />
+            Ainda não tenho o que cobrar
+          </p>
+          <p className="mt-1.5 text-pretty text-[15px] leading-[1.5] text-tinta">
+            Sem material eu não invento questão. Suba uma apostila, um resumo ou uma prova antiga
+            e eu monto os quizzes em minutos.
+          </p>
+        </div>
+
+        <InsetList label="Comece por aqui">
+          <InsetRow
+            href={`/professor/${professorId}/configurar`}
+            altura="dupla"
+            icon={<FileUp />}
+            iconTone="indigo"
+            title="Subir um PDF"
+            subtitle="Apostila, lista, prova antiga"
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+          <InsetRow
+            href={`/professor/${professorId}/configurar`}
+            altura="dupla"
+            icon={<Type />}
+            title="Colar um texto"
+            subtitle="Anotação da aula serve"
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+        </InsetList>
+      </div>
     );
   }
 
@@ -250,22 +300,7 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
         </p>
       </GlassCard>
 
-      {summary.topics.length === 0 && documents.length === 0 && (
-        <EmptyState
-          kango="acenando"
-          size="bloco"
-          title="Ensine o Kango primeiro"
-          description="Sem material ele não tem o que cobrar. Suba a apostila, um resumo ou uma prova antiga."
-          action={
-            <Link
-              href={`/professor/${professorId}/configurar`}
-              className={capsuleVariants("secundaria")}
-            >
-              Subir material
-            </Link>
-          }
-        />
-      )}
+
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, Loader2, Trash2, Type, Upload } from "lucide-react";
+import { FileText, FileX, Loader2, ScanLine, Trash2, Type, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -68,6 +68,8 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  // Nome do arquivo recusado por não ter texto — dispara a tela 43.
+  const [pdfSemTexto, setPdfSemTexto] = useState<string | null>(null);
 
   const [textName, setTextName] = useState("");
   const [textContent, setTextContent] = useState("");
@@ -102,6 +104,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     e.preventDefault();
     if (!pdfFile) return;
     setPdfError(null);
+    setPdfSemTexto(null);
     setPdfLoading(true);
     try {
       await api.uploadPdf(professorId, pdfFile);
@@ -109,7 +112,13 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       if (inputRef.current) inputRef.current.value = "";
       await refreshDocuments();
     } catch (err) {
-      setPdfError(err instanceof ApiError ? err.message : "Falha ao enviar o PDF.");
+      // 43 · PDF sem texto. O backend recusa PDF escaneado antes de gravar
+      // qualquer coisa (services/pdf.py não extraiu nada), e um alerta seco não
+      // diz o que fazer — este é o erro mais comum de quem sobe slide fotografado.
+      const semTexto =
+        err instanceof ApiError && /extrair texto|escaneado/i.test(err.message);
+      if (semTexto) setPdfSemTexto(pdfFile?.name ?? "o arquivo");
+      else setPdfError(err instanceof ApiError ? err.message : "Falha ao enviar o PDF.");
     } finally {
       setPdfLoading(false);
     }
@@ -142,6 +151,62 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     } finally {
       setDeletingId(null);
     }
+  }
+
+  if (pdfSemTexto) {
+    return (
+      <div className="mx-auto flex max-w-[560px] flex-col">
+        <span className="flex h-[76px] w-[76px] items-center justify-center rounded-grupo bg-erro/12 text-erro">
+          <FileX className="h-8 w-8" />
+        </span>
+        <h1 className="mt-3.5 text-pretty text-titulo-grande text-tinta">
+          Esse PDF não tem texto pra ler
+        </h1>
+        <p className="mt-2 text-pretty text-corpo text-tinta-fraca">
+          Parece um arquivo escaneado, só imagem. Sem texto, o Kango não consegue tirar questões
+          dele.
+        </p>
+
+        <div className="mt-4 flex items-center gap-3 rounded-cartao vidro-cartao px-4 py-3 shadow-hairline">
+          <FileText className="h-[17px] w-[17px] flex-none text-tinta-fraca" />
+          <span className="min-w-0 flex-1 truncate text-corpo text-tinta">{pdfSemTexto}</span>
+        </div>
+
+        <div className="mt-[22px]">
+          <InsetList label="O que dá pra fazer">
+            <InsetRow
+              altura="dupla"
+              icon={<Type />}
+              iconTone="indigo"
+              title="Colar o texto na mão"
+              subtitle="Copie do PDF ou do slide e cole na aba Texto"
+              onClick={() => {
+                setPdfSemTexto(null);
+                setPdfFile(null);
+                setAba("texto");
+              }}
+            />
+            <InsetRow
+              altura="dupla"
+              icon={<Upload />}
+              title="Enviar outro arquivo"
+              subtitle="PDF salvo do computador costuma ter texto"
+              onClick={() => {
+                setPdfSemTexto(null);
+                setPdfFile(null);
+              }}
+            />
+            <InsetRow
+              disabled
+              altura="dupla"
+              icon={<ScanLine />}
+              title={<span className="text-tinta-fraca">Ler foto e escaneado</span>}
+              subtitle="Em breve"
+            />
+          </InsetList>
+        </div>
+      </div>
+    );
   }
 
   return (

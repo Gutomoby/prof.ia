@@ -199,17 +199,25 @@ export default function EstudarPage() {
   // 12 · Sem matéria ainda.
   if (professors.length === 0 || !selecionada) {
     return (
-      <EmptyState
-        kango="acenando"
-        title="Comece pela matéria que mais te preocupa"
-        description="Crie um professor, suba o material dele, e ele passa a estudar com você."
-        action={
-          <Link href="/professor/novo" className={capsuleVariants("principal")}>
-            <Plus className="h-[18px] w-[18px]" />
-            Criar professor
-          </Link>
-        }
-      />
+      <div className="mx-auto max-w-[520px]">
+        <EmptyState
+          kango="esperando"
+          title="Comece pela matéria que mais te preocupa"
+          description="Crie um professor, suba o material dele, e ele passa a estudar com você."
+          action={
+            <>
+              <Link href="/professor/novo" className={capsuleVariants("principal", true)}>
+                <Plus className="h-[18px] w-[18px]" />
+                Criar minha primeira matéria
+              </Link>
+              <p className="mt-2 text-nota text-tinta-fraca">
+                Leva <MetricText tone="fraca">2</MetricText> minutos e você já sai com um
+                diagnóstico.
+              </p>
+            </>
+          }
+        />
+      </div>
     );
   }
 
@@ -220,6 +228,22 @@ export default function EstudarPage() {
     topics: score?.topics ?? [],
   });
   const dominio = score ? pctInteiro(score.overall_mastery_pct) : 0;
+
+  /*
+    41 · Sequência perdida. O handoff desenha isso como tela inteira, mas ela
+    apareceria ANTES da home num dia qualquer — sequestrando a entrada de quem
+    só quer estudar. Aqui é cartão no topo: mesma mensagem e mesmo caminho de
+    volta, sem trancar a porta.
+
+    Só aparece quando houve sequência e ela caiu: sem last_activity_date não há
+    "ficou N dias fora" a afirmar.
+  */
+  const diasFora = (() => {
+    if (!progress || progress.current_streak > 0 || !progress.last_activity_date) return null;
+    const ultima = new Date(progress.last_activity_date + "T00:00:00");
+    const dias = Math.floor((Date.now() - ultima.getTime()) / 86400000);
+    return dias >= 2 ? dias : null;
+  })();
 
   const licoes = progress?.licoes_hoje ?? 0;
   const metaLicoes = progress?.meta_licoes ?? 2;
@@ -264,6 +288,22 @@ export default function EstudarPage() {
           </Link>
         </div>
       </div>
+
+      {diasFora !== null && progress && (
+        <div className="flex items-center gap-3.5 rounded-grupo bg-erro/8 p-4">
+          <KangoPlaceholder px={52} tom="neutro" estado="com saudade" />
+          <div className="min-w-0 flex-1">
+            <p className="text-linha font-bold text-tinta">
+              Você ficou <MetricText weight="bold">{diasFora}</MetricText> dias fora
+            </p>
+            <p className="mt-0.5 text-pretty text-nota leading-[1.4] text-tinta-fraca">
+              Sua sequência de <MetricText tone="fraca">{progress.longest_streak}</MetricText>{" "}
+              {progress.longest_streak === 1 ? "dia" : "dias"} parou. Uma lição hoje recomeça a
+              contagem — a trilha e o domínio continuam intactos.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Chips: trocam a matéria em foco sem sair da home. O "+" no fim é a
           porta de criar matéria — na home antiga ela era um botão no cabeçalho,
