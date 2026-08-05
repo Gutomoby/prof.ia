@@ -124,6 +124,19 @@ class ActivitySubmitRequest(BaseModel):
     time_seconds: int
 
 
+class QuestionCheckRequest(BaseModel):
+    """Confere UMA questão, para a lição corrigir na hora.
+
+    A lição mostra uma questão por vez e responde "certo/errado" no ato, então
+    o cliente precisa do gabarito daquela questão. Ele não vem na geração de
+    propósito (_strip_answers), senão o gabarito inteiro viajaria junto com o
+    quiz e bastaria abrir o inspetor.
+    """
+    activity_id: UUID
+    question_index: int
+    answer: int
+
+
 class ActivityResult(BaseModel):
     id: UUID
     professor_id: UUID

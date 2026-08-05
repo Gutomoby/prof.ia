@@ -61,6 +61,15 @@ export interface SubmittedQuestionResult extends QuizQuestion {
   correta: boolean;
 }
 
+// Resposta de POST /atividades/conferir — o gabarito de UMA questão, pedido
+// depois que o aluno respondeu. É o que permite a lição corrigir na hora sem
+// que o quiz inteiro viaje com as respostas.
+export interface QuestionCheckResult {
+  correta: boolean;
+  resposta_correta: number;
+  explicacao: string;
+}
+
 export interface ActivitySubmitResult {
   score_pct: number;
   questions: SubmittedQuestionResult[];

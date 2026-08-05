@@ -14,10 +14,8 @@ import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { ProgressBar } from "@/components/ui/gauge";
 import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
-import { QuizOption } from "@/components/quiz/QuizOption";
-import { QuizReview } from "@/components/quiz/QuizReview";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Licao } from "@/components/quiz/Licao";
+import { ResultadoLicao } from "@/components/quiz/ResultadoLicao";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
 import { pendingQuizKey } from "@/lib/use-start-quiz";
 import { cn, pctInteiro } from "@/lib/utils";
@@ -32,10 +30,8 @@ import {
 } from "@/lib/types";
 
 /*
-  Tela 22 · Fazer um quiz, e 23 · Gerando o quiz (o mesmo caminho, esperando).
-
-  Responder e resultado (telas 37 a 39) continuam como estavam: sao a Fase D e
-  tem desenho proprio.
+  Rota do quiz: tela 22 (formulario), 23 (espera), 37/38 (a licao, em
+  components/quiz/Licao) e 39 (o resultado, em ResultadoLicao).
 
   Duas coisas do desenho que este app tem e a tela 22 nao mostra, e que eu
   mantive em vez de remover:
@@ -74,7 +70,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
   const [gerandoDe, setGerandoDe] = useState<string | null>(null);
 
   const [activity, setActivity] = useState<GeneratedActivity | null>(null);
-  const [answers, setAnswers] = useState<Record<string, number>>({});
   const [startedAt, setStartedAt] = useState<number | null>(null);
 
   const [submitting, setSubmitting] = useState(false);
@@ -123,7 +118,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
       try {
         const pending: GeneratedActivity = JSON.parse(pendingRaw);
         setActivity(pending);
-        setAnswers({});
         setResult(null);
         setStartedAt(Date.now());
         setView("respondendo");
@@ -147,7 +141,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         difficulty,
       });
       setActivity(generated);
-      setAnswers({});
       setResult(null);
       setStartedAt(Date.now());
       setView("respondendo");
@@ -159,17 +152,17 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     }
   }
 
-  function selectAnswer(questionIndex: number, altIndex: number) {
-    setAnswers((prev) => ({ ...prev, [String(questionIndex)]: altIndex }));
-  }
-
-  async function handleSubmit() {
+  async function handleSubmit(respostas: Record<string, number>) {
     if (!activity) return;
     setSubmitError(null);
     setSubmitting(true);
     try {
       const time_seconds = startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0;
-      const res = await api.submitAtividade({ activity_id: activity.activity_id, answers, time_seconds });
+      const res = await api.submitAtividade({
+        activity_id: activity.activity_id,
+        answers: respostas,
+        time_seconds,
+      });
       setResult(res);
       setView("resultado");
       refreshHistory();
@@ -187,9 +180,6 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     setGenError(null);
     setView("idle");
   }
-
-  const allAnswered = activity ? activity.questions.every((_, i) => answers[String(i)] !== undefined) : false;
-  const answeredCount = activity ? activity.questions.filter((_, i) => answers[String(i)] !== undefined).length : 0;
 
   const answeredHistory = history.filter((h) => h.score_pct != null);
 
@@ -451,86 +441,33 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         </div>
       )}
 
-      {/* Responder e resultado seguem na casca antiga — são a Fase D. */}
       {view === "respondendo" && activity && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-3">
-            <ProgressBar
-              className="flex-1"
-              value={(answeredCount / activity.questions.length) * 100}
-              aria-label="Progresso do quiz"
-            />
-            <span className="shrink-0 text-nota text-tinta-fraca">
-              <MetricText tone="fraca">
-                {answeredCount}/{activity.questions.length}
-              </MetricText>{" "}
-              respondidas
-            </span>
-          </div>
-
-          {activity.questions.map((q, qi) => (
-            <Card key={qi}>
-              <CardHeader>
-                <CardTitle>
-                  {qi + 1}. {q.enunciado}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {q.alternativas.map((alt, ai) => (
-                  <QuizOption
-                    key={ai}
-                    index={ai}
-                    label={alt}
-                    state={answers[String(qi)] === ai ? "selected" : "default"}
-                    onClick={() => selectAnswer(qi, ai)}
-                  />
-                ))}
-              </CardContent>
-            </Card>
-          ))}
-          {submitError && <InlineAlert>{submitError}</InlineAlert>}
-          <Button onClick={handleSubmit} disabled={!allAnswered} loading={submitting} size="lg" className="w-full">
-            {submitting ? "Enviando..." : "Enviar respostas"}
-          </Button>
-        </div>
+        <Licao
+          activity={activity}
+          enviando={submitting}
+          erroEnvio={submitError}
+          onSair={handleReset}
+          onConcluir={handleSubmit}
+        />
       )}
 
       {view === "resultado" && result && (
-        <QuizReview
-          scorePct={result.score_pct}
-          questions={result.questions}
-          reward={{
-            xpGanho: result.xp_ganho,
-            topicosDominados: result.topicos_dominados,
-            currentStreak: result.current_streak,
-          }}
-          footer={
-            <div className="space-y-3">
-              {genError && <InlineAlert>{genError}</InlineAlert>}
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Button
-                  className="flex-1"
-                  size="lg"
-                  loading={generating}
-                  onClick={() =>
-                    startQuiz(
-                      activity?.module_id
-                        ? { moduleId: activity.module_id }
-                        : { topic: activity?.topic ?? null, rotulo: activity?.topic ?? undefined }
-                    )
-                  }
-                >
-                  <RotateCcw className="h-4 w-4" />
-                  Tentar novamente
-                </Button>
-                <Link href={`/professor/${professorId}/quiz`} onClick={handleReset} className={capsuleVariants("secundaria")}>
-                  Novo quiz
-                </Link>
-              </div>
-            </div>
+        <ResultadoLicao
+          result={result}
+          topico={activity?.topic ?? null}
+          professorId={professorId}
+          gerando={generating}
+          erro={genError}
+          onRepetir={() =>
+            startQuiz(
+              activity?.module_id
+                ? { moduleId: activity.module_id }
+                : { topic: activity?.topic ?? null, rotulo: activity?.topic ?? undefined }
+            )
           }
         />
       )}
+
     </div>
   );
 }

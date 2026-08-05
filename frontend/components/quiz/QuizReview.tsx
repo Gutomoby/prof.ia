@@ -1,72 +1,199 @@
-import { Flame, Trophy, Zap } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { QuizOption } from "./QuizOption";
-import { pctInteiro } from "@/lib/utils";
+import { Check, X } from "lucide-react";
+import { Gauge } from "@/components/ui/gauge";
+import { GlassCard } from "@/components/ui/glass-card";
+import { InsetList } from "@/components/ui/inset-list";
+import { MetricText } from "@/components/ui/metric-text";
+import { cn, pctInteiro } from "@/lib/utils";
 import type { SubmittedQuestionResult } from "@/lib/types";
+
+/*
+  Tela 40 · Revisão da tentativa.
+
+  O handoff lista só as questões ERRADAS ("As 2 que você errou"). É a decisão
+  certa: quem revisita uma tentativa vai atrás do que falhou, e reler cinco
+  acertos para achar dois erros é trabalho à toa. As acertadas ficam num grupo
+  recolhido no fim, para quem quiser conferir.
+
+  Cada erro mostra as duas linhas que importam — o que você marcou e qual era —
+  e a explicação embaixo. As outras duas alternativas não entram: não
+  aconteceram.
+*/
+
+function LinhaResposta({
+  texto,
+  tipo,
+  rotulo,
+}: {
+  texto: string;
+  tipo: "erro" | "acerto";
+  rotulo?: string;
+}) {
+  const acerto = tipo === "acerto";
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2.5 rounded-bolha px-3 py-2.5",
+        acerto ? "bg-acerto/10" : "bg-erro/10"
+      )}
+    >
+      {acerto ? (
+        <Check className="h-4 w-4 flex-none text-acerto" strokeWidth={3} />
+      ) : (
+        <X className="h-4 w-4 flex-none text-erro" strokeWidth={3} />
+      )}
+      <span className={cn("flex-1 text-corpo", acerto && "font-semibold")}>{texto}</span>
+      {rotulo && (
+        <span
+          className={cn(
+            "flex-none text-[12px] font-semibold",
+            acerto ? "text-acerto" : "text-erro"
+          )}
+        >
+          {rotulo}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function QuestaoErrada({ q }: { q: SubmittedQuestionResult }) {
+  return (
+    <div className="relative px-4 pb-4 pt-3.5">
+      <p className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
+        {q.enunciado}
+      </p>
+
+      <div className="mt-2.5 flex flex-col gap-1.5">
+        {q.resposta_usuario !== null && (
+          <LinhaResposta
+            texto={q.alternativas[q.resposta_usuario]}
+            tipo="erro"
+            rotulo="você marcou"
+          />
+        )}
+        <LinhaResposta
+          texto={q.alternativas[q.resposta_correta]}
+          tipo="acerto"
+          rotulo={q.resposta_usuario === null ? "era essa" : "era essa"}
+        />
+      </div>
+
+      {q.explicacao && (
+        <p className="mt-2.5 text-pretty text-nota leading-[1.45] text-tinta-fraca">
+          {q.explicacao}
+        </p>
+      )}
+
+      <span
+        aria-hidden
+        data-sep
+        className="pointer-events-none absolute bottom-0 left-4 right-0 h-[0.5px] bg-borda"
+      />
+    </div>
+  );
+}
 
 export function QuizReview({
   scorePct,
   questions,
-  reward,
+  tempoSegundos,
+  xpGanho,
   footer,
 }: {
   scorePct: number;
   questions: SubmittedQuestionResult[];
-  // Só existe logo depois de submeter — ao revisitar do histórico não há
-  // recompensa nova a mostrar.
-  reward?: { xpGanho: number; topicosDominados: string[]; currentStreak: number };
+  tempoSegundos?: number | null;
+  xpGanho?: number;
   footer?: React.ReactNode;
 }) {
+  const certas = questions.filter((q) => q.correta).length;
+  const erradas = questions.filter((q) => !q.correta);
+
+  const min = tempoSegundos ? Math.floor(tempoSegundos / 60) : null;
+  const seg = tempoSegundos ? tempoSegundos % 60 : null;
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardContent className="flex flex-col items-center gap-1 py-8">
-          <p className="text-sm text-muted-foreground">Pontuação</p>
-          <p className="text-4xl font-bold metric md:text-5xl">{pctInteiro(scorePct)}%</p>
-
-          {reward && (
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                <Zap className="h-4 w-4 text-primary" />
-                <span className="metric">+{reward.xpGanho} XP</span>
-              </span>
-              {reward.currentStreak > 0 && (
-                <span className="inline-flex items-center gap-1.5 text-sm font-medium">
-                  <Flame className="h-4 w-4 text-success" />
-                  <span className="metric">
-                    {reward.currentStreak} {reward.currentStreak === 1 ? "dia" : "dias"}
-                  </span>
-                </span>
+    <div className="mx-auto flex max-w-[560px] flex-col gap-4">
+      <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4">
+        <Gauge value={scorePct} size={72} tone="nota" />
+        <div className="min-w-0 flex-1">
+          <p className="text-linha font-bold text-tinta">
+            <MetricText weight="bold">{certas}</MetricText> de{" "}
+            <MetricText weight="bold">{questions.length}</MetricText> certas
+          </p>
+          {(tempoSegundos || xpGanho !== undefined) && (
+            <p className="mt-0.5 text-nota text-tinta-fraca">
+              {tempoSegundos ? (
+                <>
+                  Levou{" "}
+                  {min !== null && min > 0 && (
+                    <>
+                      <MetricText tone="fraca">{min}</MetricText> min{" "}
+                    </>
+                  )}
+                  <MetricText tone="fraca">{seg}</MetricText> s
+                </>
+              ) : null}
+              {tempoSegundos && xpGanho !== undefined ? " · ganhou " : ""}
+              {xpGanho !== undefined && (
+                <>
+                  <MetricText tone="fraca">+{xpGanho}</MetricText> XP
+                </>
               )}
-            </div>
-          )}
-
-          {reward && reward.topicosDominados.length > 0 && (
-            <p className="mt-3 inline-flex items-center gap-1.5 text-center text-sm text-success">
-              <Trophy className="h-4 w-4 shrink-0" />
-              Você dominou {reward.topicosDominados.join(", ")}.
             </p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
-      {questions.map((q, qi) => (
-        <Card key={qi}>
-          <CardHeader>
-            <CardTitle>
-              {qi + 1}. {q.enunciado}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {q.alternativas.map((alt, ai) => {
-              const state =
-                ai === q.resposta_correta ? "correct" : ai === q.resposta_usuario ? "incorrect" : "default";
-              return <QuizOption key={ai} index={ai} label={alt} state={state} disabled />;
-            })}
-            <p className="pt-2 text-sm text-muted-foreground">{q.explicacao}</p>
-          </CardContent>
-        </Card>
-      ))}
+      {erradas.length > 0 ? (
+        <div>
+          <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-erro">
+            {erradas.length === 1 ? "A que você errou" : `As ${erradas.length} que você errou`}
+          </p>
+          <InsetList>
+            {erradas.map((q, i) => (
+              <QuestaoErrada key={i} q={q} />
+            ))}
+          </InsetList>
+        </div>
+      ) : (
+        <p className="px-rotulo-secao text-corpo text-acerto">
+          Você acertou tudo nesta tentativa.
+        </p>
+      )}
+
+      {certas > 0 && erradas.length > 0 && (
+        <details className="group">
+          <summary className="cursor-pointer list-none px-rotulo-secao text-nota font-semibold text-indigo hover:underline">
+            Ver as <MetricText tone="indigo">{certas}</MetricText> que você acertou
+          </summary>
+          <div className="mt-2">
+            <InsetList>
+              {questions
+                .filter((q) => q.correta)
+                .map((q, i) => (
+                  <div key={i} className="relative px-4 pb-4 pt-3.5">
+                    <p className="text-pretty text-[16px] font-semibold leading-[1.35] tracking-[-0.43px] text-tinta">
+                      {q.enunciado}
+                    </p>
+                    <div className="mt-2.5">
+                      <LinhaResposta
+                        texto={q.alternativas[q.resposta_correta]}
+                        tipo="acerto"
+                        rotulo="você acertou"
+                      />
+                    </div>
+                    <span
+                      aria-hidden
+                      data-sep
+                      className="pointer-events-none absolute bottom-0 left-4 right-0 h-[0.5px] bg-borda"
+                    />
+                  </div>
+                ))}
+            </InsetList>
+          </div>
+        </details>
+      )}
 
       {footer}
     </div>

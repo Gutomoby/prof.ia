@@ -8,6 +8,7 @@ migrar depois.
 
 Endpoints:
   POST /atividades/gerar        pede ao Claude para gerar um quiz novo
+  POST /atividades/conferir     corrige UMA questao, sem fechar a atividade
   POST /atividades/submeter     recebe as respostas, calcula score e salva
   GET  /atividades              lista atividades de um professor (histórico)
   GET  /atividades/{id}         detalhe corrigido de uma tentativa (revisitar)
@@ -17,7 +18,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
-from models import ActivityGenerateRequest, ActivitySubmitRequest
+from models import ActivityGenerateRequest, ActivitySubmitRequest, QuestionCheckRequest
 from services.claude import MODEL_HAIKU, generate_json
 from services.config import settings
 from services.progress import (
@@ -177,6 +178,45 @@ def gerar_atividade(payload: ActivityGenerateRequest):
 # ---------------------------------------------------------------------------
 # Submissão / correção
 # ---------------------------------------------------------------------------
+
+
+@router.post("/conferir")
+def conferir_questao(payload: QuestionCheckRequest):
+    """Corrige uma questão isolada, sem fechar a atividade.
+
+    É o que a lição usa entre uma questão e a próxima. Não escreve nada: o
+    score, o XP e a sequência continuam saindo de /submeter, no fim. Ter os
+    dois caminhos separados é o que permite corrigir na hora sem que uma lição
+    abandonada no meio vire tentativa pontuada.
+
+    Devolver o gabarito da questão já respondida é o objetivo. Um cliente
+    malicioso poderia pedir /conferir de todos os índices antes de responder —
+    mas o único prejudicado seria quem está estudando, então não vale trancar
+    isso com estado por questão no banco.
+    """
+    sb = get_supabase()
+    found = (
+        sb.table("activity_results")
+        .select("id, questions, score_pct")
+        .eq("id", str(payload.activity_id))
+        .limit(1)
+        .execute()
+    )
+    if not found.data:
+        raise HTTPException(status_code=404, detail="Atividade não encontrada")
+
+    questions: list[dict] = found.data[0]["questions"] or []
+    if not 0 <= payload.question_index < len(questions):
+        raise HTTPException(status_code=400, detail="Índice de questão inválido")
+
+    question = questions[payload.question_index]
+    correta_idx = question["resposta_correta"]
+
+    return {
+        "correta": payload.answer == correta_idx,
+        "resposta_correta": correta_idx,
+        "explicacao": question.get("explicacao") or "",
+    }
 
 
 @router.post("/submeter")

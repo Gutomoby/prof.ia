@@ -13,6 +13,7 @@ import type {
   DocumentWithProfessor,
   GeneratedActivity,
   ActivitySubmitResult,
+  QuestionCheckResult,
   ActivityHistoryItem,
   ActivityDetail,
   Difficulty,
@@ -174,6 +175,19 @@ export function generateAtividade(payload: {
   });
 }
 
+// Corrige UMA questão, para a lição responder na hora. Não fecha a atividade:
+// score, XP e sequência continuam saindo de submitAtividade, no fim.
+export function conferirQuestao(payload: {
+  activity_id: string;
+  question_index: number;
+  answer: number;
+}) {
+  return request<QuestionCheckResult>("/atividades/conferir", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function submitAtividade(payload: {
   activity_id: string;
   answers: Record<string, number>;
@@ -293,6 +307,7 @@ export const api = {
   uploadText,
   deleteDocument,
   generateAtividade,
+  conferirQuestao,
   submitAtividade,
   listAtividades,
   getAtividade,
