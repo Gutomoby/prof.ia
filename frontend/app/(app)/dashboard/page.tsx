@@ -161,7 +161,10 @@ export default function EstudarPage() {
     let cancelled = false;
     api
       .listAtividades(selecionada.id)
-      .then((res) => !cancelled && setRevisoes(res.items))
+      // Só as respondidas. Uma tentativa abandonada no meio não tem o que
+      // revisar, e /atividades/{id} responde 400 para ela — a lista inteira
+      // aqui é link, então uma linha sem nota viraria uma tela de erro.
+      .then((res) => !cancelled && setRevisoes(res.items.filter((a) => a.score_pct !== null)))
       .catch(() => !cancelled && setRevisoes([]));
     return () => {
       cancelled = true;
@@ -370,11 +373,9 @@ export default function EstudarPage() {
                 title={a.topic ?? "Quiz geral"}
                 subtitle={new Date(a.created_at).toLocaleDateString("pt-BR")}
                 value={
-                  a.score_pct === null ? undefined : (
-                    <Pill tone={tonePilulaDaNota(pctInteiro(a.score_pct))}>
-                      <MetricText>{pctInteiro(a.score_pct)}%</MetricText>
-                    </Pill>
-                  )
+                  <Pill tone={tonePilulaDaNota(pctInteiro(a.score_pct as number))}>
+                    <MetricText>{pctInteiro(a.score_pct as number)}%</MetricText>
+                  </Pill>
                 }
                 trailing={<ChevronRight className="h-[18px] w-[18px]" />}
               />
