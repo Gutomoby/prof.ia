@@ -61,7 +61,9 @@ export default function CriarContaPage() {
     // Com confirmação de e-mail ligada o Supabase não devolve sessão —
     // o usuário precisa clicar no link antes de entrar.
     if (data.session) {
-      router.push("/dashboard");
+      // Conta nova não tem matéria nenhuma: o /dashboard seria só o vazio da
+      // tela 12. Quem acabou de se cadastrar entra pelo primeiro acesso.
+      router.push("/boas-vindas");
       router.refresh();
     } else {
       setAwaitingConfirm(true);

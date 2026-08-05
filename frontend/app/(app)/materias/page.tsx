@@ -184,7 +184,7 @@ export default function MateriasPage() {
           title="Comece pela matéria que mais te preocupa"
           description="Crie um professor, suba o material dele, e ele passa a estudar com você."
           action={
-            <Link href="/professor/novo" className={capsuleVariants("principal")}>
+            <Link href="/comecar" className={capsuleVariants("principal")}>
               <Plus className="h-[18px] w-[18px]" />
               Criar professor
             </Link>

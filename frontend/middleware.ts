@@ -38,7 +38,12 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/professor") ||
     pathname.startsWith("/licao") ||
-    pathname.startsWith("/perfil");
+    pathname.startsWith("/perfil") ||
+    // Primeiro acesso: /comecar cria matéria e /diagnostico lê tentativa, as
+    // duas coisas presas a uma conta. Só /boas-vindas fica de fora — ela é a
+    // porta de entrada e precisa abrir deslogada.
+    pathname.startsWith("/comecar") ||
+    pathname.startsWith("/diagnostico");
   // Logado não tem o que fazer no login/criar conta. /recuperar-senha e
   // /atualizar-senha ficam FORA disso: o link de recovery autentica o usuário,
   // e redirecionar aqui impediria a troca de senha.
@@ -66,6 +71,8 @@ export const config = {
     "/professor/:path*",
     "/licao/:path*",
     "/perfil/:path*",
+    "/comecar",
+    "/diagnostico/:path*",
     "/login",
     "/criar-conta",
   ],

@@ -42,6 +42,9 @@ export interface InsetRowProps {
   icon?: React.ReactNode;
   iconTone?: RowTone;
   iconVariant?: IconVariant;
+  /** Substitui as classes do tom. Para as cores de matéria (teal, âmbar),
+      que não são estado e por isso não entram em RowTone — ver a tela 05. */
+  iconClass?: string;
   title: React.ReactNode;
   subtitle?: React.ReactNode;
   /** Valor à direita. String/número entram em mono automaticamente. */
@@ -62,6 +65,7 @@ export function InsetRow({
   icon,
   iconTone = "inativo",
   iconVariant = "quadrado",
+  iconClass,
   title,
   subtitle,
   value,
@@ -84,8 +88,8 @@ export function InsetRow({
             "flex flex-none items-center justify-center",
             "[&>svg]:h-[17px] [&>svg]:w-[17px]",
             iconVariant === "quadrado"
-              ? cn("h-[30px] w-[30px] rounded-icone", iconToneClasses[iconTone])
-              : "text-tinta-fraca"
+              ? cn("h-[30px] w-[30px] rounded-icone", iconClass ?? iconToneClasses[iconTone])
+              : iconClass ?? "text-tinta-fraca"
           )}
           aria-hidden
         >

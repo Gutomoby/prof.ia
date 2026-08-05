@@ -33,6 +33,8 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
   const moduleId = search.get("module");
   const dificuldade = (search.get("dif") as Difficulty | null) ?? "medio";
   const rotulo = search.get("rotulo") ?? topic;
+  // Diagnóstico do primeiro acesso: mesma lição, outro destino no fim.
+  const diagnostico = search.get("diagnostico") === "1";
 
   const [fase, setFase] = useState<Fase>("gerando");
   const [activity, setActivity] = useState<GeneratedActivity | null>(null);
@@ -82,6 +84,16 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
         answers: respostas,
         time_seconds: startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0,
       });
+
+      // O diagnóstico do primeiro acesso termina na tela 11, não na 39: a
+      // pergunta ali não é "como fui nesta lição" e sim "por onde eu começo".
+      // replace, não push, para o voltar do navegador não cair na lição já
+      // respondida.
+      if (diagnostico) {
+        router.replace(`/diagnostico/${professorId}?a=${activity.activity_id}`);
+        return;
+      }
+
       setResult(res);
       setFase("resultado");
     } catch (err) {

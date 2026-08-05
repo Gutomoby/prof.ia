@@ -225,7 +225,10 @@ export default function EstudarPage() {
           description="Crie um professor, suba o material dele, e ele passa a estudar com você."
           action={
             <>
-              <Link href="/professor/novo" className={capsuleVariants("principal", true)}>
+              {/* Primeira matéria vai pelo fluxo guiado (telas 06 a 11), que
+                  termina com material lido e diagnóstico feito. O formulário
+                  seco da tela 15 continua servindo para a segunda em diante. */}
+              <Link href="/comecar" className={capsuleVariants("principal", true)}>
                 <Plus className="h-[18px] w-[18px]" />
                 Criar minha primeira matéria
               </Link>
