@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronRight, Flame, Settings, Target, Trophy } from "lucide-react";
 import { api } from "@/lib/api";
@@ -69,9 +68,14 @@ export default function PerfilPage() {
         setEmail(data.user?.email ?? null);
         const criado = data.user?.created_at;
         if (criado) {
-          setDesde(
-            new Date(criado).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
-          );
+          // Maiuscula so na primeira letra. A classe `capitalize` do CSS
+          // maiusculiza cada palavra e transforma "julho de 2026" em
+          // "Julho De 2026".
+          const mes = new Date(criado).toLocaleDateString("pt-BR", {
+            month: "long",
+            year: "numeric",
+          });
+          setDesde(mes.charAt(0).toUpperCase() + mes.slice(1));
         }
       })
       .catch(() => setEmail(null));
@@ -98,23 +102,7 @@ export default function PerfilPage() {
 
   return (
     <div className="mx-auto max-w-[560px]">
-      <PageHeader
-        title="Perfil"
-        topRight={
-          <Link
-            href="/perfil/configuracoes"
-            aria-label="Configurações"
-            title="Configurações"
-            className={cn(
-              "-mr-2 flex h-toque w-toque flex-none items-center justify-center rounded-capsula",
-              "text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6",
-              "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
-            )}
-          >
-            <Settings className="h-5 w-5" />
-          </Link>
-        }
-      />
+      <PageHeader title="Perfil" />
 
       <div className="flex flex-col gap-3">
         <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4">
@@ -124,7 +112,7 @@ export default function PerfilPage() {
             <p className="truncate text-corpo text-tinta-fraca">{email ?? "—"}</p>
             {desde && (
               <p className="mt-0.5 text-corpo text-tinta-fraca">
-                Estudando desde <span className="capitalize">{desde}</span>
+                Estudando desde {desde}
               </p>
             )}
           </div>
@@ -184,6 +172,9 @@ export default function PerfilPage() {
           </>
         )}
 
+        {/* Uma porta so para Configuracoes. O handoff poe a engrenagem no canto
+            do titulo, mas com a linha embaixo ficavam duas entradas para o
+            mesmo lugar — a linha ganha por ser a que se le. */}
         <InsetList className="mt-2">
           <InsetRow
             href="/perfil/configuracoes"
