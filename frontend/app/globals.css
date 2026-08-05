@@ -223,4 +223,30 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+
+  /*
+    Exceção para indicador de carregamento. A regra acima é uma vassourada em
+    tudo, e num indicador ela apaga a única prova de que o app está fazendo
+    algo — a tela fica idêntica a uma tela travada. Isso é perder informação,
+    não reduzir enfeite.
+
+    O que incomoda de verdade em movimento é o DESLOCAMENTO, então aqui ele
+    some: no lugar da faixa que atravessa, um pulso de opacidade no mesmo
+    lugar. A classe vence o seletor universal por especificidade, mesmo os
+    dois sendo !important.
+  */
+  .movimento-essencial {
+    animation: pulso-essencial 1.6s ease-in-out infinite !important;
+    transform: none !important;
+  }
+}
+
+@keyframes pulso-essencial {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
 }

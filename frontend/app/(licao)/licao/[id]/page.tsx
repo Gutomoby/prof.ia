@@ -158,7 +158,7 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
                       </div>
                       <span
                         aria-hidden
-                        className="pointer-events-none absolute inset-y-0 -inset-x-full animate-brilho bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                        className="movimento-essencial pointer-events-none absolute inset-y-0 -inset-x-full animate-brilho bg-gradient-to-r from-transparent via-white/70 to-transparent"
                         style={{ animationDelay: `${i * 0.45}s` }}
                       />
                       {i < 2 && (
@@ -180,7 +180,7 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
               >
                 <span
                   aria-hidden
-                  className="absolute inset-y-0 left-0 w-1/4 animate-indeterminada rounded-capsula bg-indigo"
+                  className="movimento-essencial absolute inset-y-0 left-0 w-1/4 animate-indeterminada rounded-capsula bg-indigo"
                 />
               </div>
               <p className="mt-2.5 text-nota text-tinta-fraca">
