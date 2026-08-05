@@ -167,11 +167,15 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
         </div>
 
         {!erroGeracao && (
-          <p className="flex items-center gap-3 pt-8 text-left text-nota leading-[1.4] text-tinta-fraca">
+          {/* O texto vai dentro de um span: num flex, cada nó de texto solto
+              vira item e a frase se parte em colunas. */}
+          <div className="flex items-center gap-3 pt-8 text-left">
             <Sparkles className="h-[17px] w-[17px] flex-none text-acerto" />
-            Dica: acertar <MetricText tone="fraca">70%</MetricText> de um tópico duas vezes marca
-            ele como dominado.
-          </p>
+            <span className="text-nota leading-[1.4] text-tinta-fraca">
+              Dica: acertar <MetricText tone="fraca">70%</MetricText> de um tópico duas vezes marca
+              ele como dominado.
+            </span>
+          </div>
         )}
       </div>
     );

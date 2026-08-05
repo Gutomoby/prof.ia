@@ -194,7 +194,10 @@ export function Licao({
             acertou ? "bg-acerto/14" : "bg-erro/12"
           )}
         >
-          <div className={cn("flex gap-3", acertou ? "items-center" : "items-start")}>
+          {/* Sempre alinhado ao topo. O desenho centra o Kango porque ali a
+              explicação tem uma linha; as que o modelo escreve têm um
+              parágrafo, e centrado o mascote fica boiando no meio do texto. */}
+          <div className="flex items-start gap-3">
             <KangoPlaceholder px={52} tom={acertou ? "indigo" : "neutro"} />
             <div className="min-w-0 flex-1">
               <p
