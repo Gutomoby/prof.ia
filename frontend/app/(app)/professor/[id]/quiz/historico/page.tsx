@@ -26,13 +26,17 @@ import { DIFFICULTY_LABELS, type ActivityHistoryItem, type Professor } from "@/l
 
 const PAGINA = 12;
 
-/** "1 min 40 s" — o formato do desenho, sem zero à esquerda no minuto. */
-function duracao(segundos: number | null): string | null {
+/*
+  "1 min 40 s". O handoff põe a linha inteira em mono, mas o guia §03 é
+  explícito: "Palavra nunca entra em mono". Só o número vai — por isso a função
+  devolve as partes em vez de uma string pronta.
+*/
+function duracao(segundos: number | null): { min: number | null; seg: string } | null {
   if (segundos === null || segundos <= 0) return null;
   const min = Math.floor(segundos / 60);
   const seg = segundos % 60;
-  if (min === 0) return `${seg} s`;
-  return `${min} min ${String(seg).padStart(2, "0")} s`;
+  if (min === 0) return { min: null, seg: String(seg) };
+  return { min, seg: String(seg).padStart(2, "0") };
 }
 
 /** Segunda-feira da semana da data, no fuso local. */
@@ -250,7 +254,17 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
                             month: "2-digit",
                           })}
                         </MetricText>
-                        {tempo ? <> · <MetricText tone="fraca">{tempo}</MetricText></> : null}
+                        {tempo ? (
+                          <>
+                            {" · "}
+                            {tempo.min !== null && (
+                              <>
+                                <MetricText tone="fraca">{tempo.min}</MetricText> min{" "}
+                              </>
+                            )}
+                            <MetricText tone="fraca">{tempo.seg}</MetricText> s
+                          </>
+                        ) : null}
                         {a.difficulty ? ` · ${DIFFICULTY_LABELS[a.difficulty]}` : ""}
                       </>
                     }
