@@ -32,7 +32,7 @@ export function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
 
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -20 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid vertical={false} stroke="hsl(var(--borda))" strokeDasharray="0" />
         <XAxis
           dataKey="label"
@@ -47,9 +47,10 @@ export function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
           axisLine={false}
           tickLine={false}
           tick={{ fill: "hsl(var(--tinta-fraca))", fontSize: 11, fontFamily: MONO }}
-          // 40px: a mono e mais larga que a proporcional, e com 32 o "100"
-          // saia cortado no eixo.
-          width={40}
+          // A mono e mais larga que a proporcional: 44px e o que cabe "100"
+          // inteiro. A margem esquerda do grafico tambem precisa ficar em 0 —
+          // negativa, ela puxa o eixo para fora e corta o primeiro digito.
+          width={44}
         />
         <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--borda-forte))", strokeWidth: 1 }} />
         <Line
