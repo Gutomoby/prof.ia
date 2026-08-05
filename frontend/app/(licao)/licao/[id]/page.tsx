@@ -6,10 +6,9 @@ import { Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { InsetList } from "@/components/ui/inset-list";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
-import { ProgressBar } from "@/components/ui/gauge";
 import { Licao } from "@/components/quiz/Licao";
 import { ResultadoLicao } from "@/components/quiz/ResultadoLicao";
 import type { ActivitySubmitResult, Difficulty, GeneratedActivity } from "@/lib/types";
@@ -139,26 +138,51 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
                 Leva uns <MetricText tone="fraca">10</MetricText> segundos.
               </p>
 
+              {/*
+                Os três passos existem no backend (search_chunks → geração →
+                validação), mas a geração é uma requisição só: o cliente não
+                observa em qual está. Então nenhum ganha check — o brilho que
+                percorre as linhas mostra que há trabalho acontecendo, sem
+                afirmar qual passo terminou.
+              */}
               <div className="mt-6 w-full">
                 <InsetList>
                   {[
                     "Procurar os trechos do seu material",
                     "Escrever as questões",
                     "Conferir as respostas",
-                  ].map((passo) => (
-                    <InsetRow
-                      key={passo}
-                      title={<span className="text-tinta-fraca">{passo}</span>}
-                    />
+                  ].map((passo, i) => (
+                    <div key={passo} className="relative min-h-linha overflow-hidden">
+                      <div className="flex min-h-linha items-center px-4">
+                        <span className="text-linha text-tinta-fraca">{passo}</span>
+                      </div>
+                      <span
+                        aria-hidden
+                        className="pointer-events-none absolute inset-y-0 -inset-x-full animate-brilho bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                        style={{ animationDelay: `${i * 0.45}s` }}
+                      />
+                      {i < 2 && (
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute bottom-0 left-4 right-0 h-[0.5px] bg-borda"
+                        />
+                      )}
+                    </div>
                   ))}
                 </InsetList>
               </div>
 
-              <ProgressBar
-                className="mt-4 w-full animate-pulse"
-                value={100}
+              {/* Indeterminada: não há progresso real a informar. */}
+              <div
+                role="progressbar"
                 aria-label="Gerando a lição"
-              />
+                className="relative mt-4 h-2 w-full overflow-hidden rounded-capsula bg-cinza-tonal"
+              >
+                <span
+                  aria-hidden
+                  className="absolute inset-y-0 left-0 w-1/4 animate-indeterminada rounded-capsula bg-indigo"
+                />
+              </div>
               <p className="mt-2.5 text-nota text-tinta-fraca">
                 As questões saem só do material que você enviou.
               </p>

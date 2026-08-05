@@ -194,6 +194,19 @@ const config: Config = {
           from: { transform: "translateY(100%)", opacity: "0" },
           to: { transform: "translateY(0)", opacity: "1" },
         },
+        // Barra indeterminada: uma faixa atravessa o trilho. Diz "trabalhando"
+        // sem afirmar quanto falta — a geração é uma requisição só e ninguém
+        // sabe em que ponto está.
+        indeterminada: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(400%)" },
+        },
+        // Brilho que percorre a linha, para a lista de passos não parecer
+        // congelada durante os ~10s de espera.
+        brilho: {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -205,6 +218,8 @@ const config: Config = {
       },
       animation: {
         "subir-rodape": "subir-rodape 0.25s ease-out",
+        indeterminada: "indeterminada 1.4s ease-in-out infinite",
+        brilho: "brilho 1.8s ease-in-out infinite",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
