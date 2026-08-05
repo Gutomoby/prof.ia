@@ -72,12 +72,16 @@ export default function ConquistasPage() {
   }, []);
 
   const conquistadas = items?.filter((c) => c.ganha) ?? [];
-  const aCaminho = items?.filter((c) => !c.ganha) ?? [];
+  const pendentes = items?.filter((c) => !c.ganha) ?? [];
 
   // A mais perto de sair: maior fração do alvo, e só se já saiu do zero.
-  const faltaPouco = aCaminho
+  const faltaPouco = pendentes
     .filter((c) => c.atual > 0)
     .sort((a, b) => b.atual / b.alvo - a.atual / a.alvo)[0];
+
+  // A destacada sai da lista de baixo: repetida nos dois lugares, ela deixa
+  // de ser destaque e vira ruído.
+  const aCaminho = pendentes.filter((c) => c.id !== faltaPouco?.id);
 
   return (
     <div className="mx-auto max-w-[560px]">
