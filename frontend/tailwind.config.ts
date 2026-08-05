@@ -202,6 +202,12 @@ const config: Config = {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(400%)" },
         },
+        // Skeleton do guia §09: pulsa de 1 a .45 em 2s. O animate-pulse do
+        // Tailwind vai de 1 a .5 com outra curva — perto, mas não é o valor.
+        pulsar: {
+          "0%, 100%": { opacity: "1" },
+          "50%": { opacity: "0.45" },
+        },
         // Brilho que percorre a linha, para a lista de passos não parecer
         // congelada durante os ~10s de espera.
         brilho: {
@@ -219,6 +225,7 @@ const config: Config = {
       },
       animation: {
         "subir-rodape": "subir-rodape 0.25s ease-out",
+        pulsar: "pulsar 2s ease-in-out infinite",
         indeterminada: "indeterminada 1.4s ease-in-out infinite",
         brilho: "brilho 1.8s ease-in-out infinite",
         "accordion-down": "accordion-down 0.2s ease-out",

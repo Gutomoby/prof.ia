@@ -20,7 +20,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { TopicNode } from "@/components/ui/topic-node";
 import { MathText } from "@/components/ui/math-text";
 import { computeNextStep } from "@/lib/next-step";
@@ -84,10 +84,45 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
 
   if (loading) {
     return (
-      <div className="mx-auto flex max-w-[720px] flex-col gap-4">
-        <Skeleton className="h-[124px] rounded-grupo" />
-        <Skeleton className="h-[180px] rounded-grupo" />
-        <Skeleton className="h-[200px] rounded-grupo" />
+      /*
+        45 · Carregando a matéria. O link de volta, a engrenagem e a régua de
+        abas já vieram reais do layout da sala — o cliente sabe todos os três.
+        Aqui pulsa só o que vem da API, e o cartão de próximo passo mantém o
+        índigo tonal: a cor é do CARTÃO, não do dado que ainda não chegou.
+      */
+      <div className="mx-auto flex max-w-[720px] flex-col gap-3">
+        <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-3.5 p-4">
+          <Skeleton className="h-[84px] w-[84px] flex-none rounded-capsula" />
+          <div className="flex-1 space-y-2">
+            <SkeletonLinha className="w-3/4" />
+            <SkeletonLinha className="h-2.5 w-1/2" />
+            <SkeletonLinha className="h-2.5 w-2/3" />
+          </div>
+        </GlassCard>
+
+        <div className="space-y-2.5 rounded-grupo bg-indigo/10 px-4 py-3.5">
+          <SkeletonLinha className="h-2.5 w-24 bg-indigo/15" />
+          <SkeletonLinha className="h-5 w-2/3 bg-indigo/15" />
+          <SkeletonLinha className="w-full bg-indigo/15" />
+          <Skeleton className="mt-2 h-capsula-principal w-full rounded-capsula bg-indigo/15" />
+        </div>
+
+        <div className="mt-2">
+          <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+            Trilha da matéria
+          </p>
+          <div className="flex flex-col gap-4 px-1.5">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-3.5">
+                <Skeleton className="h-10 w-10 flex-none rounded-capsula" />
+                <div className="flex-1 space-y-1.5">
+                  <SkeletonLinha className="w-1/2" />
+                  <SkeletonLinha className="h-2.5 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }

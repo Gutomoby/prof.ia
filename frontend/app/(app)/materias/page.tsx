@@ -9,7 +9,8 @@ import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList } from "@/components/ui/inset-list";
-import { Skeleton } from "@/components/ui/skeleton";
+import { GlassCard } from "@/components/ui/glass-card";
+import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { MateriaRow } from "@/components/professor/MateriaRow";
 import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
@@ -108,14 +109,61 @@ export default function MateriasPage() {
         }
       />
 
+      {/*
+        44 · Carregando as matérias. O título e o rótulo de seção já saíram de
+        verdade (ficam fora deste bloco); aqui pulsa só o que vem da API, nas
+        mesmas caixas e na mesma altura do conteúdo final — é isso que impede a
+        tela de pular quando o dado chega.
+      */}
       {loading && (
         <div className="space-y-6">
-          <Skeleton className="h-[92px] rounded-grupo" />
+          <GlassCard nivel="hud" radius="grupo" className="flex items-center gap-6 px-6 py-5">
+            <div className="flex items-center gap-2.5">
+              <Skeleton className="h-9 w-9 rounded-capsula" />
+              <div className="space-y-1.5">
+                <SkeletonLinha className="w-16" />
+                <SkeletonLinha className="h-2.5 w-12" />
+              </div>
+            </div>
+            <span aria-hidden className="h-8 w-[0.5px] bg-borda" />
+            <div className="flex-1 space-y-2">
+              <SkeletonLinha className="w-20" />
+              <Skeleton className="h-1.5 w-full" />
+            </div>
+          </GlassCard>
+
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-            <Skeleton className="h-52 rounded-grupo lg:col-span-2" />
+            <GlassCard nivel="cartao" radius="grupo" className="space-y-3 p-6 lg:col-span-2">
+              <SkeletonLinha className="h-2.5 w-12" />
+              <SkeletonLinha className="h-5 w-3/4" />
+              <SkeletonLinha className="w-1/2" />
+              <Skeleton className="mt-4 h-capsula-principal w-full rounded-capsula" />
+            </GlassCard>
             <Skeleton className="h-52 rounded-grupo" />
           </div>
-          <Skeleton className="h-40 rounded-grupo" />
+
+          <div>
+            <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+              Suas matérias
+            </p>
+            <InsetList>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="relative flex min-h-[64px] items-center gap-3 px-4 py-3">
+                  <Skeleton className="h-2.5 w-2.5 flex-none rounded-capsula" />
+                  <div className="flex-1 space-y-1.5">
+                    <SkeletonLinha className="w-1/3" />
+                    <SkeletonLinha className="h-2.5 w-1/2" />
+                  </div>
+                  {i < 2 && (
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute bottom-0 left-[38px] right-0 h-[0.5px] bg-borda"
+                    />
+                  )}
+                </div>
+              ))}
+            </InsetList>
+          </div>
         </div>
       )}
 

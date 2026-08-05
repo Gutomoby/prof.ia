@@ -15,7 +15,7 @@ import { MetricText, toneDaNota } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Segmented } from "@/components/ui/segmented";
 import { MathText } from "@/components/ui/math-text";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { computeNextStep } from "@/lib/next-step";
 import { professorColor } from "@/lib/professor-color";
 import { useStartQuiz } from "@/lib/use-start-quiz";
@@ -175,10 +175,29 @@ export default function EstudarPage() {
 
   if (loading) {
     return (
-      <div className="flex flex-col gap-4">
-        <Skeleton className="h-12 w-48 rounded-chip" />
-        <Skeleton className="h-8 rounded-capsula" />
-        <Skeleton className="h-[220px] rounded-grupo" />
+      // Mesma regra: o large title "Estudar" é do cliente e sai de verdade;
+      // pulsa a matéria em foco, os chips e o cartão da lição.
+      <div className="mx-auto flex max-w-[720px] flex-col gap-4">
+        <div>
+          <SkeletonLinha className="h-2.5 w-32" />
+          <h1 className="mt-1 text-titulo-grande text-tinta">Estudar</h1>
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-28 rounded-capsula" />
+          <Skeleton className="h-8 w-24 rounded-capsula" />
+        </div>
+        <Skeleton className="h-9 w-full rounded-[9px]" />
+        <GlassCard nivel="cartao" radius="grupo" className="p-4">
+          <div className="flex items-center gap-4">
+            <Skeleton className="h-[76px] w-[76px] flex-none rounded-capsula" />
+            <div className="flex-1 space-y-2">
+              <SkeletonLinha className="h-2.5 w-28" />
+              <SkeletonLinha className="h-5 w-3/4" />
+              <SkeletonLinha className="h-2.5 w-1/3" />
+            </div>
+          </div>
+          <Skeleton className="mt-4 h-capsula-principal w-full rounded-capsula" />
+        </GlassCard>
       </div>
     );
   }
