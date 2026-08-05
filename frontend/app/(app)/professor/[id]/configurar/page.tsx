@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { FileText, FileX, Loader2, ScanLine, Trash2, Type, Upload } from "lucide-react";
+import { FileText, FileX, Loader2, ScanLine, ShieldCheck, Trash2, Type, Upload } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -9,6 +9,8 @@ import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MathText } from "@/components/ui/math-text";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { cn } from "@/lib/utils";
 import type { DocumentItem } from "@/lib/types";
 
@@ -79,6 +81,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  // Só para a coluna auxiliar do computador (tela 56): o que o Kango tirou do
+  // material são os tópicos dos módulos.
+  const [topicos, setTopicos] = useState<string[]>([]);
+
   // Nome do que está sendo lido agora — alimenta a linha ativa da lista.
   const lendo = pdfLoading ? pdfFile?.name : textLoading ? textName : null;
 
@@ -97,6 +103,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     refreshDocuments();
+    api
+      .listModules(professorId)
+      .then(({ items }) => setTopicos([...new Set(items.flatMap((m) => m.topics))]))
+      .catch(() => setTopicos([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -210,7 +220,15 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-4">
+    /*
+      56 · Material no computador. Coluna principal com o upload e o que já foi
+      lido; auxiliar de 400px com a garantia do RAG e os tópicos que saíram do
+      material — os dois blocos que, no celular, ou não cabem ou virariam mais
+      rolagem depois da lista.
+    */
+    <div className="mx-auto flex w-full max-w-[560px] flex-col md:max-w-none">
+      <PainelLinha className="md:flex-1">
+        <PainelPrincipal className="gap-4">
       <p className="text-corpo text-tinta-fraca">
         O Kango lê o arquivo inteiro e só cobra o que está nele.
       </p>
@@ -364,6 +382,47 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
           </InsetList>
         )}
       </div>
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={400} className="mt-4 md:mt-0">
+          {/* A promessa central do produto, escrita onde ela é decidida: é
+              nesta tela que a pessoa escolhe o que o Kango pode cobrar. Teal
+              porque não é alerta nem acerto — é garantia. */}
+          <div className="rounded-grupo bg-teal-700/10 p-[18px] shadow-[inset_0_0_0_1px_rgba(15,118,110,.18)]">
+            <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-teal-700">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Só o que está aqui vira questão
+            </p>
+            <p className="mt-2 text-pretty text-corpo leading-[1.5] text-tinta">
+              Se um assunto não está nesses arquivos, o Kango diz que não sabe em vez de inventar.
+            </p>
+          </div>
+
+          {/* Tópicos que ele tirou daqui: são os dos módulos, que é a leitura
+              que o Kango fez do material. Sem módulos gerados a seção some, em
+              vez de mostrar uma lista vazia prometendo algo. */}
+          {topicos.length > 0 && (
+            <div>
+              <p className="mb-2 px-4 text-rotulo uppercase text-tinta-fraca">
+                Tópicos que ele tirou daqui
+              </p>
+              <InsetList
+                footnote={
+                  <>
+                    <MetricText tone="fraca">{topicos.length}</MetricText>{" "}
+                    {topicos.length === 1 ? "tópico encontrado" : "tópicos encontrados"} no material
+                    desta matéria.
+                  </>
+                }
+              >
+                {topicos.slice(0, 8).map((t) => (
+                  <InsetRow key={t} title={<MathText>{t}</MathText>} />
+                ))}
+              </InsetList>
+            </div>
+          )}
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }

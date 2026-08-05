@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronRight, Flame, Sparkles } from "lucide-react";
+import { ChevronRight, Compass, Flame, Sparkles, Target } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -13,8 +13,9 @@ import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreTrendChart } from "@/components/score/ScoreTrendChart";
 import { MathText } from "@/components/ui/math-text";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { cn, pctInteiro } from "@/lib/utils";
-import type { ScoreSummary } from "@/lib/types";
+import type { ScoreSummary, StudyPlan } from "@/lib/types";
 
 /*
   Tela 30 · Progresso da matéria.
@@ -47,6 +48,9 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
   const [summary, setSummary] = useState<ScoreSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Só para a coluna auxiliar do computador (tela 54): quando o plano já
+  // existe, ela mostra o resumo dele em vez de só a porta.
+  const [plano, setPlano] = useState<StudyPlan | null>(null);
 
   async function load() {
     setLoading(true);
@@ -62,6 +66,8 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
 
   useEffect(() => {
     load();
+    // Plano ainda não gerado é estado normal — getStudyPlan devolve null.
+    api.getStudyPlan(professorId).then(setPlano).catch(() => setPlano(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -102,7 +108,14 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
       : null;
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col">
+    /*
+      54 · Progresso no computador. A coluna auxiliar de 360px leva os números
+      fechados (hoje, semana, mês) e o plano; a principal fica com o que pede
+      largura — o gráfico da nota e a lista de tópicos.
+    */
+    <div className="mx-auto flex w-full max-w-[560px] flex-col md:max-w-none">
+      <PainelLinha className="md:flex-1">
+        <PainelPrincipal>
       {/* Manchete: o domínio solto, sem caixa. */}
       <div className="flex flex-col items-center py-2 text-center">
         <p className="text-rotulo uppercase text-tinta-fraca">Domínio geral da matéria</p>
@@ -128,7 +141,10 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* Hoje, semana, mês. */}
+      {/* Hoje, semana, mês. Fica na coluna principal nas duas larguras: o
+          desenho da 54 põe os números na auxiliar, mas mandá-los para lá
+          empurraria eles para o FIM da pilha no celular, onde a ordem da
+          tela 30 os quer logo abaixo da manchete. */}
       <GlassCard nivel="cartao" radius="cartao" className="mt-4 flex items-stretch">
         <Coluna rotulo="Hoje" valor={summary.streak_days > 0 ? "Em dia" : "Comece hoje"} />
         <span aria-hidden className="w-[0.5px] flex-none bg-borda" />
@@ -194,20 +210,54 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
         </p>
       )}
 
-      {/* Porta para o plano de estudos (tela 31). */}
-      <div className={cn("mt-[22px]")}>
-        <InsetList>
-          <InsetRow
-            href={`/professor/${professorId}/plano`}
-            altura="dupla"
-            icon={<Sparkles />}
-            iconTone="indigo"
-            title="Plano de estudos"
-            subtitle="O que o Kango recomenda, a partir do seu material"
-            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
-          />
-        </InsetList>
-      </div>
+        </PainelPrincipal>
+
+        {/* Porta para o plano de estudos (tela 31). No computador ela é a
+            coluna auxiliar inteira, e quando o plano já existe o resumo dele
+            vem junto — é o cartão que a 54 põe no topo dessa coluna. */}
+        <PainelAuxiliar largura={360} className="mt-[22px] md:mt-0">
+          {plano && (
+            <div className="hidden rounded-grupo bg-indigo/10 p-[18px] shadow-[inset_0_0_0_1px_hsl(var(--indigo)/0.16)] md:block">
+              <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
+                <Compass className="h-3.5 w-3.5" />
+                {summary.exam_dates ? <>Plano · {summary.exam_dates}</> : "Seu plano de estudos"}
+              </p>
+              <p className="mt-2 text-pretty text-corpo leading-[1.5] text-tinta">
+                {plano.content.resumo}
+              </p>
+            </div>
+          )}
+
+          <InsetList>
+            <InsetRow
+              href={`/professor/${professorId}/plano`}
+              altura="dupla"
+              icon={<Sparkles />}
+              iconTone="indigo"
+              title="Plano de estudos"
+              subtitle={
+                plano ? "Ver o plano inteiro" : "O que o Kango recomenda, a partir do seu material"
+              }
+              trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+            />
+          </InsetList>
+
+          {/* As prioridades do plano são exatamente "o que o Kango sugere" da
+              54 — a lista já existe no plano gerado, não é sugestão nova. */}
+          {plano && plano.content.prioridades.length > 0 && (
+            <div className="hidden md:block">
+              <p className="mb-2 px-4 text-rotulo uppercase text-tinta-fraca">
+                O que o Kango sugere
+              </p>
+              <InsetList>
+                {plano.content.prioridades.slice(0, 4).map((p) => (
+                  <InsetRow key={p} icon={<Target />} iconTone="indigo" title={<MathText>{p}</MathText>} />
+                ))}
+              </InsetList>
+            </div>
+          )}
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }

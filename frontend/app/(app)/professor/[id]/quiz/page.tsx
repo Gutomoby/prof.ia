@@ -11,6 +11,7 @@ import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Segmented } from "@/components/ui/segmented";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { MathText } from "@/components/ui/math-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useStartQuiz } from "@/lib/use-start-quiz";
@@ -87,7 +88,15 @@ export default function QuizPage({ params }: { params: { id: string } }) {
     .slice(0, 4);
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-[22px]">
+    /*
+      55 · Quiz no computador. O formulário fica na coluna principal e as
+      tentativas passam para a auxiliar de 400px: no celular elas são o fim da
+      rolagem, aqui ficam ao lado, e escolher o tópico deixa de esconder o
+      histórico que ajuda a escolher.
+    */
+    <div className="mx-auto flex w-full max-w-[560px] flex-col md:max-w-none">
+      <PainelLinha className="md:flex-1">
+        <PainelPrincipal className="gap-[22px]">
       <InsetList label="Tipo de atividade">
         <InsetRow
           active
@@ -212,6 +221,9 @@ export default function QuizPage({ params }: { params: { id: string } }) {
         </InsetList>
       )}
 
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={400} className="mt-[22px] md:mt-0">
       <div>
         <div className="mb-2 flex items-baseline justify-between gap-3 px-rotulo-secao">
           <p className="text-rotulo uppercase text-tinta-fraca">Suas tentativas</p>
@@ -267,6 +279,8 @@ export default function QuizPage({ params }: { params: { id: string } }) {
           </InsetList>
         )}
       </div>
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }
