@@ -47,7 +47,9 @@ export function ScoreTrendChart({ points }: { points: ScoreTrendPoint[] }) {
           axisLine={false}
           tickLine={false}
           tick={{ fill: "hsl(var(--tinta-fraca))", fontSize: 11, fontFamily: MONO }}
-          width={32}
+          // 40px: a mono e mais larga que a proporcional, e com 32 o "100"
+          // saia cortado no eixo.
+          width={40}
         />
         <Tooltip content={<ChartTooltip />} cursor={{ stroke: "hsl(var(--borda-forte))", strokeWidth: 1 }} />
         <Line
