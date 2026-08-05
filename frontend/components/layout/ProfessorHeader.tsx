@@ -2,11 +2,12 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { Settings } from "lucide-react";
+import { FileUp, Settings, Sparkles } from "lucide-react";
 import { PageHeader } from "./PageHeader";
 import { useQuizGuard } from "./QuizGuardContext";
 import { useHeaderAction } from "./HeaderActionContext";
 import { Segmented } from "@/components/ui/segmented";
+import { capsuleVariants } from "@/components/ui/capsule";
 import { professorColor } from "@/lib/professor-color";
 import { cn } from "@/lib/utils";
 
@@ -96,6 +97,34 @@ export function ProfessorHeader({
     <div className="mb-4">
       <PageHeader
         title={titulo}
+        /*
+          As duas ações da sala, no computador (tela 52): "Subir material" e
+          "Gerar quiz" ao lado do título. Só aqui, e só no `md` — no celular
+          elas não cabem na linha do título, e lá a ação já é a cápsula do
+          cartão de próximo passo, que é uma só, como manda o guia.
+        */
+        action={
+          ativa === "geral" ? (
+            <div className="hidden items-center gap-3 md:flex">
+              <Link
+                href={`/professor/${professor.id}/configurar`}
+                onClick={handleLinkClick}
+                className={capsuleVariants("secundaria", false, "h-capsula-secundaria")}
+              >
+                <FileUp className="h-[18px] w-[18px]" />
+                Subir material
+              </Link>
+              <Link
+                href={`/professor/${professor.id}/quiz`}
+                onClick={handleLinkClick}
+                className={capsuleVariants("principal")}
+              >
+                <Sparkles className="h-[18px] w-[18px]" />
+                Gerar quiz
+              </Link>
+            </div>
+          ) : undefined
+        }
         // Da seção o caminho de volta é a sala, não a home: é o que o link
         // "‹ ● Prof. Atuária" do handoff faz. Só a visão geral volta para
         // Estudar, porque dali a sala é o começo.

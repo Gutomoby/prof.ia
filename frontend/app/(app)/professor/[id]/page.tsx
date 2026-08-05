@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import {
   CalendarDays,
   ChevronRight,
+  FileText,
   FileUp,
   FileWarning,
   Play,
@@ -23,6 +24,7 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { TopicNode } from "@/components/ui/topic-node";
 import { MathText } from "@/components/ui/math-text";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { computeNextStep } from "@/lib/next-step";
 import { faltamPontos, montarTrilha } from "@/lib/trilha";
 import { useStartQuiz } from "@/lib/use-start-quiz";
@@ -187,41 +189,27 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
   const media = summary.weekly.media_score_pct;
 
   return (
-    <div className="mx-auto flex max-w-[720px] flex-col gap-3">
-      {/* Domínio da matéria. */}
-      <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-3.5 p-4">
-        <Gauge value={dominio} size="guia" tone="indigo" />
-        <div className="min-w-0 flex-1">
-          <p className="text-linha font-bold text-tinta">
-            Você já domina <MetricText weight="bold">{dominio}%</MetricText> da matéria
-          </p>
-          <p className="mt-[3px] text-nota leading-[1.4] text-tinta-fraca">
-            <MetricText tone="fraca">{dominados}</MetricText> de{" "}
-            <MetricText tone="fraca">{summary.topics.length}</MetricText>{" "}
-            {summary.topics.length === 1 ? "tópico dominado" : "tópicos dominados"}
-          </p>
-          {media !== null && (
-            <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-nota leading-[1.4] text-tinta-fraca">
-              {media >= 70 ? (
-                <TrendingUp className="h-3.5 w-3.5 flex-none text-acerto" />
-              ) : (
-                <TrendingDown className="h-3.5 w-3.5 flex-none text-erro" />
-              )}
-              <MetricText tone="fraca">{pctInteiro(media)}%</MetricText> de acerto nesta semana
-              {summary.exam_dates && (
-                <>
-                  <span aria-hidden>·</span>
-                  <CalendarDays className="h-3.5 w-3.5 flex-none" />
-                  <span className="truncate">{summary.exam_dates}</span>
-                </>
-              )}
-            </p>
-          )}
-        </div>
-      </GlassCard>
+    /*
+      52 · Painel de estudo, no computador.
 
-      {/* Próximo passo — o único cartão em índigo tonal da tela. */}
-      <div className="rounded-grupo bg-indigo/10 px-4 py-3.5">
+      No celular isto é uma pilha: domínio, próximo passo, trilha, rodapé. No
+      computador vira o painel do handoff — duas linhas, cada uma com a coluna
+      auxiliar de 250px à direita:
+
+        [ próximo passo          ] [ anel de domínio ]
+        [ trilha da matéria      ] [ semana e mês · material lido ]
+
+      A ordem da pilha do celular é a ordem do DOM, então a leitura em voz alta
+      e o Tab continuam iguais nas duas larguras — ver components/layout/Painel.
+    */
+    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-3 md:max-w-none md:gap-[22px]">
+      <PainelLinha>
+        <PainelPrincipal>
+          {/* Próximo passo — no celular é o único cartão em índigo tonal da
+              tela. No computador ele divide a linha com o anel, e dois fundos
+              diferentes lado a lado brigariam: ali o cartão é de vidro e o
+              acento fica no rótulo, que é o que o desenho da 52 faz. */}
+          <div className="flex flex-1 flex-col rounded-grupo bg-indigo/10 px-4 py-3.5 md:vidro-cartao md:p-5 md:shadow-vidro">
         <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
           <Zap className="h-3.5 w-3.5" />
           Próximo passo
@@ -239,6 +227,10 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           </div>
         )}
 
+        {/* No computador o cartão estica até a altura do anel ao lado, e o
+            botão desce para o pé em vez de flutuar no meio. */}
+        <div className="hidden flex-1 md:block" />
+
         <div className="mt-3.5">
           {step.kind === "subir-material" ? (
             <Link
@@ -254,10 +246,54 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
             </Capsule>
           )}
         </div>
-      </div>
+          </div>
+        </PainelPrincipal>
 
-      {/* Trilha da matéria. */}
-      <div className="mt-2">
+        {/* Domínio da matéria. Deitado no celular, em pé no computador —
+            é o mesmo dado, no formato que cada largura comporta. */}
+        <PainelAuxiliar>
+          <GlassCard
+            nivel="cartao"
+            radius="grupo"
+            className="flex flex-1 items-center gap-3.5 p-4 md:flex-col md:justify-center md:gap-0 md:p-5 md:text-center"
+          >
+            <Gauge value={dominio} size="guia" tone="indigo" className="md:hidden" />
+            <Gauge value={dominio} size="desktop" tone="indigo" className="hidden md:flex" />
+            <div className="min-w-0 flex-1 md:flex-none">
+              <p className="text-linha font-bold text-tinta md:mt-3.5">
+                Você já domina <MetricText weight="bold">{dominio}%</MetricText> da matéria
+              </p>
+              <p className="mt-[3px] text-nota leading-[1.4] text-tinta-fraca">
+                <MetricText tone="fraca">{dominados}</MetricText> de{" "}
+                <MetricText tone="fraca">{summary.topics.length}</MetricText>{" "}
+                {summary.topics.length === 1 ? "tópico dominado" : "tópicos dominados"}
+              </p>
+              {media !== null && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-nota leading-[1.4] text-tinta-fraca md:justify-center">
+                  {media >= 70 ? (
+                    <TrendingUp className="h-3.5 w-3.5 flex-none text-acerto" />
+                  ) : (
+                    <TrendingDown className="h-3.5 w-3.5 flex-none text-erro" />
+                  )}
+                  <MetricText tone="fraca">{pctInteiro(media)}%</MetricText> de acerto nesta semana
+                  {summary.exam_dates && (
+                    <>
+                      <span aria-hidden>·</span>
+                      <CalendarDays className="h-3.5 w-3.5 flex-none" />
+                      <span className="truncate">{summary.exam_dates}</span>
+                    </>
+                  )}
+                </p>
+              )}
+            </div>
+          </GlassCard>
+        </PainelAuxiliar>
+      </PainelLinha>
+
+      <PainelLinha className="md:flex-1">
+        <PainelPrincipal>
+          {/* Trilha da matéria. */}
+          <div className="mt-2 md:mt-0">
         <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
           Trilha da matéria
         </p>
@@ -304,38 +340,76 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
             ))}
           </div>
         )}
-      </div>
+          </div>
+        </PainelPrincipal>
 
-      {/* Rodapé: semana e mês, lado a lado. */}
-      <GlassCard nivel="cartao" radius="alerta" className="mt-2 flex items-center gap-3.5 px-4 py-3">
-        <p className="flex-1 text-nota leading-[1.35] text-tinta-fraca">
-          Esta semana
-          <br />
-          <span className="text-corpo font-bold text-tinta">
-            <MetricText weight="bold">{summary.weekly.quizzes_respondidos}</MetricText>{" "}
-            {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
-            {media !== null && (
-              <>
-                {" · "}
-                <MetricText weight="bold">{pctInteiro(media)}%</MetricText>
-              </>
-            )}
-          </span>
-        </p>
+        <PainelAuxiliar>
+          {/* Semana e mês. Deitado no celular; no computador vira duas linhas
+              empilhadas, que é o que cabe em 250px. */}
+          <GlassCard
+            nivel="cartao"
+            radius="alerta"
+            className="mt-2 flex items-center gap-3.5 px-4 py-3 md:mt-0 md:flex-col md:items-stretch md:gap-3 md:rounded-grupo md:p-4"
+          >
+            <p className="flex-1 text-nota leading-[1.35] text-tinta-fraca md:flex-none">
+              Esta semana
+              <br />
+              <span className="text-corpo font-bold text-tinta">
+                <MetricText weight="bold">{summary.weekly.quizzes_respondidos}</MetricText>{" "}
+                {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
+                {media !== null && (
+                  <>
+                    {" · "}
+                    <MetricText weight="bold">{pctInteiro(media)}%</MetricText>
+                  </>
+                )}
+              </span>
+            </p>
 
-        <span aria-hidden className="h-[30px] w-[0.5px] flex-none bg-borda" />
+            <span
+              aria-hidden
+              className="h-[30px] w-[0.5px] flex-none bg-borda md:h-[0.5px] md:w-full"
+            />
 
-        <p className="flex-1 text-nota leading-[1.35] text-tinta-fraca">
-          Este mês
-          <br />
-          <span className="text-corpo font-bold text-tinta">
-            +<MetricText weight="bold">{summary.monthly.topicos_dominados}</MetricText>{" "}
-            {summary.monthly.topicos_dominados === 1 ? "tópico dominado" : "tópicos dominados"}
-          </span>
-        </p>
-      </GlassCard>
+            <p className="flex-1 text-nota leading-[1.35] text-tinta-fraca md:flex-none">
+              Este mês
+              <br />
+              <span className="text-corpo font-bold text-tinta">
+                +<MetricText weight="bold">{summary.monthly.topicos_dominados}</MetricText>{" "}
+                {summary.monthly.topicos_dominados === 1 ? "tópico dominado" : "tópicos dominados"}
+              </span>
+            </p>
+          </GlassCard>
 
-
+          {/* Material lido só existe no computador: no celular ele já é a aba
+              Material inteira, e repetir a lista na sala seria dizer duas vezes
+              a mesma coisa numa tela que já rola. */}
+          <div className="hidden md:block">
+            <p className="mb-2 px-4 text-rotulo uppercase text-tinta-fraca">Material lido</p>
+            <InsetList>
+              {documents.slice(0, 4).map((doc) => (
+                <InsetRow
+                  key={doc.id}
+                  href={`/professor/${professorId}/configurar`}
+                  icon={doc.type === "pdf" ? <FileText /> : <Type />}
+                  iconVariant="simples"
+                  title={doc.name}
+                />
+              ))}
+              {documents.length > 4 && (
+                <InsetRow
+                  href={`/professor/${professorId}/configurar`}
+                  title={
+                    <span className="text-indigo">
+                      Ver os <MetricText tone="indigo">{documents.length}</MetricText> materiais
+                    </span>
+                  }
+                />
+              )}
+            </InsetList>
+          </div>
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }
