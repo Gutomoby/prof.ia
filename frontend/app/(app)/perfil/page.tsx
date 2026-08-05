@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronRight, Flame, Settings, Target, Trophy } from "lucide-react";
+import { ChevronRight, Flame, Settings, Share2, Target, Trophy } from "lucide-react";
 import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -11,22 +11,20 @@ import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
 import { ProgressBar } from "@/components/ui/gauge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CompartilharProgresso } from "@/components/perfil/CompartilharProgresso";
 import { cn } from "@/lib/utils";
 import type { UserProgress } from "@/lib/types";
 
 /*
   Tela 33 · Perfil.
 
-  Duas coisas do desenho ficaram de fora, e o motivo é o mesmo: não existe
-  backend.
+  Conquistas (as 9 medalhas e o "4 de 9") continuam de fora: não há tabela,
+  rota nem tipo — procurei no backend inteiro. Derivar no cliente seria
+  inventar um sistema de conquistas, não mostrar um. Preferi a tela menor e
+  verdadeira a caixas com número fixo.
 
-  - Conquistas (as 9 medalhas e o "4 de 9"). Não há tabela, rota nem tipo —
-    procurei no backend inteiro. Derivar no cliente seria inventar um sistema
-    de conquistas, não mostrar um.
-  - "Compartilhar meu progresso", que no desenho gera uma imagem.
-
-  Ambas são a Fase G. Preferi a tela menor e verdadeira a caixas com número
-  fixo.
+  "Compartilhar meu progresso" (tela 36) entrou: a imagem é desenhada no
+  cliente com os números que esta tela já busca, sem depender de rota nova.
 
   "Estudando desde" sai do created_at do usuário no Supabase, que é a data de
   cadastro de verdade.
@@ -56,8 +54,13 @@ export default function PerfilPage() {
   const [progress, setProgress] = useState<UserProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
+  const [nome, setNome] = useState<string | null>(null);
   const [desde, setDesde] = useState<string | null>(null);
   const [dominados, setDominados] = useState<number | null>(null);
+  // Só para a tela 36: a matéria principal e o domínio médio entre elas.
+  const [materia, setMateria] = useState<string | null>(null);
+  const [dominioPct, setDominioPct] = useState<number | null>(null);
+  const [compartilhando, setCompartilhando] = useState(false);
 
   useEffect(() => {
     api.getProgress().then(setProgress).catch(() => setProgress(null)).finally(() => setLoading(false));
@@ -66,6 +69,10 @@ export default function PerfilPage() {
       .auth.getUser()
       .then(({ data }) => {
         setEmail(data.user?.email ?? null);
+        // full_name é o que a tela de cadastro pede; sem ele sobra o começo
+        // do e-mail, que é o que o resto da tela já mostra.
+        const completo = data.user?.user_metadata?.full_name;
+        setNome(typeof completo === "string" && completo.trim() ? completo.trim() : null);
         const criado = data.user?.created_at;
         if (criado) {
           // Maiuscula so na primeira letra. A classe `capitalize` do CSS
@@ -85,15 +92,22 @@ export default function PerfilPage() {
     api
       .listProfessors()
       .then(async (res) => {
+        setMateria(res.items[0]?.discipline ?? null);
+
         const somas = await Promise.allSettled(res.items.map((p) => api.getScoreSummary(p.id)));
-        const total = somas.reduce(
-          (soma, r) =>
-            r.status === "fulfilled"
-              ? soma + r.value.topics.filter((t) => t.status === "dominado").length
-              : soma,
-          0
+        const ok = somas.flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+
+        setDominados(
+          ok.reduce((soma, s) => soma + s.topics.filter((t) => t.status === "dominado").length, 0)
         );
-        setDominados(total);
+
+        // Domínio do perfil é a média entre as matérias, cada uma pesando o
+        // mesmo: quem estuda duas não tem a nota da maior diluindo a outra.
+        setDominioPct(
+          ok.length > 0
+            ? ok.reduce((soma, s) => soma + s.overall_mastery_pct, 0) / ok.length
+            : null
+        );
       })
       .catch(() => setDominados(null));
   }, []);
@@ -177,6 +191,14 @@ export default function PerfilPage() {
             mesmo lugar — a linha ganha por ser a que se le. */}
         <InsetList className="mt-2">
           <InsetRow
+            icon={<Share2 />}
+            iconTone="indigo"
+            title="Compartilhar meu progresso"
+            onClick={() => setCompartilhando(true)}
+            disabled={!progress}
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+          <InsetRow
             href="/perfil/configuracoes"
             icon={<Settings />}
             title="Configurações"
@@ -184,6 +206,21 @@ export default function PerfilPage() {
           />
         </InsetList>
       </div>
+
+      {progress && (
+        <CompartilharProgresso
+          aberta={compartilhando}
+          onFechar={() => setCompartilhando(false)}
+          dados={{
+            nome: nome ?? email?.split("@")[0] ?? "Aluno",
+            materia,
+            nivel: progress.level,
+            sequencia: progress.current_streak,
+            dominioPct,
+            topicos: dominados,
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { KeyRound, Loader2, LogOut, Target } from "lucide-react";
+import { Download, KeyRound, Loader2, LogOut, Target } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -14,23 +14,31 @@ import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
-import type { UserProgress } from "@/lib/types";
+import { DIFFICULTY_LABELS, type UserProgress } from "@/lib/types";
 
 /*
   Tela 35 · Configurações.
 
-  Do desenho, só a meta diária e a conta têm backend. O que ficou de fora, e
-  por quê:
+  O que o desenho pede e esta tela faz: meta diária, trocar a senha, baixar o
+  progresso e sair. O que ficou de fora, e por quê:
 
   - Lembrete diário e horário (20:00): reminderEnabled/reminderTime não existem
-    em lugar nenhum — nem coluna, nem rota.
+    em lugar nenhum — nem coluna, nem rota, nem serviço de push. A permissão do
+    navegador é pedida no primeiro acesso (tela 09), mas permissão não agenda
+    nada, e um interruptor aqui prometeria a lembrança que não vem.
   - Aparência (Sistema / Claro / Escuro): além de não haver onde guardar, o
     modo escuro não foi DESENHADO. As 81 telas são claras e os tokens Kango não
     respondem a prefers-color-scheme (ver "Pendências de design" no plano). Um
     seletor de tema aqui prometeria uma tela que não existe.
-  - Baixar progresso em CSV e apagar a conta: sem rota.
+  - Apagar minha conta: apagar usuário no Supabase exige service_role, que não
+    existe no navegador. Apagar só as matérias já existe na tela 26 e é outra
+    coisa — não vale oferecer uma no lugar da outra.
 
   Controle que não faz nada é pior que controle ausente: o primeiro mente.
+
+  O CSV é montado aqui, no cliente, com o histórico que /atividades já
+  devolve: rota nova só faria sentido se o arquivo precisasse de dado que a
+  tela não pode ver, e não é o caso.
 
   Sobre a meta: o handoff mostra "2 lições", mas o que o backend deixa ajustar
   é a meta em XP (daily_goal_xp / PATCH /progresso/meta). A meta em lições é
@@ -39,6 +47,15 @@ import type { UserProgress } from "@/lib/types";
 */
 
 const OPCOES_XP = [30, 50, 80, 120];
+
+// Ponto e vírgula, não vírgula: é o separador que o Excel em pt-BR espera, e
+// o campo decimal do sistema aqui é a vírgula. O BOM na frente é o que faz o
+// Excel abrir o arquivo como UTF-8 em vez de estropiar os acentos.
+function paraCSV(linhas: (string | number | null)[][]) {
+  const celula = (v: string | number | null) =>
+    v === null ? "" : `"${String(v).replace(/"/g, '""')}"`;
+  return `﻿${linhas.map((l) => l.map(celula).join(";")).join("\r\n")}`;
+}
 
 export default function ConfiguracoesPage() {
   const router = useRouter();
@@ -49,6 +66,9 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading] = useState(true);
   const [salvandoMeta, setSalvandoMeta] = useState<number | null>(null);
   const [erroMeta, setErroMeta] = useState<string | null>(null);
+
+  const [baixando, setBaixando] = useState(false);
+  const [erroCsv, setErroCsv] = useState<string | null>(null);
 
   const [enviandoReset, setEnviandoReset] = useState(false);
   const [avisoReset, setAvisoReset] = useState<string | null>(null);
@@ -73,6 +93,51 @@ export default function ConfiguracoesPage() {
       setErroMeta(err instanceof ApiError ? err.message : "Não foi possível salvar a meta.");
     } finally {
       setSalvandoMeta(null);
+    }
+  }
+
+  async function baixarProgresso() {
+    setErroCsv(null);
+    setBaixando(true);
+    try {
+      const { items: professores } = await api.listProfessors();
+      const porMateria = await Promise.all(
+        professores.map(async (p) => ({ p, tentativas: (await api.listAtividades(p.id)).items }))
+      );
+
+      const linhas: (string | number | null)[][] = [
+        ["Matéria", "Professor", "Data", "Tópico", "Dificuldade", "Nota (%)", "Tempo (s)"],
+      ];
+      for (const { p, tentativas } of porMateria) {
+        for (const t of tentativas) {
+          linhas.push([
+            p.discipline,
+            p.name,
+            new Date(t.created_at).toLocaleDateString("pt-BR"),
+            t.topic,
+            t.difficulty ? DIFFICULTY_LABELS[t.difficulty] : null,
+            t.score_pct,
+            t.time_seconds,
+          ]);
+        }
+      }
+
+      if (linhas.length === 1) {
+        setErroCsv("Ainda não há tentativa nenhuma para baixar.");
+        return;
+      }
+
+      const blob = new Blob([paraCSV(linhas)], { type: "text/csv;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `kango-progresso-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setErroCsv(err instanceof ApiError ? err.message : "Não foi possível montar o arquivo.");
+    } finally {
+      setBaixando(false);
     }
   }
 
@@ -186,6 +251,14 @@ export default function ConfiguracoesPage() {
               disabled={enviandoReset || !email}
             />
             <InsetRow
+              icon={baixando ? <Loader2 className="animate-spin" /> : <Download />}
+              altura="dupla"
+              title="Baixar meu progresso"
+              subtitle="Notas e histórico em CSV"
+              onClick={baixarProgresso}
+              disabled={baixando}
+            />
+            <InsetRow
               icon={<LogOut />}
               iconTone="erro"
               title={<span className="text-erro">Sair da conta</span>}
@@ -193,9 +266,9 @@ export default function ConfiguracoesPage() {
               disabled={saindo}
             />
           </InsetList>
-          {avisoReset && (
+          {(avisoReset || erroCsv) && (
             <div className="mt-2">
-              <InlineAlert>{avisoReset}</InlineAlert>
+              <InlineAlert>{avisoReset ?? erroCsv}</InlineAlert>
             </div>
           )}
         </div>
