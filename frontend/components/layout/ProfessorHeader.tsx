@@ -76,21 +76,26 @@ export function ProfessorHeader({
             {professor.discipline}
           </span>
         }
-        action={
+        // Canto superior direito, na linha do link de volta — é onde o handoff
+        // põe a engrenagem (telas 16 e 21). Antes era uma cápsula branca larga
+        // no slot de ação, que no celular caía para baixo do subtítulo e
+        // disputava atenção com a cápsula principal da tela.
+        topRight={
           isAjustes ? undefined : (
             <Link
               href={`/professor/${professor.id}/ajustes`}
               onClick={handleLinkClick}
               aria-label={`Ajustes de ${professor.name}`}
+              title="Ajustes"
               className={cn(
-                "flex h-capsula-secundaria items-center gap-2 rounded-capsula bg-white px-5",
-                "text-[16px] font-semibold text-indigo shadow-capsula-secundaria",
-                "transition-all duration-180 ease-out hover:bg-papel",
+                // 44px de alvo de toque, ícone de 20 — o piso do sistema vale
+                // mesmo quando o desenho mostra só o glifo.
+                "-mr-2 flex h-toque w-toque flex-none items-center justify-center rounded-capsula",
+                "text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6",
                 "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
               )}
             >
-              <Settings className="h-[17px] w-[17px]" />
-              Ajustes
+              <Settings className="h-5 w-5" />
             </Link>
           )
         }

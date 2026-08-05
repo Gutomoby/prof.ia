@@ -15,6 +15,7 @@ export function PageHeader({
   backLabel = "Voltar",
   subtitle,
   action,
+  topRight,
 }: {
   title: string;
   backHref?: string;
@@ -22,6 +23,13 @@ export function PageHeader({
   backLabel?: string;
   subtitle?: React.ReactNode;
   action?: React.ReactNode;
+  /**
+   * Canto superior direito, na mesma linha do link de volta. É onde o design
+   * põe a engrenagem de ajustes (telas 16 e 21) — ícone solto, não cápsula:
+   * a linha de cima é navegação, e uma cápsula ali competiria com a ação
+   * principal da tela.
+   */
+  topRight?: React.ReactNode;
   /**
    * @deprecated O design trocou a trilha de migalhas pelo link de volta (celular)
    * e pela sidebar (desktop) — não é renderizada. A prop continua na assinatura
@@ -40,15 +48,22 @@ export function PageHeader({
 
   return (
     <div className="pb-4">
-      {backHref && (
-        <Link
-          href={backHref}
-          onClick={handleBackClick}
-          className="-ml-1 mb-1 inline-flex items-center gap-1.5 rounded-chip py-1 pl-1 pr-2 text-[16px] font-medium text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
-        >
-          <ChevronLeft className="h-[18px] w-[18px]" />
-          {backLabel}
-        </Link>
+      {(backHref || topRight) && (
+        <div className="mb-1 flex items-center justify-between gap-3">
+          {backHref ? (
+            <Link
+              href={backHref}
+              onClick={handleBackClick}
+              className="-ml-1 inline-flex items-center gap-1.5 rounded-chip py-1 pl-1 pr-2 text-[16px] font-medium text-indigo transition-colors duration-140 ease-out hover:bg-indigo/6 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+            >
+              <ChevronLeft className="h-[18px] w-[18px]" />
+              {backLabel}
+            </Link>
+          ) : (
+            <span />
+          )}
+          {topRight}
+        </div>
       )}
 
       <div className="flex flex-wrap items-end justify-between gap-x-5 gap-y-3">
