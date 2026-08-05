@@ -184,61 +184,75 @@ export function Licao({
         </div>
       )}
 
-      <div className="flex-1" />
+      {/* Espaço para o painel fixo não cobrir a última alternativa. */}
+      <div className={cn("flex-1", respondida ? "min-h-[260px]" : "min-h-6")} />
 
-      {/* Painel de resposta. Só aparece depois de conferir. */}
+      {/*
+        O painel de resposta é preso ao rodapé da janela e sobe por cima do
+        conteúdo — é o que o handoff faz, e é o que faz sentido: a resposta tem
+        que aparecer sem o aluno procurar. No fluxo do documento, questão longa
+        empurrava o veredito para fora da tela.
+      */}
       {respondida ? (
-        <div
-          className={cn(
-            "mt-6 rounded-[30px] p-[18px] backdrop-blur-[24px]",
-            acertou ? "bg-acerto/14" : "bg-erro/12"
-          )}
-        >
-          {/* Sempre alinhado ao topo. O desenho centra o Kango porque ali a
-              explicação tem uma linha; as que o modelo escreve têm um
-              parágrafo, e centrado o mascote fica boiando no meio do texto. */}
-          <div className="flex items-start gap-3">
-            <KangoPlaceholder px={52} tom={acertou ? "indigo" : "neutro"} />
-            <div className="min-w-0 flex-1">
-              <p
-                className={cn(
-                  "text-[19px] font-bold tracking-[-0.02em]",
-                  acertou ? "text-acerto" : "text-erro"
-                )}
-              >
-                {acertou
-                  ? "Certíssimo"
-                  : `Quase. A resposta é ${
-                      questao.alternativas[respondida.resultado.resposta_correta]
-                    }.`}
-              </p>
-              {respondida.resultado.explicacao && (
-                <p className="mt-1 text-pretty text-[14px] leading-[1.45] text-tinta">
-                  {respondida.resultado.explicacao}
+        // O contêiner posiciona; o filho anima. Se a animação morasse no mesmo
+        // elemento, o translateY do keyframe apagaria a centralização.
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3.5">
+          <div
+            className={cn(
+              "pointer-events-auto w-full max-w-[536px] rounded-[30px] p-[18px]",
+              "animate-subir-rodape backdrop-blur-[24px] shadow-vidro-flutuante",
+              acertou ? "bg-acerto/14" : "bg-erro/12"
+            )}
+          >
+            {/* Alinhado ao topo. O desenho centra o Kango porque ali a
+                explicação tem uma linha; as que o modelo escreve têm um
+                parágrafo, e centrado o mascote fica boiando no meio do texto. */}
+            <div className="flex items-start gap-3">
+              <KangoPlaceholder px={52} tom={acertou ? "indigo" : "neutro"} />
+              <div className="min-w-0 flex-1">
+                <p
+                  className={cn(
+                    "text-pretty text-[19px] font-bold tracking-[-0.02em]",
+                    acertou ? "text-acerto" : "text-erro"
+                  )}
+                >
+                  {acertou
+                    ? "Certíssimo"
+                    : `Quase. A resposta é ${
+                        questao.alternativas[respondida.resultado.resposta_correta]
+                      }.`}
                 </p>
-              )}
+                {respondida.resultado.explicacao && (
+                  // Preso ao rodapé, o painel não pode crescer sem limite: as
+                  // explicações do modelo às vezes passam de um parágrafo e
+                  // empurrariam o "Continuar" para fora da tela.
+                  <p className="mt-1 max-h-[34vh] overflow-y-auto text-pretty text-[14px] leading-[1.45] text-tinta">
+                    {respondida.resultado.explicacao}
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* A regra do produto dita: errar não custa nada. */}
-          {!acertou && (
-            <div className="mt-3.5 flex items-center gap-2 rounded-chip bg-white/60 px-3 py-2.5">
-              <Info className="h-[15px] w-[15px] flex-none text-indigo" />
-              <p className="text-nota leading-[1.4] text-tinta-fraca">
-                Errar não tira nada de você, só ensina o Kango o que cobrar de novo.
-              </p>
+            {/* A regra do produto dita: errar não custa nada. */}
+            {!acertou && (
+              <div className="mt-3.5 flex items-center gap-2 rounded-chip bg-white/60 px-3 py-2.5">
+                <Info className="h-[15px] w-[15px] flex-none text-indigo" />
+                <p className="text-nota leading-[1.4] text-tinta-fraca">
+                  Errar não tira nada de você, só ensina o Kango o que cobrar de novo.
+                </p>
+              </div>
+            )}
+
+            <div className="mt-3.5">
+              <Capsule
+                block
+                loading={enviando}
+                onClick={continuar}
+                className={acertou ? "bg-acerto shadow-none hover:bg-[hsl(152_60%_21%)]" : undefined}
+              >
+                {enviando ? "Fechando a lição..." : ultima ? "Ver o resultado" : "Continuar"}
+              </Capsule>
             </div>
-          )}
-
-          <div className="mt-3.5">
-            <Capsule
-              block
-              loading={enviando}
-              onClick={continuar}
-              className={acertou ? "bg-acerto shadow-none hover:bg-[hsl(152_60%_21%)]" : undefined}
-            >
-              {enviando ? "Fechando a lição..." : ultima ? "Ver o resultado" : "Continuar"}
-            </Capsule>
           </div>
         </div>
       ) : (

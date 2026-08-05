@@ -188,6 +188,12 @@ const config: Config = {
         400: "400ms",
       },
       keyframes: {
+        // Painel de resposta da lição: sobe do rodapé. .25s ease-out é a
+        // duração de troca de tela do guia §07 — curto e nativo, sem bounce.
+        "subir-rodape": {
+          from: { transform: "translateY(100%)", opacity: "0" },
+          to: { transform: "translateY(0)", opacity: "1" },
+        },
         "accordion-down": {
           from: { height: "0" },
           to: { height: "var(--radix-accordion-content-height)" },
@@ -198,6 +204,7 @@ const config: Config = {
         },
       },
       animation: {
+        "subir-rodape": "subir-rodape 0.25s ease-out",
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
