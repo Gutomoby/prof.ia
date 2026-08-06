@@ -8,6 +8,7 @@ import { InsetList } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CATALOGO } from "@/components/perfil/catalogo-conquistas";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { cn } from "@/lib/utils";
 import type { Achievement } from "@/lib/types";
 
@@ -84,7 +85,13 @@ export default function ConquistasPage() {
   const aCaminho = pendentes.filter((c) => c.id !== faltaPouco?.id);
 
   return (
-    <div className="mx-auto max-w-[560px]">
+    /*
+      69 · Conquistas no computador. A medalha ganha vira CARTÃO numa grade de
+      três, com a data no canto — a linha de lista, que no celular é o formato
+      certo, em 900px de largura vira uma faixa de texto perdida. O "falta
+      pouco" e as últimas conquistas passam para a auxiliar.
+    */
+    <div className="mx-auto w-full max-w-[560px] md:max-w-none">
       <PageHeader
         title="Conquistas"
         backHref="/perfil"
@@ -110,7 +117,8 @@ export default function ConquistasPage() {
       )}
 
       {items && (
-        <div className="flex flex-col gap-[22px]">
+        <PainelLinha className="md:items-start">
+        <PainelPrincipal className="gap-[22px]">
           {faltaPouco && (
             <div className="rounded-grupo bg-indigo/10 p-4 shadow-[inset_0_0_0_1px_hsl(var(--indigo)/0.16)]">
               <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
@@ -152,6 +160,32 @@ export default function ConquistasPage() {
           {conquistadas.length > 0 && (
             <div>
               <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">Ganhas</p>
+              <div className="hidden gap-4 md:grid md:grid-cols-3">
+                {conquistadas.map((c) => {
+                  const copy = CATALOGO[c.id];
+                  const Icone = copy?.icone;
+                  return (
+                    <div key={c.id} className="rounded-grupo vidro-cartao p-[18px] shadow-vidro">
+                      <div className="flex items-start justify-between gap-3">
+                        <Disco px={44} className={copy?.cor ?? "bg-indigo"}>
+                          {Icone && <Icone className="h-[21px] w-[21px]" />}
+                        </Disco>
+                        {c.data && (
+                          <MetricText tone="fraca" className="text-[12px]">
+                            {dataCurta(c.data)}
+                          </MetricText>
+                        )}
+                      </div>
+                      <p className="mt-3 text-linha font-semibold">{copy?.nome ?? c.id}</p>
+                      <p className="mt-1 text-pretty text-nota leading-[1.4] text-tinta-fraca">
+                        {copy?.frase}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="md:hidden">
               <InsetList>
                 {conquistadas.map((c) => {
                   const copy = CATALOGO[c.id];
@@ -184,6 +218,7 @@ export default function ConquistasPage() {
                   );
                 })}
               </InsetList>
+              </div>
             </div>
           )}
 
@@ -232,7 +267,51 @@ export default function ConquistasPage() {
               </div>
             </div>
           )}
-        </div>
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={330} className="mt-[22px] md:mt-0">
+          {/* Últimas conquistas: a mesma lista das ganhas, cortada em três e
+              ordenada pela data — é o que a 69 põe na coluna da direita. */}
+          {conquistadas.length > 0 && (
+            <div>
+              <p className="mb-2 px-4 text-rotulo uppercase text-tinta-fraca">
+                Últimas conquistas
+              </p>
+              <InsetList>
+                {[...conquistadas]
+                  .sort((a, b) => (b.data ?? "").localeCompare(a.data ?? ""))
+                  .slice(0, 3)
+                  .map((c) => {
+                    const copy = CATALOGO[c.id];
+                    const Icone = copy?.icone;
+                    return (
+                      <div key={c.id} className="relative flex min-h-[58px] items-center gap-3 px-4">
+                        <Disco px={30} className={copy?.cor ?? "bg-indigo"}>
+                          {Icone && <Icone className="h-[15px] w-[15px]" />}
+                        </Disco>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[16px] font-semibold tracking-[-0.43px]">
+                            {copy?.nome ?? c.id}
+                          </span>
+                          {c.data && (
+                            <MetricText tone="fraca" className="block text-nota">
+                              {dataCurta(c.data)}
+                            </MetricText>
+                          )}
+                        </span>
+                        <span
+                          aria-hidden
+                          data-sep
+                          className="pointer-events-none absolute bottom-0 left-[58px] right-0 h-[0.5px] bg-borda"
+                        />
+                      </div>
+                    );
+                  })}
+              </InsetList>
+            </div>
+          )}
+        </PainelAuxiliar>
+        </PainelLinha>
       )}
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CalendarDays, CalendarPlus, Check, Loader2, TriangleAlert } from "lucide-react";
+import { CalendarDays, CalendarPlus, Check, FileText, ListChecks, Loader2, TriangleAlert } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -10,6 +10,7 @@ import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useSetHeaderAction } from "@/components/layout/HeaderActionContext";
 import { DeleteProfessor } from "@/components/professor/DeleteProfessor";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { cn } from "@/lib/utils";
 import type { Professor } from "@/lib/types";
 
@@ -174,7 +175,15 @@ export default function AjustesPage({ params }: { params: { id: string } }) {
   }
 
   return (
-    <div className="mx-auto flex max-w-[560px] flex-col gap-[22px]">
+    /*
+      66 · Ajustes no computador: os campos na coluna larga e, na auxiliar de
+      400px, o que a matéria tem hoje e a zona de perigo. Pôr o "apagar" ao
+      lado dos números que ele leva junto é o que a 66 faz — e é mais honesto
+      que escondê-lo no fim da rolagem.
+    */
+    <div className="mx-auto flex w-full max-w-[560px] flex-col md:max-w-none">
+      <PainelLinha className="md:items-start">
+        <PainelPrincipal className="gap-[22px]">
       <p className="-mt-2 text-pretty text-[14px] leading-[1.45] text-tinta-fraca">
         Editar não apaga nada: material e histórico continuam como estão.
       </p>
@@ -252,6 +261,25 @@ export default function AjustesPage({ params }: { params: { id: string } }) {
       </InsetList>
 
       {saveError && <InlineAlert>{saveError}</InlineAlert>}
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={400} className="mt-[22px] md:mt-0">
+          {/* "Esta matéria tem": os mesmos números que o apagar leva junto,
+              contados uma vez só (ver `contagens`). */}
+          {contagens && (
+            <InsetList label="Esta matéria tem">
+              <InsetRow
+                icon={<FileText />}
+                title="Materiais lidos"
+                value={String(contagens.materiais)}
+              />
+              <InsetRow
+                icon={<ListChecks />}
+                title="Quizzes feitos"
+                value={String(contagens.quizzes)}
+              />
+            </InsetList>
+          )}
 
       {/* Zona de perigo: contorno vermelho a 30%, nunca fundo vermelho. */}
       <div
@@ -271,6 +299,8 @@ export default function AjustesPage({ params }: { params: { id: string } }) {
           nQuizzes={contagens?.quizzes}
         />
       </div>
+        </PainelAuxiliar>
+      </PainelLinha>
     </div>
   );
 }

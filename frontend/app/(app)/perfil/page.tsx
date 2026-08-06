@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ChevronRight, Flame, Settings, Share2, Target, Trophy } from "lucide-react";
 import { api } from "@/lib/api";
@@ -12,6 +13,9 @@ import { MetricText } from "@/components/ui/metric-text";
 import { ProgressBar } from "@/components/ui/gauge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CompartilharProgresso } from "@/components/perfil/CompartilharProgresso";
+import { CATALOGO } from "@/components/perfil/catalogo-conquistas";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
+import { capsuleVariants } from "@/components/ui/capsule";
 import { cn } from "@/lib/utils";
 import type { AchievementList, UserProgress } from "@/lib/types";
 
@@ -119,10 +123,32 @@ export default function PerfilPage() {
   const faltam = progress ? progress.xp_do_nivel - progress.xp_no_nivel : 0;
 
   return (
-    <div className="mx-auto max-w-[560px]">
-      <PageHeader title="Perfil" />
+    /*
+      68 · Perfil no computador. O desenho junta Perfil e Configurações numa
+      tela só; aqui elas continuam duas rotas, e o motivo é que a régua de
+      seções do celular (Perfil → Configurações) some se as duas virarem uma
+      no md e voltarem a ser duas embaixo de 768px. O que veio da 68: a ação
+      de compartilhar ao lado do título e as conquistas na coluna auxiliar.
+    */
+    <div className="mx-auto w-full max-w-[560px] md:max-w-none">
+      <PageHeader
+        title="Perfil"
+        action={
+          progress ? (
+            <button
+              type="button"
+              onClick={() => setCompartilhando(true)}
+              className={capsuleVariants("secundaria", false, "hidden md:inline-flex")}
+            >
+              <Share2 className="h-[18px] w-[18px]" />
+              Compartilhar progresso
+            </button>
+          ) : undefined
+        }
+      />
 
-      <div className="flex flex-col gap-3">
+      <PainelLinha className="md:items-start">
+      <PainelPrincipal className="gap-3">
         <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4">
           <KangoPlaceholder px={64} estado="avatar" />
           <div className="min-w-0 flex-1">
@@ -217,7 +243,43 @@ export default function PerfilPage() {
             trailing={<ChevronRight className="h-[18px] w-[18px]" />}
           />
         </InsetList>
-      </div>
+      </PainelPrincipal>
+
+      {/* Conquistas na coluna auxiliar (68): as três últimas, com a porta
+          para a tela inteira. No celular elas continuam sendo a linha da
+          lista acima — aqui a coluna existe e cabe mostrá-las. */}
+      <PainelAuxiliar largura={330} className="mt-3 hidden md:mt-0 md:flex">
+        {conquistas && conquistas.ganhas > 0 && (
+          <div>
+            <p className="mb-2 flex items-baseline justify-between gap-3 px-4 text-rotulo uppercase text-tinta-fraca">
+              Conquistas
+              <Link
+                href="/perfil/conquistas"
+                className="text-nota font-semibold normal-case tracking-normal text-indigo hover:underline"
+              >
+                Ver todas (<MetricText tone="indigo">{conquistas.ganhas}</MetricText> de{" "}
+                <MetricText tone="indigo">{conquistas.total}</MetricText>)
+              </Link>
+            </p>
+            <InsetList>
+              {conquistas.items
+                .filter((c) => c.ganha)
+                .slice(0, 3)
+                .map((c) => (
+                  <InsetRow
+                    key={c.id}
+                    href="/perfil/conquistas"
+                    icon={<Trophy />}
+                    iconTone="acerto"
+                    title={CATALOGO[c.id]?.nome ?? c.id}
+                    subtitle={c.data ? c.data.split("-").reverse().slice(0, 2).join("/") : undefined}
+                  />
+                ))}
+            </InsetList>
+          </div>
+        )}
+      </PainelAuxiliar>
+      </PainelLinha>
 
       {progress && (
         <CompartilharProgresso
