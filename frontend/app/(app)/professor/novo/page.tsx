@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, FileUp, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Capsule } from "@/components/ui/capsule";
 import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
-import { InsetList } from "@/components/ui/inset-list";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +80,17 @@ export default function NovoProfessorPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-[520px]">
+    /*
+      62 · Nova matéria no computador: o formulário na coluna larga e, na
+      auxiliar de 440px, o que serve como material e o que acontece a seguir.
+
+      A área de arrastar arquivo da 62 NÃO entra aqui, e não é esquecimento:
+      documento precisa de professor_id, e o professor só existe depois deste
+      formulário. Um dropzone antes disso não teria onde gravar. É por isso
+      que a 63 (a mesma tela "lendo o material") também não existe nesta
+      rota — quem lê é a tela 56, para onde esta manda assim que cria.
+    */
+    <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[520px] md:max-w-none">
       <PageHeader
         title="Novo professor"
         backHref="/dashboard"
@@ -86,7 +98,8 @@ export default function NovoProfessorPage() {
         subtitle="Crie um professor para a matéria. Depois você envia o material dele, apostila, resumo, prova antiga."
       />
 
-      <div className="flex flex-col gap-[22px]">
+      <PainelLinha>
+        <PainelPrincipal className="gap-[22px]">
         <InsetList label="Sobre a matéria" superficie="solido">
           <CampoLinha
             rotulo="Nome dele"
@@ -145,14 +158,49 @@ export default function NovoProfessorPage() {
         {error && <InlineAlert>{error}</InlineAlert>}
 
         <div>
-          <Capsule type="submit" block loading={loading} disabled={!podeCriar}>
+          <Capsule type="submit" block loading={loading} disabled={!podeCriar} className="md:w-fit">
             {loading ? "Criando..." : "Criar professor"}
           </Capsule>
-          <p className="mt-2 text-center text-nota text-tinta-fraca">
+          <p className="mt-2 text-center text-nota text-tinta-fraca md:text-left">
             Depois de criar, você envia o material dele.
           </p>
         </div>
-      </div>
+        </PainelPrincipal>
+
+        <PainelAuxiliar largura={440} className="mt-[22px] md:mt-0">
+          <div className="rounded-grupo bg-white/70 p-[22px] text-center shadow-hairline">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-indigo/12 text-indigo">
+              <FileUp className="h-[26px] w-[26px]" />
+            </span>
+            <p className="mt-3 text-linha font-semibold">O material vem no passo seguinte</p>
+            <p className="mt-1 text-pretty text-nota leading-[1.45] text-tinta-fraca">
+              Assim que a matéria existir, a tela de Material abre para você subir a apostila —
+              arquivo precisa de matéria para pertencer a alguém.
+            </p>
+          </div>
+
+          <InsetList label="Serve como material">
+            <InsetRow
+              icon={<Check strokeWidth={3} />}
+              iconVariant="simples"
+              iconClass="text-acerto"
+              title="Apostila, slide da aula, resumo seu"
+            />
+            <InsetRow
+              icon={<Check strokeWidth={3} />}
+              iconVariant="simples"
+              iconClass="text-acerto"
+              title="Prova antiga e lista de exercícios"
+            />
+            <InsetRow
+              icon={<X strokeWidth={3} />}
+              iconVariant="simples"
+              iconClass="text-erro"
+              title={<span className="text-tinta-fraca">PDF escaneado sem texto (só imagem)</span>}
+            />
+          </InsetList>
+        </PainelAuxiliar>
+      </PainelLinha>
     </form>
   );
 }

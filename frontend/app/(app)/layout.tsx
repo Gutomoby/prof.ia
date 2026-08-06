@@ -29,7 +29,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         {/* No celular o padding de baixo abre espaço para a barra flutuante
             (64px + 12px de margem + área segura). No desktop, o ritmo do
             design: 34px em cima, 26px nos lados e embaixo. */}
-        <main className="min-w-0 flex-1 px-margem pb-[104px] pt-8 md:px-[26px] md:pb-[26px] md:pt-[34px]">
+        {/* A margem de 280px no desktop é o lugar da sidebar, que é `fixed`
+            e saiu do fluxo para ficar sempre visível — ver Sidebar.tsx. */}
+        <main className="min-w-0 flex-1 px-margem pb-[104px] pt-8 md:ml-[280px] md:px-[26px] md:pb-[26px] md:pt-[34px]">
           {children}
         </main>
       </div>

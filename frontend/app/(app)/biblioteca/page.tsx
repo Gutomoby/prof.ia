@@ -9,6 +9,7 @@ import { Capsule } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
+import { Tabela, TabelaLinha, type Coluna } from "@/components/ui/tabela";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { professorColor } from "@/lib/professor-color";
@@ -23,6 +24,13 @@ import type { DocumentWithProfessor } from "@/lib/types";
   arquivos, e um quadrado colorido por linha viraria mosaico. A identidade da
   matéria já está no cabeçalho do grupo, como ponto.
 */
+
+// Larguras da 61: só o nome do arquivo estica.
+const COLUNAS: Coluna[] = [
+  { rotulo: "Arquivo", largura: "min-w-0 flex-1" },
+  { rotulo: "Matéria", largura: "w-[190px] flex-none" },
+  { rotulo: "Enviado", largura: "w-[78px] flex-none" },
+];
 
 function CabecalhoGrupo({ id, nome, disciplina }: { id: string; nome: string; disciplina: string }) {
   const cor = professorColor(id);
@@ -110,7 +118,7 @@ export default function BibliotecaPage() {
   const buscando = query.trim().length > 0;
 
   return (
-    <div className="mx-auto max-w-[720px]">
+    <div className="mx-auto w-full max-w-[720px] md:max-w-none">
       <PageHeader title="Biblioteca" subtitle="Todo o material das suas matérias, num só lugar." />
 
       {loading && (
@@ -207,20 +215,78 @@ export default function BibliotecaPage() {
               </InsetList>
             </EmptyState>
           ) : (
-            grupos.map(({ professor, docs }) => (
-              <div key={professor.professor_id}>
-                <CabecalhoGrupo
-                  id={professor.professor_id}
-                  nome={professor.professor_name}
-                  disciplina={professor.discipline}
-                />
-                <InsetList>
-                  {docs.map((doc) => (
-                    <LinhaDocumento key={doc.id} doc={doc} />
-                  ))}
-                </InsetList>
+            <>
+              {/*
+                61 · Biblioteca no computador: tabela, com a matéria virando
+                COLUNA em vez de cabeçalho de grupo. É o que a largura permite
+                — no celular, sem espaço para a coluna, o agrupamento é que
+                diz de quem é cada arquivo (tela 17).
+              */}
+              <div className="hidden md:block">
+                <Tabela colunas={COLUNAS}>
+                  {grupos.flatMap(({ professor, docs }) =>
+                    docs.map((doc) => (
+                      <TabelaLinha
+                        key={doc.id}
+                        colunas={COLUNAS}
+                        href={`/professor/${doc.professor_id}/configurar`}
+                        celulas={[
+                          <span key="a" className="flex items-center gap-3">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "flex h-[30px] w-[30px] flex-none items-center justify-center rounded-icone",
+                                doc.type === "pdf" ? "bg-indigo text-papel" : "bg-cinza-tonal text-tinta-fraca"
+                              )}
+                            >
+                              {doc.type === "pdf" ? (
+                                <FileText className="h-[15px] w-[15px]" />
+                              ) : (
+                                <Type className="h-[15px] w-[15px]" />
+                              )}
+                            </span>
+                            <span className="truncate">{doc.name}</span>
+                          </span>,
+                          <span key="m" className="flex items-center gap-2">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "h-2 w-2 flex-none rounded-capsula",
+                                professorColor(professor.professor_id).bg
+                              )}
+                            />
+                            <span className="truncate">{professor.discipline}</span>
+                          </span>,
+                          <MetricText key="e" tone="fraca">
+                            {new Date(doc.created_at).toLocaleDateString("pt-BR", {
+                              day: "2-digit",
+                              month: "2-digit",
+                            })}
+                          </MetricText>,
+                        ]}
+                      />
+                    ))
+                  )}
+                </Tabela>
               </div>
-            ))
+
+              <div className="flex flex-col gap-[22px] md:hidden">
+                {grupos.map(({ professor, docs }) => (
+                  <div key={professor.professor_id}>
+                    <CabecalhoGrupo
+                      id={professor.professor_id}
+                      nome={professor.professor_name}
+                      disciplina={professor.discipline}
+                    />
+                    <InsetList>
+                      {docs.map((doc) => (
+                        <LinhaDocumento key={doc.id} doc={doc} />
+                      ))}
+                    </InsetList>
+                  </div>
+                ))}
+              </div>
+            </>
           )}
         </div>
       )}

@@ -80,7 +80,22 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
     "flex items-center gap-3 rounded-chip px-3 transition-colors duration-140 ease-out focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte";
 
   return (
-    <aside className="vidro-sidebar relative hidden w-[280px] flex-none flex-col gap-[18px] border-r-[0.5px] border-borda px-3 pb-4 pt-[22px] md:flex">
+    /*
+      Presa à janela, não à página.
+
+      Antes ela era um item do flex e esticava até a altura do CONTEÚDO: numa
+      tela longa (tentativas, biblioteca) o rodapé da conta ficava lá embaixo,
+      fora de vista, e só reaparecia rolando até o fim. Agora a barra tem a
+      altura da janela e fica onde está; quem rola é só a lista de matérias,
+      no bloco `flex-1 overflow-y-auto` do meio. A marca no topo e a conta no
+      pé ficam sempre visíveis.
+
+      `fixed` e não `sticky` porque o root do app tem `overflow-hidden` (para o
+      halo do papel de parede não empurrar a largura), e sticky não gruda
+      dentro de um ancestral com overflow. O `md:ml-[280px]` que compensa a
+      saída dela do fluxo está no main, em (app)/layout.tsx.
+    */
+    <aside className="vidro-sidebar relative hidden w-[280px] flex-none flex-col gap-[18px] border-r-[0.5px] border-borda px-3 pb-4 pt-[22px] md:fixed md:inset-y-0 md:left-0 md:flex md:h-[100dvh]">
       <div className="flex items-center px-3">
         <Link
           href="/dashboard"
