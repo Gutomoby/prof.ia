@@ -41,6 +41,9 @@ export function QuizOption({
       <span
         className={cn(
           "flex h-6 w-6 flex-none items-center justify-center rounded-capsula text-[13px] font-semibold",
+          // 32px e 15px no computador, como manda a 80 — em 860px de largura
+          // a letra de 24 vira detalhe.
+          "md:h-8 md:w-8 md:text-corpo",
           state === "default" && "border border-[hsl(220_10%_56%)] text-tinta-fraca",
           state === "selected" && "bg-indigo text-papel",
           state === "correct" && "bg-acerto text-papel",
@@ -52,7 +55,7 @@ export function QuizOption({
 
       <span
         className={cn(
-          "flex-1 text-linha",
+          "flex-1 text-linha md:text-[20px]",
           (state === "correct" || state === "incorrect" || state === "selected") && "font-semibold",
           state === "incorrect" && "line-through decoration-[hsl(var(--erro)/0.5)]"
         )}
@@ -65,6 +68,18 @@ export function QuizOption({
       )}
       {state === "incorrect" && (
         <X className="h-[19px] w-[19px] flex-none text-erro" strokeWidth={3} />
+      )}
+
+      {/* O número da tecla (80). Só no computador, e só enquanto a questão
+          está aberta: depois de respondida a tecla não faz mais nada, e o
+          lugar dela é do check ou do X. */}
+      {state !== "correct" && state !== "incorrect" && (
+        <span
+          aria-hidden
+          className="hidden h-[26px] w-[26px] flex-none items-center justify-center rounded-[8px] bg-cinza-tonal font-mono text-[12px] font-bold text-tinta-fraca md:flex"
+        >
+          {index + 1}
+        </span>
       )}
 
       {!ultima && (

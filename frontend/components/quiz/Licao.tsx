@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Flame, Info, X } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
@@ -35,6 +35,15 @@ import type { GeneratedActivity, QuestionCheckResult } from "@/lib/types";
 interface Resposta {
   escolha: number;
   resultado: QuestionCheckResult;
+}
+
+/** Tecla desenhada na dica de atalho — 1, 2, 3, 4. */
+function TeclaHint({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex h-[22px] w-[22px] items-center justify-center rounded-[7px] bg-cinza-tonal align-middle font-mono text-[12px] font-bold text-tinta-fraca">
+      {children}
+    </span>
+  );
 }
 
 export function Licao({
@@ -105,10 +114,49 @@ export function Licao({
 
   const acertou = respondida?.resultado.correta ?? false;
 
+  /*
+    Atalhos do handoff §"Tela grande": 1–4 escolhem a alternativa e ↵
+    responde. Ficam aqui e não num contexto global porque só valem enquanto a
+    questão está aberta — e a dica "ou aperte 1 2 3 4" só aparece no
+    computador porque é lá que elas existem.
+  */
+  useEffect(() => {
+    function aoTeclar(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const alvo = e.target as HTMLElement | null;
+      if (alvo && /^(INPUT|TEXTAREA)$/.test(alvo.tagName)) return;
+
+      if (e.key >= "1" && e.key <= "9") {
+        const i = Number(e.key) - 1;
+        if (!respondida && !conferindo && i < questao.alternativas.length) {
+          e.preventDefault();
+          setEscolha(i);
+        }
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        if (respondida) continuar();
+        else if (escolha !== null && !conferindo) conferir();
+      }
+    }
+    window.addEventListener("keydown", aoTeclar);
+    return () => window.removeEventListener("keydown", aoTeclar);
+  });
+
   return (
-    <div className="mx-auto flex min-h-[80vh] max-w-[560px] flex-col">
+    /*
+      80 e 81 · a lição no computador.
+
+      A régua muda com a largura: a coluna vai a 860px e o conteúdo centra na
+      vertical (numa tela de 900px de altura, a questão colada no topo deixa
+      meia tela vazia embaixo); o enunciado sobe para 34/41, que é o tamanho
+      que o guia reserva para ele em tela grande; e a barra de topo vira UMA
+      linha só, com tópico, progresso e combo lado a lado.
+    */
+    <div className="mx-auto flex min-h-[80vh] max-w-[560px] flex-col md:min-h-[calc(100dvh-68px)] md:max-w-[860px] md:justify-center">
       {/* Barra de topo: uma saída e o progresso. Nada mais compete com a questão. */}
-      <div className="flex items-center gap-2.5">
+      <div className="flex flex-none items-center gap-2.5 md:gap-4">
         <button
           type="button"
           onClick={onSair}
@@ -117,15 +165,35 @@ export function Licao({
         >
           <X className="h-[19px] w-[19px]" />
         </button>
+        {/* No computador a barra de topo carrega tudo numa linha (80): o
+            tópico, o progresso, o contador e o combo. No celular não cabe, e
+            eles seguem na linha de baixo. */}
+        <span className="hidden flex-none items-center gap-[7px] text-corpo text-tinta-fraca md:flex">
+          <span aria-hidden className="h-2 w-2 flex-none rounded-capsula bg-indigo" />
+          <span className="max-w-[260px] truncate">{questao.topico}</span>
+        </span>
+
         <ProgressBar
-          className="flex-1"
+          className="flex-1 md:max-w-[520px]"
           value={((indice + (respondida ? 1 : 0)) / total) * 100}
           aria-label={`Questão ${indice + 1} de ${total}`}
         />
+
+        <span className="hidden flex-none text-corpo text-tinta-fraca md:block">
+          <MetricText tone="fraca">{indice + 1}</MetricText> de{" "}
+          <MetricText tone="fraca">{total}</MetricText>
+        </span>
+
+        {combo > 0 && !respondida && (
+          <span className="ml-auto hidden h-11 flex-none items-center gap-2 rounded-capsula vidro-cartao px-4 text-corpo font-semibold text-acerto shadow-vidro md:flex">
+            <Flame className="h-4 w-4" />
+            Combo <MetricText tone="acerto" weight="bold">×{combo}</MetricText>
+          </span>
+        )}
       </div>
 
-      <div className="mt-5">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="mt-5 md:mt-0">
+        <div className="flex flex-wrap items-center gap-2 md:hidden">
           {respondida && !acertou ? (
             <span className="inline-flex h-7 items-center gap-1.5 rounded-capsula bg-erro/10 px-[11px] text-nota font-semibold text-erro">
               <Flame className="h-3.5 w-3.5" />
@@ -146,7 +214,7 @@ export function Licao({
           </span>
         </div>
 
-        <MathText as="p" className="mt-3.5 text-pretty text-enunciado text-tinta">
+        <MathText as="p" className="mt-3.5 text-pretty text-enunciado text-tinta md:mt-0 md:text-enunciado-lg">
           {questao.enunciado}
         </MathText>
       </div>
@@ -268,10 +336,28 @@ export function Licao({
           </div>
         </div>
       ) : (
-        <div className="mt-6">
-          <Capsule block disabled={escolha === null} loading={conferindo} onClick={conferir}>
+        <div className="mt-6 flex items-center gap-4">
+          <Capsule
+            block
+            className="md:w-fit md:flex-none md:px-7"
+            disabled={escolha === null}
+            loading={conferindo}
+            onClick={conferir}
+          >
             {conferindo ? "Conferindo..." : "Responder"}
+            <span
+              aria-hidden
+              className="hidden rounded-[8px] bg-white/20 px-2 py-0.5 text-[12px] font-bold md:inline"
+            >
+              ↵
+            </span>
           </Capsule>
+          {/* A dica só existe onde há teclado, e só porque as teclas
+              funcionam de verdade — ver o efeito de atalhos acima. */}
+          <p className="hidden text-corpo text-tinta-fraca md:block">
+            ou aperte <TeclaHint>1</TeclaHint> <TeclaHint>2</TeclaHint> <TeclaHint>3</TeclaHint>{" "}
+            <TeclaHint>4</TeclaHint> para escolher
+          </p>
         </div>
       )}
     </div>
