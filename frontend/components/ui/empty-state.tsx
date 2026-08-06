@@ -39,7 +39,26 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <div className={cn("flex flex-col items-center py-8 text-center", className)}>
+    /*
+      73 a 79 · o vazio no computador.
+
+      Todas as sete telas de vazio, erro e espera do desktop têm o mesmo
+      desenho: o bloco centrado na área INTEIRA — horizontal e vertical — numa
+      coluna estreita. É o oposto do celular, onde ele começa logo abaixo do
+      cabeçalho: numa tela de 900px de altura, o vazio colado no topo deixa
+      dois terços de nada embaixo dele.
+
+      Só o vazio de tela inteira (`size="tela"`) centra na vertical. O de
+      bloco (19 · busca sem resultado) vive dentro de uma lista e continua
+      onde está.
+    */
+    <div
+      className={cn(
+        "flex flex-col items-center py-8 text-center",
+        size === "tela" && "md:mx-auto md:min-h-[60vh] md:max-w-[520px] md:justify-center md:py-0",
+        className
+      )}
+    >
       {kango !== undefined ? (
         <KangoPlaceholder px={104} estado={kango} />
       ) : (
