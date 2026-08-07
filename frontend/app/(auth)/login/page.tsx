@@ -9,7 +9,7 @@ import { AuthShell, AuthCard } from "@/components/auth/AuthShell";
 import { FieldGroup, Field, ToggleSenha, Divisor } from "@/components/auth/AuthField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
 import { Capsule } from "@/components/ui/capsule";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 
 /*
   Telas 01 (Entrar), 03 (senha errada) no celular e 46/47 no desktop.
@@ -63,7 +63,7 @@ export default function LoginPage() {
       <AuthCard largura={460}>
         {/* Marca — herói no celular, ausente no desktop (vai no canto). */}
         <div className="flex flex-none flex-col items-center pt-24 md:hidden">
-          <KangoPlaceholder
+          <Kango
             px={104}
             estado={senhaErrada ? "confuso" : "acenando"}
             tom={senhaErrada ? "neutro" : "indigo"}

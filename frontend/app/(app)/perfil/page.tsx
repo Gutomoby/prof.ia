@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 import { MetricText } from "@/components/ui/metric-text";
 import { ProgressBar } from "@/components/ui/gauge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -150,7 +150,7 @@ export default function PerfilPage() {
       <PainelLinha className="md:items-start">
       <PainelPrincipal className="gap-3">
         <GlassCard nivel="cartao" radius="grupo" className="flex items-center gap-4 p-4">
-          <KangoPlaceholder px={64} estado="avatar" />
+          <Kango px={64} estado="avatar" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-titulo-cartao text-tinta">{email?.split("@")[0] ?? "—"}</p>
             <p className="truncate text-corpo text-tinta-fraca">{email ?? "—"}</p>

@@ -7,7 +7,7 @@ import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList } from "@/components/ui/inset-list";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 import { MetricText } from "@/components/ui/metric-text";
 import { Licao } from "@/components/quiz/Licao";
 import { ResultadoLicao } from "@/components/quiz/ResultadoLicao";
@@ -124,7 +124,7 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
         <div className="flex flex-1 flex-col items-center justify-center">
           {erroGeracao ? (
             <>
-              <KangoPlaceholder px={132} estado="confuso" tom="neutro" />
+              <Kango px={132} estado="confuso" tom="neutro" />
               <h1 className="mt-6 text-pretty text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-tinta">
                 Não deu para montar a lição
               </h1>
@@ -142,7 +142,7 @@ export default function LicaoPage({ params }: { params: { id: string } }) {
             </>
           ) : (
             <>
-              <KangoPlaceholder px={132} estado="folheando o material" />
+              <Kango px={132} estado="folheando o material" />
               <h1 className="mt-6 text-pretty text-[28px] font-bold leading-[34px] tracking-[-0.02em] text-tinta">
                 {rotulo ? <>Montando seu quiz de {rotulo}</> : "Montando seu quiz"}
               </h1>

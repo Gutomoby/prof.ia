@@ -10,7 +10,7 @@ import { GlassCard } from "@/components/ui/glass-card";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 import { cn } from "@/lib/utils";
 
 /*
@@ -139,7 +139,7 @@ export default function NovoProfessorPage() {
             Como vai ficar na sua lista
           </p>
           <GlassCard className="flex items-center gap-3 p-4">
-            <KangoPlaceholder px={44} />
+            <Kango px={44} />
             <span className="min-w-0 flex-1">
               <span className="flex items-center gap-2">
                 <span aria-hidden className="h-2.5 w-2.5 flex-none rounded-capsula bg-cinza-tonal" />

@@ -6,7 +6,7 @@ import { FileUp, ListChecks, Target } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { capsuleVariants } from "@/components/ui/capsule";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 import { usePrimeiroAcesso } from "@/components/onboarding/usePrimeiroAcesso";
 
 /*
@@ -53,7 +53,7 @@ export default function BoasVindasPage() {
       </p>
 
       <div className="flex h-[168px] flex-none items-center justify-center">
-        <KangoPlaceholder px={144} estado="acenando" className="shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_18px_44px_rgba(67,56,202,.2)]" />
+        <Kango px={144} estado="acenando" className="shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_18px_44px_rgba(67,56,202,.2)]" />
       </div>
 
       <h1 className="flex-none text-pretty text-center text-[28px] font-bold leading-[34px] tracking-[0.3px]">

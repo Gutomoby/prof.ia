@@ -9,7 +9,7 @@ import { FieldGroup, Field } from "@/components/auth/AuthField";
 import { Capsule } from "@/components/ui/capsule";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
-import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
+import { Kango } from "@/components/ui/kango";
 
 /*
   Telas 04 (celular), 49 (Esqueci a senha) e 50 (Link enviado) no desktop.
@@ -182,7 +182,7 @@ export default function RecuperarSenhaPage() {
 
         <div className="min-h-4 flex-1 md:hidden" />
         <div className="flex flex-none items-center gap-3 pb-[34px] md:hidden">
-          <KangoPlaceholder px={44} />
+          <Kango px={44} />
           <p className="flex-1 text-nota leading-[1.4] text-tinta-fraca">
             &quot;Seu progresso não se perde: sequência, XP e material continuam na conta.&quot;
           </p>
