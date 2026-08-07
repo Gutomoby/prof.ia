@@ -69,3 +69,15 @@ export function localDateKey(iso: string): string {
   const dia = String(d.getDate()).padStart(2, "0");
   return `${d.getFullYear()}-${mes}-${dia}`;
 }
+
+// Idade relativa curta ("hoje", "ontem", "há 3 dias") para datar conteúdo
+// gerado — o plano de estudos usa isso pra deixar claro que é um retrato de
+// quando foi feito, não uma leitura ao vivo.
+export function idadeRelativa(iso: string): string {
+  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
+  if (dias <= 0) return "hoje";
+  if (dias === 1) return "ontem";
+  if (dias < 30) return `há ${dias} dias`;
+  const meses = Math.floor(dias / 30);
+  return meses === 1 ? "há 1 mês" : `há ${meses} meses`;
+}

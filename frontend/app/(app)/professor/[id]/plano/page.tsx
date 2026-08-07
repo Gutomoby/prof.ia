@@ -11,7 +11,7 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MathText } from "@/components/ui/math-text";
 import { useSetHeaderAction } from "@/components/layout/HeaderActionContext";
-import { cn } from "@/lib/utils";
+import { cn, idadeRelativa } from "@/lib/utils";
 import type { StudyPlan } from "@/lib/types";
 
 /*
@@ -25,14 +25,7 @@ import type { StudyPlan } from "@/lib/types";
 */
 
 /** "há 2 dias" — a idade do plano importa mais que a data exata. */
-function idade(iso: string): string {
-  const dias = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
-  if (dias <= 0) return "hoje";
-  if (dias === 1) return "ontem";
-  if (dias < 30) return `há ${dias} dias`;
-  const meses = Math.floor(dias / 30);
-  return meses === 1 ? "há 1 mês" : `há ${meses} meses`;
-}
+const idade = idadeRelativa;
 
 function PassoNumerado({ n, texto, ultimo }: { n: number; texto: string; ultimo: boolean }) {
   return (

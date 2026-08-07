@@ -13,9 +13,11 @@ import { Pill, tonePilulaDaNota } from "@/components/ui/pill";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScoreTrendChart } from "@/components/score/ScoreTrendChart";
 import { MathText } from "@/components/ui/math-text";
+import { TopicNode } from "@/components/ui/topic-node";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
-import { cn, pctInteiro } from "@/lib/utils";
-import type { ScoreSummary, StudyPlan } from "@/lib/types";
+import { faltamPontos, montarTrilha } from "@/lib/trilha";
+import { cn, idadeRelativa, pctInteiro } from "@/lib/utils";
+import type { Module, ScoreSummary, StudyPlan } from "@/lib/types";
 
 /*
   Tela 30 · Progresso da matéria.
@@ -51,6 +53,9 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
   // Só para a coluna auxiliar do computador (tela 54): quando o plano já
   // existe, ela mostra o resumo dele em vez de só a porta.
   const [plano, setPlano] = useState<StudyPlan | null>(null);
+  // Trilha por módulos: determinística (uma leitura do banco), não depende do
+  // plano de IA pra estar atualizada — é ela que carrega o "onde estou".
+  const [modules, setModules] = useState<Module[]>([]);
 
   async function load() {
     setLoading(true);
@@ -68,6 +73,9 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
     load();
     // Plano ainda não gerado é estado normal — getStudyPlan devolve null.
     api.getStudyPlan(professorId).then(setPlano).catch(() => setPlano(null));
+    // Se falhar, a seção da trilha simplesmente não aparece — o resto da tela
+    // não depende dela.
+    api.listModules(professorId).then((res) => setModules(res.items)).catch(() => setModules([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -96,6 +104,7 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
 
   const temHistorico = summary.topics.length > 0;
   const dominio = pctInteiro(summary.overall_mastery_pct);
+  const trilha = montarTrilha(modules);
 
   // Delta da NOTA nos últimos 30 dias: primeira contra última tentativa da
   // janela. Só aparece com pelo menos duas — com uma, não há evolução a mostrar.
@@ -169,6 +178,52 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
         />
       </GlassCard>
 
+      {/* Trilha da matéria — o "onde estou" mora aqui, não no plano de IA.
+          Mesmos nós da Visão Geral (tela 21/52): módulos são gerados uma vez
+          do material, e o estado sai do histórico de quiz na hora. Nada aqui
+          precisa de regeneração por IA pra estar atualizado. */}
+      {trilha.length > 0 && (
+        <>
+          <p className="mb-2 mt-[22px] px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+            Sua trilha na matéria
+          </p>
+          <div className="px-1.5">
+            {trilha.map((no, i) => (
+              <TopicNode
+                key={no.id}
+                estado={no.estado}
+                nome={<MathText>{no.nome}</MathText>}
+                // Sem tentativa não há acurácia: um "0%" no anel leria como
+                // "você zerou", quando o capítulo sequer foi aberto.
+                pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
+                conector={i < trilha.length - 1}
+                href={no.estado === "bloqueado" ? undefined : `/professor/${professorId}/quiz`}
+                detalhe={
+                  no.estado === "dominado" ? (
+                    <>
+                      Dominado · <MetricText tone="fraca">{pctInteiro(no.pct ?? 0)}%</MetricText> de
+                      acerto
+                    </>
+                  ) : no.estado === "atual" ? (
+                    no.tentativas === 0 ? (
+                      "Você está aqui · comece por este capítulo"
+                    ) : (
+                      <>
+                        Você está aqui · faltam{" "}
+                        <MetricText tone="indigo">{faltamPontos(no.pct)}</MetricText> pontos pra
+                        dominar
+                      </>
+                    )
+                  ) : (
+                    "Libera quando você dominar o anterior"
+                  )
+                }
+              />
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Evolução da nota. */}
       <p className="mb-2 mt-[22px] px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
         Como sua nota evoluiu
@@ -224,6 +279,11 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
               </p>
               <p className="mt-2 text-pretty text-corpo leading-[1.5] text-tinta">
                 {plano.content.resumo}
+              </p>
+              {/* O plano é um retrato de quando foi gerado — a data evita que
+                  ele passe por leitura ao vivo (a trilha, essa sim, é). */}
+              <p className="mt-2 text-nota text-tinta-fraca">
+                Feito {idadeRelativa(plano.created_at)} · atualize quando quiser
               </p>
             </div>
           )}
