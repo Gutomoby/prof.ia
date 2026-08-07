@@ -7,6 +7,8 @@ Endpoints:
   POST /score/{professor_id}/plano    gera um plano de estudos novo (Claude)
 """
 
+import json
+import re
 from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
@@ -91,6 +93,53 @@ def get_score_summary(professor_id: UUID):
 # Plano de estudos
 # ---------------------------------------------------------------------------
 
+# Backslash que não inicia um escape JSON válido (caso típico: LaTeX "\ell",
+# "\cdot"...). Dobrado, vira um escape válido que preserva o LaTeX original.
+_INVALID_JSON_ESCAPE = re.compile(r'\\(?!["\\/bfnrtu])')
+
+
+def _coerce_str_list(value) -> list[str]:
+    """Garante list[str] para os campos de lista do plano.
+
+    O tool-forcing normalmente devolve arrays, mas o modelo às vezes entrega a
+    lista SERIALIZADA numa string ("[\"a\", \"b\"]") — foi exatamente o que
+    quebrou a tela de Início com "prioridades.slice(...).map is not a function".
+    Pior: com LaTeX no meio, a string nem sempre é JSON válido (escapes tipo
+    \\e), então o parse tenta também a versão com escapes corrigidos.
+    """
+    if isinstance(value, str):
+        parsed = None
+        for candidate in (value, _INVALID_JSON_ESCAPE.sub(r"\\\\", value)):
+            try:
+                parsed = json.loads(candidate)
+                break
+            except ValueError:
+                continue
+        if isinstance(parsed, list):
+            value = parsed
+        else:
+            value = [value] if value.strip() else []
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if str(item).strip()]
+
+
+def _normalize_plan_content(content: dict) -> dict:
+    """Força o contrato de StudyPlanContent (models.py) na fronteira.
+
+    Aplicado ao SALVAR (dado novo nunca entra torto) e ao LER (planos antigos
+    que já entraram tortos não derrubam a UI).
+    """
+    resumo = content.get("resumo") or ""
+    if isinstance(resumo, list):
+        resumo = " ".join(str(x) for x in resumo)
+    return {
+        "resumo": str(resumo),
+        "prioridades": _coerce_str_list(content.get("prioridades")),
+        "semana": _coerce_str_list(content.get("semana")),
+        "mes": _coerce_str_list(content.get("mes")),
+    }
+
 
 @router.get("/{professor_id}/plano")
 def get_latest_study_plan(professor_id: UUID):
@@ -105,7 +154,10 @@ def get_latest_study_plan(professor_id: UUID):
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Nenhum plano de estudos gerado ainda")
-    return res.data[0]
+
+    row = res.data[0]
+    row["content"] = _normalize_plan_content(row["content"] or {})
+    return row
 
 
 @router.post("/{professor_id}/plano")
@@ -146,7 +198,7 @@ def generate_plan(professor_id: UUID):
         "Use a tool return_study_plan para responder."
     )
 
-    content = generate_study_plan(system_prompt, user_prompt, model=MODEL_HAIKU)
+    content = _normalize_plan_content(generate_study_plan(system_prompt, user_prompt, model=MODEL_HAIKU))
 
     sb = get_supabase()
     insert_res = (

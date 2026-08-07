@@ -218,19 +218,52 @@ export function getScoreSummary(professorId: string) {
   return request<ScoreSummary>(`/score/${professorId}`);
 }
 
+// A IA já devolveu as listas do plano serializadas como string em vez de
+// array — e a UI quebrava em `prioridades.slice(...).map(...)`. O backend
+// agora normaliza dos dois lados, mas o contrato é garantido AQUI também:
+// nenhum consumidor (Início, Plano) precisa se defender de novo.
+function toStrList(value: unknown): string[] {
+  if (typeof value === "string") {
+    const texto = value;
+    try {
+      const parsed = JSON.parse(texto);
+      value = Array.isArray(parsed) ? parsed : [texto];
+    } catch {
+      value = texto.trim() ? [texto] : [];
+    }
+  }
+  if (!Array.isArray(value)) return [];
+  return value.map(String).filter((s) => s.trim().length > 0);
+}
+
+function normalizeStudyPlan(plan: StudyPlan): StudyPlan {
+  const content = plan.content ?? ({} as StudyPlan["content"]);
+  return {
+    ...plan,
+    content: {
+      resumo: typeof content.resumo === "string" ? content.resumo : String(content.resumo ?? ""),
+      prioridades: toStrList(content.prioridades),
+      semana: toStrList(content.semana),
+      mes: toStrList(content.mes),
+    },
+  };
+}
+
 // Plano ainda não gerado é um estado normal (não um erro) — devolve null
 // em vez de propagar o 404 do backend.
 export async function getStudyPlan(professorId: string): Promise<StudyPlan | null> {
   try {
-    return await request<StudyPlan>(`/score/${professorId}/plano`);
+    return normalizeStudyPlan(await request<StudyPlan>(`/score/${professorId}/plano`));
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) return null;
     throw err;
   }
 }
 
-export function generateStudyPlan(professorId: string) {
-  return request<StudyPlan>(`/score/${professorId}/plano`, { method: "POST" });
+export async function generateStudyPlan(professorId: string) {
+  return normalizeStudyPlan(
+    await request<StudyPlan>(`/score/${professorId}/plano`, { method: "POST" })
+  );
 }
 
 // ---------------------------------------------------------------------------
