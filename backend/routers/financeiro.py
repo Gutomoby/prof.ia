@@ -13,7 +13,6 @@ from datetime import datetime, timedelta
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from sqlalchemy import text
 
 from services.supabase_client import get_supabase
 
