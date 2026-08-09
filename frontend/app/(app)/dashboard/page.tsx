@@ -17,9 +17,14 @@ import { Segmented } from "@/components/ui/segmented";
 import { MathText } from "@/components/ui/math-text";
 import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { computeNextStep } from "@/lib/next-step";
+import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
 import { useStartQuiz } from "@/lib/use-start-quiz";
+import { montarTrilha } from "@/lib/trilha";
+import { TopicNode } from "@/components/ui/topic-node";
+import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { cn, pctInteiro } from "@/lib/utils";
+import type { Module } from "@/lib/types";
 import type {
   ActivityHistoryItem,
   DocumentItem,
@@ -85,6 +90,7 @@ export default function EstudarPage() {
 
   const [scores, setScores] = useState<Record<string, ScoreSummary>>({});
   const [docs, setDocs] = useState<Record<string, DocumentItem[]>>({});
+  const [modules, setModules] = useState<Record<string, any[]>>({});
   const [detailsLoading, setDetailsLoading] = useState(true);
 
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -124,22 +130,32 @@ export default function EstudarPage() {
 
     Promise.allSettled(
       professors.map((p) =>
-        Promise.all([api.getScoreSummary(p.id), api.listDocuments(p.id)]).then(
-          ([score, lista]) => ({ id: p.id, score, docs: lista.items })
-        )
+        Promise.all([
+          api.getScoreSummary(p.id),
+          api.listDocuments(p.id),
+          api.listModules(p.id),
+        ]).then(([score, docRes, modRes]) => ({
+          id: p.id,
+          score,
+          docs: docRes.items,
+          modules: modRes.items,
+        }))
       )
     ).then((results) => {
       if (cancelled) return;
       const nextScores: Record<string, ScoreSummary> = {};
       const nextDocs: Record<string, DocumentItem[]> = {};
+      const nextModules: Record<string, any[]> = {};
       results.forEach((res) => {
         if (res.status === "fulfilled") {
           nextScores[res.value.id] = res.value.score;
           nextDocs[res.value.id] = res.value.docs;
+          nextModules[res.value.id] = res.value.modules;
         }
       });
       setScores(nextScores);
       setDocs(nextDocs);
+      setModules(nextModules);
       setDetailsLoading(false);
     });
 
@@ -148,13 +164,22 @@ export default function EstudarPage() {
     };
   }, [professors]);
 
-  // A matéria em foco é a primeira até o usuário escolher outra. Trocar de
-  // matéria volta para a Trilha: as outras abas mostram dado da anterior por um
-  // instante se a aba ficar de pé.
-  const selecionada = useMemo(
-    () => professors.find((p) => p.id === selectedId) ?? professors[0] ?? null,
-    [professors, selectedId]
-  );
+  // A matéria em foco: por padrão, a mais urgente via computeGlobalNextStep
+  // (tópico fraco > diagnóstico > praticar tudo > subir material).
+  // Se nenhuma está pronta (detalhes carregando), cai para a primeira.
+  // Trocar de matéria via chip volta para a Trilha.
+  const selecionada = useMemo(() => {
+    if (selectedId) {
+      return professors.find((p) => p.id === selectedId) ?? null;
+    }
+    // Sem chip clicado, usar a mais urgente
+    // Converter docs (Record<string, DocumentItem[]>) pra counts (Record<string, number>)
+    const docCounts = Object.fromEntries(
+      Object.entries(docs).map(([k, v]) => [k, v.length])
+    );
+    const globalStep = computeGlobalNextStep(professors, scores, docCounts);
+    return globalStep?.professor ?? professors[0] ?? null;
+  }, [professors, scores, docs, selectedId]);
 
   useEffect(() => {
     if (!selecionada || aba !== "revisao") return;
@@ -369,7 +394,59 @@ export default function EstudarPage() {
       {aba === "trilha" &&
         (detailsLoading ? (
           <Skeleton className="h-[220px] rounded-grupo" />
+        ) : modules[selecionada.id]?.length > 0 ? (
+          // Trilha por módulos: hero da home, tap direto pra quiz
+          <GlassCard nivel="cartao" radius="grupo" className="px-4 py-5">
+            <p className="mb-3 px-1.5 text-rotulo uppercase text-tinta-fraca">
+              Sua trilha na matéria
+            </p>
+            <div className="px-1.5 space-y-1">
+              {montarTrilha(modules[selecionada.id] || []).map((no, i) => (
+                <TopicNode
+                  key={no.id}
+                  estado={no.estado}
+                  nome={<MathText>{no.nome}</MathText>}
+                  pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
+                  conector={i < (modules[selecionada.id]?.length ?? 0) - 1}
+                  onClick={
+                    no.estado === "atual"
+                      ? () => start(null, { moduleId: no.id, rotulo: no.nome })
+                      : undefined
+                  }
+                  detalhe={
+                    no.estado === "dominado" ? (
+                      <>
+                        Dominado · <MetricText tone="fraca">{pctInteiro(no.pct ?? 0)}%</MetricText>
+                      </>
+                    ) : no.estado === "atual" ? (
+                      no.tentativas === 0 ? (
+                        "Clique para começar"
+                      ) : (
+                        <>Você está aqui · faltam <MetricText tone="indigo">{Math.max(0, 70 - Math.round(no.pct ?? 0))}</MetricText> pontos</>
+                      )
+                    ) : (
+                      "Libera quando dominar o anterior"
+                    )
+                  }
+                />
+              ))}
+            </div>
+
+            {startError && (
+              <div className="mt-3">
+                <InlineAlert>{startError}</InlineAlert>
+              </div>
+            )}
+
+            <Link
+              href={`/professor/${selecionada.id}`}
+              className={capsuleVariants("texto", true, "mt-3 w-full justify-center")}
+            >
+              Ver detalhes da matéria
+            </Link>
+          </GlassCard>
         ) : (
+          // Fallback: próximo passo por tópico (quando não há módulos gerados)
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
             <div className="flex items-center gap-4">
               <Gauge value={dominio} size="cartao" tone="nota" />
@@ -409,8 +486,6 @@ export default function EstudarPage() {
                   {generating ? "Gerando..." : "Começar lição"}
                 </Capsule>
               )}
-              {/* A sala é onde moram Ajustes, Progresso e o histórico completo.
-                  Sem esta saída a home não chega neles. */}
               <Link
                 href={`/professor/${selecionada.id}`}
                 className={capsuleVariants("texto", true)}
@@ -512,6 +587,9 @@ export default function EstudarPage() {
           </p>
         </GlassCard>
       </div>
+
+      {/* Calendário compacto mostrando quando você estudou e eventos. */}
+      <MiniCalendar />
     </div>
   );
 }

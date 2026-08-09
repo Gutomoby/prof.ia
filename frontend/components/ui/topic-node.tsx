@@ -25,6 +25,7 @@ export interface TopicNodeProps {
   /** Linha vertical até o próximo nó. Desligue no último. */
   conector?: boolean;
   href?: string;
+  onClick?: () => void;
   className?: string;
 }
 
@@ -35,6 +36,7 @@ export function TopicNode({
   pct,
   conector = false,
   href,
+  onClick,
   className,
 }: TopicNodeProps) {
   const no = (
@@ -89,7 +91,22 @@ export function TopicNode({
     </>
   );
 
-  if (href && estado !== "bloqueado") {
+  if ((href || onClick) && estado !== "bloqueado") {
+    if (onClick) {
+      return (
+        <button
+          type="button"
+          onClick={onClick}
+          className={cn(
+            "block w-full text-left rounded-chip transition-colors duration-140 ease-out hover:bg-indigo/5",
+            "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
+            className
+          )}
+        >
+          {conteudo}
+        </button>
+      );
+    }
     return (
       <a
         href={href}

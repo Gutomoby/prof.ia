@@ -17,6 +17,7 @@ import { TopicNode } from "@/components/ui/topic-node";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { faltamPontos, montarTrilha } from "@/lib/trilha";
 import { cn, idadeRelativa, pctInteiro } from "@/lib/utils";
+import { useStartQuiz } from "@/lib/use-start-quiz";
 import type { Module, ScoreSummary, StudyPlan } from "@/lib/types";
 
 /*
@@ -46,6 +47,7 @@ function Coluna({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 
 export default function ProgressoPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
+  const { start } = useStartQuiz(professorId);
 
   const [summary, setSummary] = useState<ScoreSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -166,7 +168,11 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
                 nome={<MathText>{no.nome}</MathText>}
                 pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                 conector={i < trilha.length - 1}
-                href={no.estado === "bloqueado" ? undefined : `/professor/${professorId}/quiz`}
+                onClick={
+                  no.estado === "atual"
+                    ? () => start(null, { moduleId: no.id, rotulo: no.nome })
+                    : undefined
+                }
                 detalhe={
                   no.estado === "dominado" ? (
                     <>
@@ -175,7 +181,7 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
                     </>
                   ) : no.estado === "atual" ? (
                     no.tentativas === 0 ? (
-                      "Você está aqui · comece por este capítulo"
+                      "Você está aqui · clique para começar"
                     ) : (
                       <>
                         Você está aqui · faltam{" "}
