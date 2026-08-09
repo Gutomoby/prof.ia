@@ -42,6 +42,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://127.0.0.1:3000",
         "https://profia-rose.vercel.app",
+        "https://www.kangoguru.com",
         *settings.extra_cors_origins(),
     ],
     allow_credentials=True,
