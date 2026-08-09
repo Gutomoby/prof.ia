@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ChevronRight, Compass, Flame, Sparkles, Target } from "lucide-react";
+import { ChevronRight, Flame, Sparkles } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { GlassCard } from "@/components/ui/glass-card";
@@ -150,38 +150,9 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
-      {/* Hoje, semana, mês. Fica na coluna principal nas duas larguras: o
-          desenho da 54 põe os números na auxiliar, mas mandá-los para lá
-          empurraria eles para o FIM da pilha no celular, onde a ordem da
-          tela 30 os quer logo abaixo da manchete. */}
-      <GlassCard nivel="cartao" radius="cartao" className="mt-4 flex items-stretch">
-        <Coluna rotulo="Hoje" valor={summary.streak_days > 0 ? "Em dia" : "Comece hoje"} />
-        <span aria-hidden className="w-[0.5px] flex-none bg-borda" />
-        <Coluna
-          rotulo="Semana"
-          valor={
-            <>
-              <MetricText weight="bold">{summary.weekly.quizzes_respondidos}</MetricText>{" "}
-              {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
-            </>
-          }
-        />
-        <span aria-hidden className="w-[0.5px] flex-none bg-borda" />
-        <Coluna
-          rotulo="Mês"
-          valor={
-            <>
-              +<MetricText weight="bold">{summary.monthly.topicos_dominados}</MetricText>{" "}
-              {summary.monthly.topicos_dominados === 1 ? "tópico" : "tópicos"}
-            </>
-          }
-        />
-      </GlassCard>
-
-      {/* Trilha da matéria — o "onde estou" mora aqui, não no plano de IA.
-          Mesmos nós da Visão Geral (tela 21/52): módulos são gerados uma vez
-          do material, e o estado sai do histórico de quiz na hora. Nada aqui
-          precisa de regeneração por IA pra estar atualizado. */}
+      {/* ━━ TRILHA: hero da tela — o "onde estou" vem daqui, não do plano. ━━
+          Mesmos nós da Visão Geral (tela 21/52): módulos gerados uma vez,
+          estado sai do histórico de quiz. Determinística, sempre atualizada. */}
       {trilha.length > 0 && (
         <>
           <p className="mb-2 mt-[22px] px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
@@ -193,8 +164,6 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
                 key={no.id}
                 estado={no.estado}
                 nome={<MathText>{no.nome}</MathText>}
-                // Sem tentativa não há acurácia: um "0%" no anel leria como
-                // "você zerou", quando o capítulo sequer foi aberto.
                 pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                 conector={i < trilha.length - 1}
                 href={no.estado === "bloqueado" ? undefined : `/professor/${professorId}/quiz`}
@@ -223,6 +192,31 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
           </div>
         </>
       )}
+
+      {/* Hoje, semana, mês — contexto, não guia. */}
+      <GlassCard nivel="cartao" radius="cartao" className="mt-[22px] flex items-stretch md:mt-4">
+        <Coluna rotulo="Hoje" valor={summary.streak_days > 0 ? "Em dia" : "Comece hoje"} />
+        <span aria-hidden className="w-[0.5px] flex-none bg-borda" />
+        <Coluna
+          rotulo="Semana"
+          valor={
+            <>
+              <MetricText weight="bold">{summary.weekly.quizzes_respondidos}</MetricText>{" "}
+              {summary.weekly.quizzes_respondidos === 1 ? "quiz" : "quizzes"}
+            </>
+          }
+        />
+        <span aria-hidden className="w-[0.5px] flex-none bg-borda" />
+        <Coluna
+          rotulo="Mês"
+          valor={
+            <>
+              +<MetricText weight="bold">{summary.monthly.topicos_dominados}</MetricText>{" "}
+              {summary.monthly.topicos_dominados === 1 ? "tópico" : "tópicos"}
+            </>
+          }
+        />
+      </GlassCard>
 
       {/* Evolução da nota. */}
       <p className="mb-2 mt-[22px] px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
@@ -267,55 +261,34 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
 
         </PainelPrincipal>
 
-        {/* Porta para o plano de estudos (tela 31). No computador ela é a
-            coluna auxiliar inteira, e quando o plano já existe o resumo dele
-            vem junto — é o cartão que a 54 põe no topo dessa coluna. */}
+        {/* Sugestões (colapsado). O plano de IA é um complemento opcional,
+            não o guia principal — a trilha é a fonte de verdade. */}
         <PainelAuxiliar largura={360} className="mt-[22px] md:mt-0">
-          {plano && (
-            <div className="hidden rounded-grupo bg-indigo/10 p-[18px] shadow-[inset_0_0_0_1px_hsl(var(--indigo)/0.16)] md:block">
-              <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
-                <Compass className="h-3.5 w-3.5" />
-                {summary.exam_dates ? <>Plano · {summary.exam_dates}</> : "Seu plano de estudos"}
-              </p>
-              <p className="mt-2 text-pretty text-corpo leading-[1.5] text-tinta">
-                {plano.content.resumo}
-              </p>
-              {/* O plano é um retrato de quando foi gerado — a data evita que
-                  ele passe por leitura ao vivo (a trilha, essa sim, é). */}
-              <p className="mt-2 text-nota text-tinta-fraca">
-                Feito {idadeRelativa(plano.created_at)} · atualize quando quiser
-              </p>
+          <details className="group">
+            <summary className="flex cursor-pointer items-center gap-2 rounded-chip px-3 py-2.5 text-corpo font-medium text-indigo hover:bg-indigo/8 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte">
+              <Sparkles className="h-4 w-4" />
+              Sugestões do Kango
+              <ChevronRight className="ml-auto h-4 w-4 transition-transform group-open:rotate-90" />
+            </summary>
+            <div className="mt-2 space-y-3">
+              {plano && (
+                <div className="rounded-cartao bg-indigo/8 p-3">
+                  <p className="text-nota text-tinta-fraca">
+                    Feito {idadeRelativa(plano.created_at)} · desatualizado é normal
+                  </p>
+                  <p className="mt-2 text-pretty text-corpo leading-[1.5] text-tinta">
+                    {plano.content.resumo}
+                  </p>
+                </div>
+              )}
+              <Link
+                href={`/professor/${professorId}/plano`}
+                className="block rounded-cartao border border-borda px-3 py-2.5 text-centro text-corpo font-medium text-indigo hover:bg-indigo/8 focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+              >
+                Ver plano completo →
+              </Link>
             </div>
-          )}
-
-          <InsetList>
-            <InsetRow
-              href={`/professor/${professorId}/plano`}
-              altura="dupla"
-              icon={<Sparkles />}
-              iconTone="indigo"
-              title="Plano de estudos"
-              subtitle={
-                plano ? "Ver o plano inteiro" : "O que o Kango recomenda, a partir do seu material"
-              }
-              trailing={<ChevronRight className="h-[18px] w-[18px]" />}
-            />
-          </InsetList>
-
-          {/* As prioridades do plano são exatamente "o que o Kango sugere" da
-              54 — a lista já existe no plano gerado, não é sugestão nova. */}
-          {plano && plano.content.prioridades.length > 0 && (
-            <div className="hidden md:block">
-              <p className="mb-2 px-4 text-rotulo uppercase text-tinta-fraca">
-                O que o Kango sugere
-              </p>
-              <InsetList>
-                {plano.content.prioridades.slice(0, 4).map((p) => (
-                  <InsetRow key={p} icon={<Target />} iconTone="indigo" title={<MathText>{p}</MathText>} />
-                ))}
-              </InsetList>
-            </div>
-          )}
+          </details>
         </PainelAuxiliar>
       </PainelLinha>
     </div>
