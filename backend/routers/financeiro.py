@@ -40,33 +40,33 @@ async def get_resumo(dias: int = Query(30, ge=1, le=365)):
 
     data_limite = datetime.utcnow() - timedelta(days=dias)
 
-    # Usuários ativos = com activity nos últimos N dias
-    res_ativos = sb.rpc(
-        "count_active_users",
-        {"days": dias}
-    ).execute()
-    ativos = res_ativos.data or 0
+    # Usuários total (simples)
+    res_users = sb.table("usuarios_perfis").select("id").execute()
+    total_users = len(res_users.data or [])
 
-    # Usuários inativos = com conta mas sem activity
-    res_total = sb.table("auth.users").select("count", count="exact").execute()
-    total_users = res_total.count or 0
+    # Usuários ativos = com token_logs nos últimos N dias
+    res_ativos = sb.table("token_logs")\
+        .select("user_id", count="exact")\
+        .gte("created_at", data_limite.isoformat())\
+        .execute()
+    ativos = len(set(row["user_id"] for row in res_ativos.data or []))
     inativos = total_users - ativos
 
-    # Assinantes (simulado por enquanto - quando tiver tabela de subscriptions)
-    assinantes = 0  # TODO: contar de subscriptions table quando implementar
+    # Assinantes (simulado por enquanto)
+    assinantes = 0
 
     # Custo total nos últimos N dias
     res_custos = sb.table("token_logs")\
         .select("cost_usd")\
         .gte("created_at", data_limite.isoformat())\
         .execute()
-    custo_total = sum(row["cost_usd"] for row in res_custos.data or [])
+    custo_total = sum(float(row.get("cost_usd", 0)) for row in res_custos.data or [])
 
-    # Receita (por enquanto 0 se não há assinantes)
-    receita_total = (assinantes * PLANOS["pro"]) / 100  # média pra demo
+    # Receita
+    receita_total = (assinantes * PLANOS["pro"]) / 100
 
     # Margem
-    margem = receita_total - custo_total if receita_total > 0 else 0
+    margem = receita_total - custo_total if receita_total > 0 else -custo_total
 
     return {
         "usuarios": {
@@ -87,8 +87,8 @@ async def get_resumo(dias: int = Query(30, ge=1, le=365)):
 
 @router.get("/usuarios")
 async def list_usuarios(
-    plano: str = Query(None),  # 'free', 'basico', 'pro', 'kango'
-    status: str = Query(None),  # 'ativo', 'inativo'
+    plano: str = Query(None),
+    status: str = Query(None),
     dias: int = Query(30, ge=1, le=365),
     limit: int = Query(50, ge=1, le=500),
 ):
@@ -97,39 +97,43 @@ async def list_usuarios(
 
     data_limite = datetime.utcnow() - timedelta(days=dias)
 
-    res = sb.rpc(
-        "get_usuarios_financeiro",
-        {
-            "dias": dias,
-            "limite": limit,
-        }
-    ).execute()
-
+    # Buscar usuários
+    res_users = sb.table("usuarios_perfis").select("id, email").limit(limit).execute()
     usuarios = []
-    for row in res.data or []:
-        # Filtrar por status
-        if status == "ativo" and row["tokens_total"] == 0:
-            continue
-        if status == "inativo" and row["tokens_total"] > 0:
-            continue
 
-        # Filtrar por plano
-        user_plano = row.get("plano", "free")
-        if plano and user_plano != plano:
+    for user in res_users.data or []:
+        user_id = user["id"]
+
+        # Custo e tokens do usuário
+        res_tokens = sb.table("token_logs")\
+            .select("cost_usd, tokens_in, tokens_out")\
+            .eq("user_id", user_id)\
+            .gte("created_at", data_limite.isoformat())\
+            .execute()
+
+        tokens_total = sum(row.get("tokens_in", 0) + row.get("tokens_out", 0) for row in res_tokens.data or [])
+        custo_total = sum(row.get("cost_usd", 0) for row in res_tokens.data or [])
+
+        user_status = "ativo" if tokens_total > 0 else "inativo"
+
+        # Filtros
+        if status and user_status != status:
+            continue
+        if plano and plano != "free":  # Por enquanto todos são free
             continue
 
         usuarios.append({
-            "id": row["id"],
-            "email": row["email"],
-            "plano": user_plano,
-            "status": "ativo" if row["tokens_total"] > 0 else "inativo",
-            "tokens_mes": row["tokens_total"],
-            "custo_mes": round(row["cost_usd"], 2),
-            "ultima_atividade": row["last_activity"],
-            "data_criacao": row["created_at"],
+            "id": user_id,
+            "email": user["email"],
+            "plano": "free",
+            "status": user_status,
+            "tokens_mes": tokens_total,
+            "custo_mes": round(custo_total, 2),
+            "ultima_atividade": None,
+            "data_criacao": None,
         })
 
-    return {"items": usuarios, "total": len(usuarios)}
+    return {"items": usuarios[:limit], "total": len(usuarios)}
 
 
 @router.get("/custos")
@@ -188,9 +192,9 @@ async def get_kpis(dias: int = Query(30, ge=1, le=365)):
     data_limite = datetime.utcnow() - timedelta(days=dias)
 
     # Usuários ativos (com tokens nos últimos N dias)
-    res_ativos = sb.table("user_usage_daily")\
+    res_ativos = sb.table("token_logs")\
         .select("user_id")\
-        .gte("date", data_limite.date().isoformat())\
+        .gte("created_at", data_limite.isoformat())\
         .execute()
     usuarios_ativos = len(set(row["user_id"] for row in res_ativos.data or []))
 
@@ -199,26 +203,26 @@ async def get_kpis(dias: int = Query(30, ge=1, le=365)):
         .select("tokens_in, tokens_out")\
         .gte("created_at", data_limite.isoformat())\
         .execute()
-    total_tokens = sum(row["tokens_in"] + row["tokens_out"] for row in res_tokens.data or [])
+    total_tokens = sum(row.get("tokens_in", 0) + row.get("tokens_out", 0) for row in res_tokens.data or [])
 
     # Custo total
     res_custos = sb.table("token_logs")\
         .select("cost_usd")\
         .gte("created_at", data_limite.isoformat())\
         .execute()
-    custo_total = sum(row["cost_usd"] for row in res_custos.data or [])
+    custo_total = sum(row.get("cost_usd", 0) for row in res_custos.data or [])
 
     # Uso médio por usuário
     uso_medio = (total_tokens / usuarios_ativos) if usuarios_ativos > 0 else 0
+    custo_medio_usuario = (custo_total / usuarios_ativos) if usuarios_ativos > 0 else 0
 
-    # Churn (simulado: ~5% pra demo)
+    # Churn (simulado: ~5%)
     churn_rate = 5.0
 
-    # LTV (simulado: 90 dias * custo médio)
-    custo_medio_usuario = (custo_total / usuarios_ativos) if usuarios_ativos > 0 else 0
-    ltv = custo_medio_usuario * 3  # 3 meses média
+    # LTV (3 meses de custo médio)
+    ltv = custo_medio_usuario * 3
 
-    # Financiadores (pagam mas não usam) - por enquanto 0
+    # Financiadores
     financiadores = 0
 
     return {
@@ -227,7 +231,7 @@ async def get_kpis(dias: int = Query(30, ge=1, le=365)):
         "ltv": round(ltv, 2),
         "uso_medio_tokens": int(uso_medio),
         "custo_mensal": round(custo_total, 2),
-        "receita_mensal": 0,  # Quando tiver assinantes
+        "receita_mensal": 0,
         "financiadores": financiadores,
         "custo_medio_usuario": round(custo_medio_usuario, 2),
     }
