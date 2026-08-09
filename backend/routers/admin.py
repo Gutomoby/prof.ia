@@ -179,21 +179,3 @@ async def get_cost_trend(days: int = Query(30, ge=1, le=90)):
     }
 
 
-@router.post("/models/test-gemini")
-async def enable_gemini_test(percentage: int = Query(10, ge=1, le=100)):
-    """
-    Ativa teste do Gemini com X% dos usuários.
-    Requer feature flag 'use_gemini_for_quiz' no backend.
-    """
-    # Implementação simplificada: apenas retorna o comando a rodar no backend
-    # Em produção, isso seria um toggle em Redis/banco de dados
-
-    return {
-        "status": "enabled",
-        "message": f"Teste Gemini ativado para {percentage}% dos quizzes",
-        "next_steps": [
-            "1. No backend, ativar feature flag: use_gemini_for_quiz={percentage}",
-            "2. Monitorar token_logs por modelo='gemini'",
-            "3. Após 1 semana, comparar: custo, latência, satisfação do usuário",
-        ],
-    }

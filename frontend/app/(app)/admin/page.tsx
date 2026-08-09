@@ -45,7 +45,6 @@ export default function AdminPage() {
   const [trends, setTrends] = useState<CostTrend[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [geminiTest, setGeminiTest] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -181,33 +180,30 @@ export default function AdminPage() {
         </GlassCard>
       )}
 
-      {/* Teste Gemini */}
-      <GlassCard nivel="cartao" radius="grupo" className="p-4">
-        <div className="flex items-start gap-3">
-          <Zap className="h-5 w-5 flex-none text-indigo" />
-          <div className="flex-1">
-            <p className="text-corpo font-bold text-tinta">Teste Gemini 2.0 Flash</p>
-            <p className="mt-1 text-nota text-tinta-fraca">
-              Ativar teste com 10% dos quizzes pra comparar custo vs Haiku
-            </p>
-            {geminiTest && <p className="mt-2 text-nota text-acerto">{geminiTest}</p>}
-            <Capsule
-              className="mt-3"
-              onClick={async () => {
-                try {
-                  const res = await fetch("/admin/models/test-gemini", { method: "POST" });
-                  const data = await res.json();
-                  setGeminiTest(data.message);
-                } catch (err) {
-                  setGeminiTest("Erro ao ativar teste");
-                }
-              }}
-            >
-              Ativar Teste →
-            </Capsule>
+      {/* Gemini é o modelo padrão para quizzes */}
+      {metrics && (
+        <GlassCard nivel="cartao" radius="grupo" className="p-4">
+          <div className="flex items-start gap-3">
+            <Zap className="h-5 w-5 flex-none text-indigo" />
+            <div className="flex-1">
+              <p className="text-corpo font-bold text-tinta">Gemini 2.0 Flash — modelo padrão</p>
+              <p className="mt-1 text-nota text-tinta-fraca">
+                100% dos quizzes usam Gemini, com fallback automático a Haiku.
+              </p>
+              {metrics.operations_by_model.gemini && metrics.operations_by_model.gemini > 0 ? (
+                <p className="mt-2 text-nota text-acerto">
+                  Custo médio por quiz:{" "}
+                  <MetricText weight="bold">
+                    ${(metrics.cost_by_model.gemini / metrics.operations_by_model.gemini).toFixed(4)}
+                  </MetricText>
+                </p>
+              ) : (
+                <p className="mt-2 text-nota text-tinta-fraca">Aguardando primeiro quiz com Gemini...</p>
+              )}
+            </div>
           </div>
-        </div>
-      </GlassCard>
+        </GlassCard>
+      )}
     </div>
   );
 }

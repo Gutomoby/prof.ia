@@ -1,13 +1,18 @@
 """
-Wrapper para chamadas à Claude API (Anthropic).
+Wrapper para chamadas à Claude API (Anthropic) e Google Gemini API.
 
-Centraliza a escolha de modelo por feature, conforme decidido:
-  - Módulos, Chat e Prova (qualidade):        claude-sonnet-5
-  - Quiz, Simulado, Reforço, Análise (custo): claude-haiku-4-5-20251001
+Centraliza a escolha de modelo por feature:
+  - Módulos (qualidade):           claude-sonnet-5
+  - Quiz (custo ultra-baixo):      gemini-2.0-flash (com fallback a haiku)
+  - Simulado, Reforço, Análise:    claude-haiku-4-5-20251001
+  - Plano de estudos (qualidade):  claude-haiku-4-5-20251001
+
+Nota: Quiz usa Gemini por padrão quando GEMINI_API_KEY está configurada.
+      Em caso de erro na chamada ao Gemini, cai automaticamente para Haiku.
+      Sem GEMINI_API_KEY, vai direto para Haiku.
 """
 
 from functools import lru_cache
-import random
 from datetime import datetime
 
 from anthropic import Anthropic
@@ -21,9 +26,6 @@ from services.supabase_client import get_supabase
 MODEL_SONNET = "claude-sonnet-5"
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
 MODEL_GEMINI = "gemini-2.0-flash"
-
-# Feature flag: percentual de quizzes que usam Gemini (padrão 0 = desativado)
-GEMINI_TEST_PERCENTAGE = 10
 
 
 @lru_cache(maxsize=1)
@@ -41,9 +43,16 @@ def _get_gemini_client():
     return genai.GenerativeModel(MODEL_GEMINI)
 
 
-def should_use_gemini() -> bool:
-    """Feature flag: com GEMINI_TEST_PERCENTAGE de chance, retorna True."""
-    return random.randint(1, 100) <= GEMINI_TEST_PERCENTAGE
+def _model_key(model: str) -> str:
+    """Normaliza nome do modelo para a chave curta usada em token_logs e estimativa de custo."""
+    model_lower = model.lower()
+    if "haiku" in model_lower:
+        return "haiku"
+    elif "sonnet" in model_lower:
+        return "sonnet"
+    elif "gemini" in model_lower:
+        return "gemini"
+    return "haiku"  # fallback seguro
 
 
 def _log_token_usage(
@@ -235,18 +244,23 @@ def generate_json(
     user_id: str = None,
     professor_id: str = None,
 ) -> dict:
-    """Pede ao Claude/Gemini um quiz em JSON estruturado, via tool-forcing.
+    """Pede a Gemini (com fallback a Claude) um quiz em JSON estruturado.
+
+    Estratégia: Gemini por padrão (quando GEMINI_API_KEY está configurada),
+    com fallback silencioso para Haiku se falhar. Sem a chave, vai direto para Haiku.
 
     Retorna o dict com a chave "questions" (ver _QUIZ_TOOL para o schema).
     """
-    # Decidir qual modelo usar (feature flag Gemini)
-    use_gemini = model == MODEL_GEMINI or (model == MODEL_HAIKU and should_use_gemini() and settings.GEMINI_API_KEY)
-    final_model = MODEL_GEMINI if use_gemini else model
+    # Tentar Gemini se a chave estiver configurada
+    if settings.GEMINI_API_KEY:
+        try:
+            return _generate_json_gemini(system_prompt, user_prompt, user_id, professor_id)
+        except Exception as e:
+            print(f"Aviso: falha ao chamar Gemini, caindo para Haiku: {e}")
+            # Cai automaticamente para o código abaixo (Haiku)
 
-    if use_gemini:
-        return _generate_json_gemini(system_prompt, user_prompt, user_id, professor_id)
-    else:
-        return _generate_json_claude(system_prompt, user_prompt, model, user_id, professor_id)
+    # Fallback para Haiku (ou rota padrão se não há chave Gemini)
+    return _generate_json_claude(system_prompt, user_prompt, MODEL_HAIKU, user_id, professor_id)
 
 
 def _generate_json_claude(
@@ -274,7 +288,7 @@ def _generate_json_claude(
         tokens_in = response.usage.input_tokens
         tokens_out = response.usage.output_tokens
         cost = _estimate_cost(model, tokens_in, tokens_out)
-        _log_token_usage(user_id, professor_id, model, "quiz", tokens_in, tokens_out, cost)
+        _log_token_usage(user_id, professor_id, _model_key(model), "quiz", tokens_in, tokens_out, cost)
 
     for block in response.content:
         if block.type == "tool_use" and block.name == "return_quiz":
@@ -322,11 +336,21 @@ Responda **APENAS** em JSON válido (sem markdown, sem "```json") com a seguinte
         tokens_in = response.usage_metadata.prompt_token_count
         tokens_out = response.usage_metadata.candidates_token_count
         cost = _estimate_cost(MODEL_GEMINI, tokens_in, tokens_out)
-        _log_token_usage(user_id, professor_id, MODEL_GEMINI, "quiz", tokens_in, tokens_out, cost)
+        _log_token_usage(user_id, professor_id, "gemini", "quiz", tokens_in, tokens_out, cost)
 
-    # Parse da resposta JSON
+    # Parse da resposta JSON — tolerante a cercas Markdown
+    text = response.text.strip()
+    # Stripar ```json ... ``` se Gemini devolveu com cercas
+    if text.startswith("```json"):
+        text = text[7:]  # remove ```json
+    elif text.startswith("```"):
+        text = text[3:]  # remove ```
+    if text.endswith("```"):
+        text = text[:-3]  # remove ```
+    text = text.strip()
+
     try:
-        result = json.loads(response.text)
+        result = json.loads(text)
         if "questions" in result:
             return result
     except (json.JSONDecodeError, AttributeError):
@@ -344,19 +368,12 @@ def _estimate_cost(model: str, tokens_in: int, tokens_out: int) -> float:
         "gemini": {"in": 0.075, "out": 0.30},
     }
 
-    model_key = model.lower()
-    if "haiku" in model_key:
-        model_key = "haiku"
-    elif "sonnet" in model_key:
-        model_key = "sonnet"
-    elif "gemini" in model_key:
-        model_key = "gemini"
-
-    if model_key not in pricing:
+    key = _model_key(model)
+    if key not in pricing:
         return 0.0
 
-    price_in = pricing[model_key]["in"]
-    price_out = pricing[model_key]["out"]
+    price_in = pricing[key]["in"]
+    price_out = pricing[key]["out"]
     return (tokens_in * price_in + tokens_out * price_out) / 1_000_000
 
 
