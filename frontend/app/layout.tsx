@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   title: "Kango",
   description:
     "Kango, o seu companheiro de estudos: quizzes, trilhas e progresso a partir do seu próprio material.",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 // Uma cor só, o papel: não há tema escuro para acompanhar. Declarar o
