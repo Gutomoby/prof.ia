@@ -22,6 +22,7 @@ from routers import (
     calendario,
     modulos,
     conquistas,
+    admin,
 )
 from services.config import settings
 
@@ -65,3 +66,4 @@ app.include_router(progresso.router)
 app.include_router(calendario.router)
 app.include_router(modulos.router)
 app.include_router(conquistas.router)
+app.include_router(admin.router)

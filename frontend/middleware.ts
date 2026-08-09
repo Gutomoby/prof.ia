@@ -39,6 +39,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/professor") ||
     pathname.startsWith("/licao") ||
     pathname.startsWith("/perfil") ||
+    pathname.startsWith("/admin") ||
     // Primeiro acesso: /comecar cria matéria e /diagnostico lê tentativa, as
     // duas coisas presas a uma conta. Só /boas-vindas fica de fora — ela é a
     // porta de entrada e precisa abrir deslogada.
@@ -71,6 +72,7 @@ export const config = {
     "/professor/:path*",
     "/licao/:path*",
     "/perfil/:path*",
+    "/admin/:path*",
     "/comecar",
     "/diagnostico/:path*",
     "/login",
