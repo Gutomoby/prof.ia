@@ -255,14 +255,11 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
           "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
         )}
       >
-        {/* Kango é placeholder até a persona 3D existir: círculo listrado a 135°. */}
-        <span
-          aria-hidden
-          className="h-[38px] w-[38px] flex-none rounded-capsula shadow-[inset_0_0_0_1px_rgba(255,255,255,.9)]"
-          style={{
-            background:
-              "repeating-linear-gradient(135deg, rgba(67,56,202,.2) 0 6px, rgba(255,255,255,.8) 6px 12px)",
-          }}
+        {/* Kango mascote */}
+        <img
+          src="/favicon.png"
+          alt="Kango"
+          className="h-[38px] w-[38px] flex-none rounded-capsula object-cover"
         />
         <span className="min-w-0 flex-1">
           <span className="block text-[15px] font-semibold tracking-[-0.24px]">Perfil</span>
