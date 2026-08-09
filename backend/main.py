@@ -23,6 +23,7 @@ from routers import (
     modulos,
     conquistas,
     admin,
+    financeiro,
 )
 from services.config import settings
 
@@ -68,3 +69,4 @@ app.include_router(calendario.router)
 app.include_router(modulos.router)
 app.include_router(conquistas.router)
 app.include_router(admin.router)
+app.include_router(financeiro.router)
