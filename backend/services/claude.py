@@ -7,21 +7,70 @@ Centraliza a escolha de modelo por feature, conforme decidido:
 """
 
 from functools import lru_cache
+import random
+from datetime import datetime
 
 from anthropic import Anthropic
+import google.generativeai as genai
 
 from services.config import settings
+from services.supabase_client import get_supabase
 
 # Modelos do projeto. Mantenha aqui — se trocar de modelo, troca em um lugar só.
 # claude-sonnet-4-20250514 saiu do ar (404 na API) — substituído pelo Sonnet 5.
 MODEL_SONNET = "claude-sonnet-5"
 MODEL_HAIKU = "claude-haiku-4-5-20251001"
+MODEL_GEMINI = "gemini-2.0-flash"
+
+# Feature flag: percentual de quizzes que usam Gemini (padrão 0 = desativado)
+GEMINI_TEST_PERCENTAGE = 10
 
 
 @lru_cache(maxsize=1)
 def _get_client() -> Anthropic:
     """Cliente Anthropic — carregado uma vez por processo (mesmo padrão do embedder em rag.py)."""
     return Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+
+
+@lru_cache(maxsize=1)
+def _get_gemini_client():
+    """Cliente Google Gemini — carregado uma vez por processo."""
+    if not settings.GEMINI_API_KEY:
+        raise RuntimeError("GEMINI_API_KEY não configurada no ambiente")
+    genai.configure(api_key=settings.GEMINI_API_KEY)
+    return genai.GenerativeModel(MODEL_GEMINI)
+
+
+def should_use_gemini() -> bool:
+    """Feature flag: com GEMINI_TEST_PERCENTAGE de chance, retorna True."""
+    return random.randint(1, 100) <= GEMINI_TEST_PERCENTAGE
+
+
+def _log_token_usage(
+    user_id: str,
+    professor_id: str,
+    model: str,
+    operation: str,
+    tokens_in: int,
+    tokens_out: int,
+    cost_usd: float,
+) -> None:
+    """Registra consumo de tokens em token_logs para billing intelligence."""
+    try:
+        sb = get_supabase()
+        sb.table("token_logs").insert({
+            "user_id": user_id,
+            "professor_id": professor_id,
+            "model": model,
+            "operation": operation,
+            "tokens_in": tokens_in,
+            "tokens_out": tokens_out,
+            "cost_usd": cost_usd,
+            "created_at": datetime.utcnow().isoformat(),
+        }).execute()
+    except Exception as e:
+        # Log não é crítico — se falhar, a operação de IA continua
+        print(f"Aviso: falha ao registrar token_log: {e}")
 
 
 # Schema da tool usada para forçar o Claude a responder em JSON estruturado.
@@ -179,11 +228,35 @@ async def stream_chat(system_prompt: str, messages: list[dict], model: str = MOD
     raise NotImplementedError
 
 
-def generate_json(system_prompt: str, user_prompt: str, model: str = MODEL_HAIKU) -> dict:
-    """Pede ao Claude um quiz em JSON estruturado, via tool-forcing.
+def generate_json(
+    system_prompt: str,
+    user_prompt: str,
+    model: str = MODEL_HAIKU,
+    user_id: str = None,
+    professor_id: str = None,
+) -> dict:
+    """Pede ao Claude/Gemini um quiz em JSON estruturado, via tool-forcing.
 
     Retorna o dict com a chave "questions" (ver _QUIZ_TOOL para o schema).
     """
+    # Decidir qual modelo usar (feature flag Gemini)
+    use_gemini = model == MODEL_GEMINI or (model == MODEL_HAIKU and should_use_gemini() and settings.GEMINI_API_KEY)
+    final_model = MODEL_GEMINI if use_gemini else model
+
+    if use_gemini:
+        return _generate_json_gemini(system_prompt, user_prompt, user_id, professor_id)
+    else:
+        return _generate_json_claude(system_prompt, user_prompt, model, user_id, professor_id)
+
+
+def _generate_json_claude(
+    system_prompt: str,
+    user_prompt: str,
+    model: str,
+    user_id: str = None,
+    professor_id: str = None,
+) -> dict:
+    """Chamada a Claude via Anthropic API."""
     client = _get_client()
     # 8192: um quiz de módulo (8-10 questões com explicação) não cabe em 4096
     # e o corte no meio da tool devolvia input vazio ("nenhuma questão").
@@ -196,11 +269,95 @@ def generate_json(system_prompt: str, user_prompt: str, model: str = MODEL_HAIKU
         tool_choice={"type": "tool", "name": "return_quiz"},
     )
 
+    # Log de tokens (se user_id/professor_id fornecidos)
+    if user_id and professor_id:
+        tokens_in = response.usage.input_tokens
+        tokens_out = response.usage.output_tokens
+        cost = _estimate_cost(model, tokens_in, tokens_out)
+        _log_token_usage(user_id, professor_id, model, "quiz", tokens_in, tokens_out, cost)
+
     for block in response.content:
         if block.type == "tool_use" and block.name == "return_quiz":
             return block.input
 
     raise RuntimeError("Claude não retornou o quiz no formato esperado.")
+
+
+def _generate_json_gemini(
+    system_prompt: str,
+    user_prompt: str,
+    user_id: str = None,
+    professor_id: str = None,
+) -> dict:
+    """Chamada a Gemini via Google GenerativeAI API."""
+    import json
+
+    client = _get_gemini_client()
+
+    # Gemini não tem tool-forcing nativo, então pedimos JSON direto
+    prompt_with_schema = f"""{system_prompt}
+
+{user_prompt}
+
+Responda **APENAS** em JSON válido (sem markdown, sem "```json") com a seguinte estrutura:
+{json.dumps({
+    "questions": [
+        {
+            "topico": "string",
+            "enunciado": "string",
+            "alternativas": ["string", "string", "string", "string"],
+            "resposta_correta": 0,
+            "explicacao": "string"
+        }
+    ]
+}, indent=2)}"""
+
+    response = client.generate_content(
+        prompt_with_schema,
+        generation_config=genai.types.GenerationConfig(max_output_tokens=8192),
+    )
+
+    # Log de tokens (se user_id/professor_id fornecidos)
+    if user_id and professor_id:
+        tokens_in = response.usage_metadata.prompt_token_count
+        tokens_out = response.usage_metadata.candidates_token_count
+        cost = _estimate_cost(MODEL_GEMINI, tokens_in, tokens_out)
+        _log_token_usage(user_id, professor_id, MODEL_GEMINI, "quiz", tokens_in, tokens_out, cost)
+
+    # Parse da resposta JSON
+    try:
+        result = json.loads(response.text)
+        if "questions" in result:
+            return result
+    except (json.JSONDecodeError, AttributeError):
+        pass
+
+    raise RuntimeError("Gemini não retornou o quiz no formato JSON esperado.")
+
+
+def _estimate_cost(model: str, tokens_in: int, tokens_out: int) -> float:
+    """Estima o custo em USD baseado no modelo e tokens."""
+    # Preços por 1M tokens (janeiro 2026)
+    pricing = {
+        "haiku": {"in": 0.80, "out": 4.00},
+        "sonnet": {"in": 3.00, "out": 15.00},
+        "gemini": {"in": 0.075, "out": 0.30},
+    }
+
+    model_key = model.lower()
+    if "haiku" in model_key:
+        model_key = "haiku"
+    elif "sonnet" in model_key:
+        model_key = "sonnet"
+    elif "gemini" in model_key:
+        model_key = "gemini"
+
+    if model_key not in pricing:
+        return 0.0
+
+    price_in = pricing[model_key]["in"]
+    price_out = pricing[model_key]["out"]
+    return (tokens_in * price_in + tokens_out * price_out) / 1_000_000
 
 
 def generate_study_plan(system_prompt: str, user_prompt: str, model: str = MODEL_HAIKU) -> dict:

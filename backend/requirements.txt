@@ -6,8 +6,9 @@ uvicorn[standard]==0.30.6           # servidor ASGI para rodar a API local e em 
 pydantic==2.9.2                     # já vem com FastAPI; fixado p/ evitar quebras
 pydantic-settings==2.5.2            # carrega variáveis do .env num objeto tipado
 
-# --- IA (apenas Claude — sem OpenAI) ---
+# --- IA (Claude + Gemini para teste A/B) ---
 anthropic==0.39.0                   # Claude API (Sonnet/Haiku)
+google-generativeai>=0.8.0           # Google Gemini API (teste de custo)
 
 # --- Embeddings LOCAIS (zero custo recorrente) ---
 # all-MiniLM-L6-v2: 384 dims, ~80 MB, roda em CPU em ~ms por chunk.

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # --- Anthropic (Claude) ---
     ANTHROPIC_API_KEY: str
 
+    # --- Google Gemini (teste A/B) ---
+    GEMINI_API_KEY: str = ""
+
     # --- Embeddings (modelo local) ---
     EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
 

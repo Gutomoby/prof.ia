@@ -19,7 +19,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import ActivityGenerateRequest, ActivitySubmitRequest, QuestionCheckRequest
-from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_json
+from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_json, MODEL_GEMINI
 from services.config import settings
 from services.progress import (
     XP_ATIVIDADE_CONCLUIDA,
@@ -143,7 +143,13 @@ def gerar_atividade(payload: ActivityGenerateRequest):
         "Use a tool return_quiz para responder."
     )
 
-    result = generate_json(system_prompt, user_prompt, model=MODEL_HAIKU)
+    result = generate_json(
+        system_prompt,
+        user_prompt,
+        model=MODEL_HAIKU,
+        user_id=settings.MVP_USER_ID,
+        professor_id=str(payload.professor_id),
+    )
     questions = result.get("questions") or []
     if not questions:
         raise HTTPException(status_code=502, detail="Claude não retornou nenhuma questão.")
