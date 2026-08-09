@@ -211,8 +211,8 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
               acento fica no rótulo, que é o que o desenho da 52 faz. */}
           <div className="flex flex-1 flex-col rounded-grupo bg-indigo/10 px-4 py-3.5 md:vidro-cartao md:p-5 md:shadow-vidro">
         <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
-          <Zap className="h-3.5 w-3.5" />
-          Próximo passo
+          <ChevronRight className="h-3.5 w-3.5" />
+          Siga sua trilha
         </p>
         <MathText
           as="p"
