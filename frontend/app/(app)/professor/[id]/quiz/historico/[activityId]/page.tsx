@@ -10,7 +10,8 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { QuizReview } from "@/components/quiz/QuizReview";
 import { useStartQuiz } from "@/lib/use-start-quiz";
-import { DIFFICULTY_LABELS, type ActivityDetail } from "@/lib/types";
+import { montarTrilha } from "@/lib/trilha";
+import { DIFFICULTY_LABELS, type ActivityDetail, type Module } from "@/lib/types";
 
 /*
   Tela 40 · Revisão da tentativa. O cabeçalho ("‹ Suas tentativas" e o título
@@ -28,6 +29,7 @@ export default function QuizHistoricoDetailPage({
   const [detail, setDetail] = useState<ActivityDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [modules, setModules] = useState<Module[]>([]);
   // Tentativa gerada e abandonada no meio: existe, mas não tem o que revisar.
   // O backend devolve 400 nesse caso, e um alerta seco de erro faria parecer
   // que algo quebrou — quando na verdade não há nada para ver ali.
@@ -37,13 +39,31 @@ export default function QuizHistoricoDetailPage({
   // assume direto a lição — mesmo caminho de todo CTA de prática.
   const { start, generating: retrying, error: retryError } = useStartQuiz(professorId);
 
+  // Busca o próximo módulo incompleto da trilha
+  function handlePraticaProximo() {
+    const trilha = montarTrilha(modules);
+    // Encontra o primeiro módulo que não está dominado
+    const proximo = trilha.find((no) => no.estado !== "dominado");
+    if (proximo) {
+      start(null, { moduleId: proximo.id, rotulo: proximo.nome });
+    } else {
+      // Se tudo está dominado, retorna ao tópico específico (fallback)
+      start(detail?.topic || null);
+    }
+  }
+
   useEffect(() => {
     (async () => {
       setLoading(true);
       setError(null);
       setNaoRespondida(false);
       try {
-        setDetail(await api.getAtividade(activityId));
+        const [detailRes, modulesRes] = await Promise.all([
+          api.getAtividade(activityId),
+          api.listModules(professorId),
+        ]);
+        setDetail(detailRes);
+        setModules(modulesRes.items);
       } catch (err) {
         if (err instanceof ApiError && err.status === 400) setNaoRespondida(true);
         else setError(err instanceof ApiError ? err.message : "Não foi possível carregar essa tentativa.");
@@ -51,7 +71,7 @@ export default function QuizHistoricoDetailPage({
         setLoading(false);
       }
     })();
-  }, [activityId]);
+  }, [activityId, professorId]);
 
   if (loading) {
     return (
@@ -104,7 +124,7 @@ export default function QuizHistoricoDetailPage({
         footer={
           <div className="mt-2 flex flex-col gap-3">
             {retryError && <InlineAlert>{retryError}</InlineAlert>}
-            <Capsule block loading={retrying} onClick={() => start(detail.topic)}>
+            <Capsule block loading={retrying} onClick={handlePraticaProximo}>
               {!retrying && <RotateCcw className="h-4 w-4" />}
               {retrying ? "Gerando..." : "Praticar esse tópico de novo"}
             </Capsule>
