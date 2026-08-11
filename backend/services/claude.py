@@ -166,13 +166,15 @@ _MODULES_TOOL = {
 # Medido no material de Atuária em produção antes da regra: de 53 tópicos de
 # módulo, 28 vinham em notação tipo-LaTeX solta e 6 em Unicode.
 NOTACAO_MATEMATICA = (
-    "NOTAÇÃO MATEMÁTICA: escreva toda fórmula, variável com índice e expoente "
-    "em LaTeX entre cifrões — $q_x$, $_tp_x$, $\\bar{A}_x$, $A_x^{(m)}$, "
-    "$\\mu_{x+t}$, $\\ell_x$, $\\delta$, $\\int_0^1 f(t)\\,dt$. "
-    "Vale também no meio de frase: 'a força $\\mu_{x+t}$ cresce'. "
-    "NUNCA use subscrito ou sobrescrito em Unicode (qₓ, ℓ₄₀, ᵗ), nem _ ou ^ "
-    "fora dos cifrões, nem 'barra' escrito por extenso. "
-    "Texto comum fica fora dos cifrões."
+    "NOTAÇÃO MATEMÁTICA OBRIGATÓRIA: "
+    "1. TODA fórmula, variável com índice/expoente deve estar em LaTeX puro entre $ e $ "
+    "2. Exemplos CORRETOS: $q_x$, $_tp_x$, $\\bar{A}_x$, $A_x^{(m)}$, $\\mu_{x+t}$, $\\ell_x$, $\\delta$, $\\int_0^1 f(t)\\,dt$ "
+    "3. Use $ corretamente: 'a força $\\mu_{x+t}$ cresce' (no meio de frase também) "
+    "4. PROIBIDO: subscrito Unicode (qₓ, ℓ₄₀), sobrescrito Unicode (ᵗ, ²), underscore/acento fora de $ "
+    "5. LaTeX deve estar COMPLETO e VÁLIDO — sem quebras de linha, sem misturar notações "
+    "6. Quando escrever fórmula complexa, mantenha tudo entre os mesmos $ ... $ "
+    "7. Teste mentalmente: se copiar o texto entre $ para um compilador LaTeX, deve funcionar "
+    "NUNCA misture LaTeX com Unicode ou extensão. Texto comum fica FORA dos cifrões."
 )
 
 
