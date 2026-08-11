@@ -25,6 +25,29 @@ PLANOS = {
     "free": 0,
 }
 
+# O PostgREST devolve no máximo 1000 linhas por requisição e não sinaliza que
+# cortou. Num painel de custo isso é pior que um erro: a conta simplesmente
+# fica menor do que a real, sem nada indicando que faltou dado. O mesmo teto
+# ja tinha feito um material inteiro desaparecer do digest da trilha
+# (ver routers/modulos.py).
+_PAGINA = 1000
+
+
+def _todos(query_builder) -> list[dict]:
+    """Executa a query paginando até o fim.
+
+    Recebe uma função que monta a query, porque o builder do supabase-py é
+    consumido a cada execute() e precisa ser remontado por página.
+    """
+    linhas: list[dict] = []
+    inicio = 0
+    while True:
+        lote = query_builder().range(inicio, inicio + _PAGINA - 1).execute().data or []
+        linhas.extend(lote)
+        if len(lote) < _PAGINA:
+            return linhas
+        inicio += _PAGINA
+
 
 @router.get("/resumo")
 async def get_resumo(dias: int = Query(30, ge=1, le=365)):
@@ -34,12 +57,11 @@ async def get_resumo(dias: int = Query(30, ge=1, le=365)):
         data_limite = datetime.utcnow() - timedelta(days=dias)
 
         # Custo total
-        res_custos = sb.table("token_logs")\
-            .select("cost_usd, user_id")\
-            .gte("created_at", data_limite.isoformat())\
-            .execute()
-
-        custos_list = res_custos.data or []
+        custos_list = _todos(
+            lambda: sb.table("token_logs")
+            .select("cost_usd, user_id")
+            .gte("created_at", data_limite.isoformat())
+        )
         custo_total = sum(float(row.get("cost_usd", 0)) for row in custos_list)
         usuarios_ativos = len(set(row["user_id"] for row in custos_list))
 
@@ -80,14 +102,15 @@ async def list_usuarios(
         data_limite = datetime.utcnow() - timedelta(days=dias)
 
         # Busca logs de token por usuário
-        res = sb.table("token_logs")\
-            .select("user_id, cost_usd, tokens_in, tokens_out")\
-            .gte("created_at", data_limite.isoformat())\
-            .execute()
+        linhas = _todos(
+            lambda: sb.table("token_logs")
+            .select("user_id, cost_usd, tokens_in, tokens_out")
+            .gte("created_at", data_limite.isoformat())
+        )
 
         # Agrega por usuário
         usuarios_custos = {}
-        for row in (res.data or []):
+        for row in linhas:
             uid = row["user_id"]
             if uid not in usuarios_custos:
                 usuarios_custos[uid] = {
@@ -140,14 +163,15 @@ async def get_custos(
         if not data_inicio:
             data_inicio = (datetime.utcnow() - timedelta(days=30)).date().isoformat()
 
-        res = sb.table("token_logs")\
-            .select("operation, model, cost_usd, created_at")\
-            .gte("created_at", f"{data_inicio}T00:00:00")\
-            .lte("created_at", f"{data_fim}T23:59:59")\
-            .execute()
+        linhas = _todos(
+            lambda: sb.table("token_logs")
+            .select("operation, model, cost_usd, created_at")
+            .gte("created_at", f"{data_inicio}T00:00:00")
+            .lte("created_at", f"{data_fim}T23:59:59")
+        )
 
         agregado = {}
-        for row in (res.data or []):
+        for row in linhas:
             if por == "operacao":
                 chave = row.get("operation", "unknown")
             elif por == "modelo":
@@ -186,12 +210,11 @@ async def get_kpis(dias: int = Query(30, ge=1, le=365)):
         sb = get_supabase()
         data_limite = datetime.utcnow() - timedelta(days=dias)
 
-        res = sb.table("token_logs")\
-            .select("user_id, tokens_in, tokens_out, cost_usd")\
-            .gte("created_at", data_limite.isoformat())\
-            .execute()
-
-        dados = res.data or []
+        dados = _todos(
+            lambda: sb.table("token_logs")
+            .select("user_id, tokens_in, tokens_out, cost_usd")
+            .gte("created_at", data_limite.isoformat())
+        )
         usuarios_ativos = len(set(row["user_id"] for row in dados))
         total_tokens = sum(row.get("tokens_in", 0) + row.get("tokens_out", 0) for row in dados)
         custo_total = sum(float(row.get("cost_usd", 0)) for row in dados)
