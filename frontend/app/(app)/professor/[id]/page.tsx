@@ -335,16 +335,15 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
                     </>
                   ) : no.estado === "atual" ? (
                     no.tentativas === 0 ? (
-                      "Você está aqui · comece por este capítulo"
+                      "Você está aqui · comece"
                     ) : (
                       <>
-                        Você está aqui · faltam{" "}
-                        <MetricText tone="indigo">{faltamPontos(no.pct)}</MetricText> pontos pra
-                        dominar
+                        Faltam{" "}
+                        <MetricText tone="indigo">{faltamPontos(no.pct)}</MetricText> pts
                       </>
                     )
                   ) : (
-                    "Libera quando você dominar o anterior"
+                    "Desbloqueável"
                   )
                 }
               />

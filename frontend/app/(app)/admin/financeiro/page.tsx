@@ -109,7 +109,7 @@ export default function FinanceiroPage() {
       {resumo && (
         <div className="mb-6 grid gap-4 md:grid-cols-4">
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
-            <p className="text-nota text-tinta-fraca">Usuários Ativos</p>
+            <p className="text-nota text-tinta-fraca">Ativos</p>
             <p className="mt-2 text-[28px] font-bold text-tinta">
               <MetricText>{resumo.usuarios.ativos}</MetricText>
             </p>
@@ -129,7 +129,7 @@ export default function FinanceiroPage() {
             <p className="mt-2 text-[28px] font-bold text-tinta">
               <MetricText>${resumo.financeiro.receita_total.toFixed(2)}</MetricText>
             </p>
-            <p className="mt-1 text-nota text-tinta-fraca">Anual projetado: ${(resumo.financeiro.receita_total * 365 / dias).toFixed(2)}</p>
+            <p className="mt-1 text-nota text-tinta-fraca">Ano: ${(resumo.financeiro.receita_total * 365 / dias).toFixed(2)}</p>
           </GlassCard>
 
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
@@ -203,14 +203,14 @@ export default function FinanceiroPage() {
         {aba === "usuarios" && (
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
             <p className="text-corpo font-bold text-tinta">Dados de usuários carregando...</p>
-            <p className="mt-2 text-nota text-tinta-fraca">Integração com lista completa em progresso</p>
+            <p className="mt-2 text-nota text-tinta-fraca">Em breve</p>
           </GlassCard>
         )}
 
         {aba === "custos" && (
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
             <p className="text-corpo font-bold text-tinta">Custos por operação</p>
-            <p className="mt-2 text-nota text-tinta-fraca">Breakdown de quiz, chat, módulo em progresso</p>
+            <p className="mt-2 text-nota text-tinta-fraca">Em breve</p>
           </GlassCard>
         )}
 
@@ -224,7 +224,7 @@ export default function FinanceiroPage() {
             </GlassCard>
 
             <GlassCard nivel="cartao" radius="grupo" className="p-4">
-              <p className="text-nota text-tinta-fraca">LTV (Lifetime Value)</p>
+              <p className="text-nota text-tinta-fraca">LTV</p>
               <p className="mt-2 text-[28px] font-bold text-tinta">
                 <MetricText>${kpis.ltv.toFixed(2)}</MetricText>
               </p>
@@ -257,7 +257,7 @@ export default function FinanceiroPage() {
               <p className="mt-2 text-[28px] font-bold text-tinta">
                 <MetricText>{kpis.financiadores}</MetricText>
               </p>
-              <p className="mt-1 text-nota text-tinta-fraca">pagam, não usam</p>
+              <p className="mt-1 text-nota text-tinta-fraca">sem uso</p>
             </GlassCard>
           </div>
         )}
