@@ -1,9 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { FileText, FileX, Loader2, ScanLine, ShieldCheck, Trash2, Type, Upload } from "lucide-react";
+import {
+  Check,
+  FileText,
+  FileX,
+  Loader2,
+  ScanLine,
+  ShieldCheck,
+  Sparkles,
+  Trash2,
+  Type,
+  Upload,
+} from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { Capsule } from "@/components/ui/capsule";
+import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { MetricText } from "@/components/ui/metric-text";
@@ -83,10 +95,15 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
   const [updatingModules, setUpdatingModules] = useState(false);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  // Quantos capítulos entraram na última atualização. `null` = ainda não rodou
+  // nesta visita. Sem isso a ação não tinha resposta visível: o botão voltava
+  // ao normal e não dava para saber se a trilha cresceu, encolheu ou nada mudou.
+  const [novosCapitulos, setNovosCapitulos] = useState<number | null>(null);
 
-  // Só para a coluna auxiliar do computador (tela 56): o que o Kango tirou do
-  // material são os tópicos dos módulos.
+  // Tópicos que o Kango tirou do material (vêm dos módulos) e quantos
+  // capítulos a trilha tem hoje.
   const [topicos, setTopicos] = useState<string[]>([]);
+  const [nCapitulos, setNCapitulos] = useState(0);
 
   // Nome do que está sendo lido agora — alimenta a linha ativa da lista.
   const lendo = pdfLoading ? pdfFile?.name : textLoading ? textName : null;
@@ -108,8 +125,14 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     refreshDocuments();
     api
       .listModules(professorId)
-      .then(({ items }) => setTopicos([...new Set(items.flatMap((m) => m.topics))]))
-      .catch(() => setTopicos([]));
+      .then(({ items }) => {
+        setTopicos([...new Set(items.flatMap((m) => m.topics))]);
+        setNCapitulos(items.length);
+      })
+      .catch(() => {
+        setTopicos([]);
+        setNCapitulos(0);
+      });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
@@ -168,10 +191,16 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
   async function handleUpdateTrilha() {
     setUpdateError(null);
+    setNovosCapitulos(null);
     setUpdatingModules(true);
+    const antes = nCapitulos;
     try {
       const res = await api.listModules(professorId, { regen: true });
       setTopicos([...new Set(res.items.flatMap((m) => m.topics))]);
+      setNCapitulos(res.items.length);
+      // Zero capítulos novos é resposta legítima (o material já está coberto),
+      // não erro — o backend devolve a trilha atual nesse caso.
+      setNovosCapitulos(Math.max(0, res.items.length - antes));
     } catch (err) {
       setUpdateError(err instanceof ApiError ? err.message : "Falha ao atualizar trilha.");
     } finally {
@@ -362,7 +391,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
                 subtitle={<span className="text-indigo">Lendo o arquivo...</span>}
               />
             )}
-            {documents.map((doc) => (
+            {documents.map((doc: DocumentItem) => (
               <InsetRow
                 key={doc.id}
                 altura="dupla"
@@ -401,6 +430,87 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
           </InsetList>
         )}
       </div>
+
+      {/*
+        Atualizar a trilha — a ação que fecha o ciclo de subir material.
+
+        Mora aqui, na coluna principal logo abaixo do que o Kango leu, e não na
+        auxiliar: no celular a auxiliar é o ÚLTIMO bloco da pilha (ver
+        components/layout/Painel.tsx), então o botão ficava embaixo do upload,
+        da lista inteira e do bloco teal — invisível na prática para quem acabou
+        de subir um PDF. É a ação mais importante desta tela; ela não pode
+        depender de rolar até o fim.
+
+        Continua sendo um botão, e não automático depois do upload: reorganizar
+        a trilha é uma chamada de IA, e disparar isso sozinho a cada arquivo
+        gastaria à toa em quem sobe três PDFs seguidos.
+      */}
+      {documents.length > 0 && (
+        <div className="mt-1.5 rounded-grupo bg-indigo/10 p-4">
+          <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
+            <Sparkles className="h-3.5 w-3.5" />
+            Trilha da matéria
+          </p>
+          <p className="mt-1.5 text-pretty text-corpo leading-[1.5] text-tinta">
+            {nCapitulos === 0 ? (
+              "O Kango ainda não organizou este material em capítulos. Monte a trilha para começar a estudar em ordem."
+            ) : (
+              <>
+                A trilha tem{" "}
+                <MetricText weight="bold">{nCapitulos}</MetricText>{" "}
+                {nCapitulos === 1 ? "capítulo" : "capítulos"}. Subiu material novo? Ela não muda
+                sozinha — o Kango lê o que chegou e acrescenta só o que ainda não está coberto.
+              </>
+            )}
+          </p>
+
+          {updateError && (
+            <div className="mt-3">
+              <InlineAlert>{updateError}</InlineAlert>
+            </div>
+          )}
+
+          {novosCapitulos !== null && !updateError && (
+            <p className="mt-3 flex items-start gap-[7px] text-corpo leading-[1.45] text-acerto">
+              <Check className="mt-[3px] h-4 w-4 flex-none" strokeWidth={3} />
+              {novosCapitulos === 0 ? (
+                <span>
+                  Nada novo pra acrescentar — o material que você subiu já está coberto pelos{" "}
+                  <MetricText tone="acerto" weight="bold">{nCapitulos}</MetricText> capítulos.
+                </span>
+              ) : (
+                <span>
+                  <MetricText tone="acerto" weight="bold">+{novosCapitulos}</MetricText>{" "}
+                  {novosCapitulos === 1 ? "capítulo novo" : "capítulos novos"} na trilha.
+                </span>
+              )}
+            </p>
+          )}
+
+          <div className="mt-3.5 flex flex-col gap-2 md:flex-row md:items-center">
+            <Capsule
+              block
+              className="md:w-fit"
+              loading={updatingModules}
+              onClick={handleUpdateTrilha}
+            >
+              {updatingModules
+                ? "Lendo o material..."
+                : nCapitulos === 0
+                  ? "Montar trilha"
+                  : "Atualizar trilha"}
+            </Capsule>
+            {novosCapitulos !== null && novosCapitulos > 0 && (
+              <Link
+                href={`/professor/${professorId}`}
+                className={capsuleVariants("secundaria", true, "md:w-fit")}
+              >
+                Ver a trilha
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
         </PainelPrincipal>
 
         <PainelAuxiliar largura={400} className="mt-4 md:mt-0">
@@ -416,20 +526,6 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
               Se um assunto não está nesses arquivos, o Kango diz que não sabe em vez de inventar.
             </p>
           </div>
-
-          {/* Botão pra atualizar trilha quando novo material é adicionado */}
-          {documents.length > 0 && (
-            <div className="mt-4">
-              {updateError && <InlineAlert>{updateError}</InlineAlert>}
-              <Capsule
-                block
-                loading={updatingModules}
-                onClick={handleUpdateTrilha}
-              >
-                {updatingModules ? "Atualizando..." : "Atualizar trilha"}
-              </Capsule>
-            </div>
-          )}
 
           {/* Tópicos que ele tirou daqui: são os dos módulos, que é a leitura
               que o Kango fez do material. Sem módulos gerados a seção some, em
