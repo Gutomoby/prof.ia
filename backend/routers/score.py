@@ -79,12 +79,12 @@ def get_score_summary(professor_id: UUID):
     sb = get_supabase()
     modules_res = (
         sb.table("modules")
-        .select("id, state")
+        .select("id, estado")
         .eq("professor_id", str(professor_id))
         .execute()
     )
     modules = modules_res.data or []
-    dominados_modules = [m for m in modules if m.get("state") == "dominado"]
+    dominados_modules = [m for m in modules if m.get("estado") == "dominado"]
     overall_mastery_pct = (
         round((len(dominados_modules) / len(modules)) * 100, 1) if modules else 0.0
     )
