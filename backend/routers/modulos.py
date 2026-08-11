@@ -25,10 +25,19 @@ from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/professores/{professor_id}/modulos", tags=["modulos"])
 
-# Orçamento de texto enviado ao Claude na organização. O material completo
-# pode passar disso; nesse caso amostramos chunks uniformemente — para dividir
-# em capítulos basta ver a estrutura do material, não cada parágrafo.
-_MAX_DIGEST_CHARS = 60_000
+# Orçamento de texto enviado ao Claude na organização. O material completo pode
+# passar disso; nesse caso amostramos chunks uniformemente — para dividir em
+# capítulos basta ver a estrutura do material, não cada parágrafo.
+#
+# Eram 60 mil, escolhidos quando o material típico eram apostilas de algumas
+# dezenas de milhares de caracteres. Com um livro de 600 páginas na matéria
+# (1,4 milhão de caracteres sozinho) a amostragem passava a pegar 1 chunk a
+# cada 30: o modelo via lampejos desconexos do livro e concluía, com razão do
+# ponto de vista dele, que não havia assunto novo a acrescentar.
+#
+# 240 mil caracteres são ~60 mil tokens — folgado dentro dos 200 mil de contexto
+# do Sonnet, e o custo só aparece quando a pessoa clica em "Atualizar trilha".
+_MAX_DIGEST_CHARS = 240_000
 
 
 def _material_digest(professor_id: UUID) -> str | None:

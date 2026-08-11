@@ -112,7 +112,25 @@ async def upload_pdf(
     document_id = UUID(doc_res.data[0]["id"])
 
     # 4) Indexação RAG (chunking + embeddings + insert)
-    n_chunks = index_document(professor_id, document_id, text)
+    #
+    # Se falhar, o registro do documento TEM que sair junto. Antes ele ficava:
+    # o arquivo aparecia na lista de "o que o Kango já leu" com zero chunks,
+    # então o RAG não via nada dele e a trilha dizia, com razão do ponto de
+    # vista dela, que não havia assunto novo a cobrir. Um livro de 600 páginas
+    # ficou assim em produção — 1,4 milhão de caracteres extraídos e nenhum
+    # pedaço indexado.
+    try:
+        n_chunks = index_document(professor_id, document_id, text)
+    except Exception as exc:
+        sb.table("documents").delete().eq("id", str(document_id)).execute()
+        try:
+            sb.storage.from_(settings.STORAGE_BUCKET).remove([storage_path])
+        except Exception:
+            pass
+        raise HTTPException(
+            status_code=500,
+            detail="Não foi possível ler o arquivo até o fim. Tente enviar de novo.",
+        ) from exc
 
     # Material rende XP, mas não conta como "estudou hoje" — só atividade mantém
     # a sequência viva, senão bastaria subir arquivo pra não quebrar o streak.
@@ -137,7 +155,7 @@ def upload_text(payload: DocumentTextCreate, user_id: UserId):
     Útil para anotações soltas, resumos pessoais, transcrições de aula, etc.
     Mesmo pipeline de chunking/embedding do PDF — só pula a etapa de extract_text.
     """
-    _ensure_professor_exists(payload.professor_id)
+    _ensure_professor_exists(payload.professor_id, user_id)
 
     if not payload.raw_text.strip():
         raise HTTPException(status_code=400, detail="Texto não pode ser vazio")

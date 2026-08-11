@@ -117,36 +117,50 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
 # ---------------------------------------------------------------------------
 
 
+# Chunks por lote de embedding/insert. Um livro rende mais de mil pedaços, e
+# cada linha carrega um vetor de 384 floats: em lote único o INSERT vira uma
+# requisição de vários MB, que estoura no caminho e não indexa nada. 64 mantém
+# a memória do encoder previsível e o corpo do POST em ordem de centenas de KB.
+_LOTE = 64
+
+
 def index_document(professor_id: UUID, document_id: UUID, text: str) -> int:
-    """Chunkifica + embeda + insere chunks no banco.
+    """Chunkifica + embeda + insere chunks no banco, em lotes.
 
     Retorna o número de chunks indexados (útil para mostrar na UI:
     "documento processado em N pedaços").
 
-    Roda em batch único: para PDFs gigantes pode ficar pesado em memória,
-    mas para o uso pessoal do MVP (documentos de até umas 200 páginas)
-    é o suficiente. Se virar problema, fatiar em lotes de 64 chunks.
+    Era um lote único, com a ressalva no comentário de que "para documentos de
+    até 200 páginas é suficiente". Um livro passa disso: o encode de mil e
+    poucos chunks de uma vez segurava a thread por minutos e o INSERT resultante
+    era grande demais para completar. Ver o histórico em
+    services/supabase_client.py — os dois problemas apareciam juntos.
     """
     chunks = chunk_text(text)
     if not chunks:
         return 0
 
-    embeddings = embed_texts(chunks)
-
-    rows = [
-        {
-            "professor_id": str(professor_id),
-            "document_id": str(document_id),
-            "content": content,
-            "embedding": vector,
-            "chunk_index": i,
-        }
-        for i, (content, vector) in enumerate(zip(chunks, embeddings))
-    ]
-
     sb = get_supabase()
-    sb.table("chunks").insert(rows).execute()
-    return len(rows)
+    indexados = 0
+
+    for inicio in range(0, len(chunks), _LOTE):
+        lote = chunks[inicio : inicio + _LOTE]
+        vetores = embed_texts(lote)
+        sb.table("chunks").insert(
+            [
+                {
+                    "professor_id": str(professor_id),
+                    "document_id": str(document_id),
+                    "content": conteudo,
+                    "embedding": vetor,
+                    "chunk_index": inicio + i,
+                }
+                for i, (conteudo, vetor) in enumerate(zip(lote, vetores))
+            ]
+        ).execute()
+        indexados += len(lote)
+
+    return indexados
 
 
 # ---------------------------------------------------------------------------
