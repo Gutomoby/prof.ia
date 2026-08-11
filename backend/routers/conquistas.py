@@ -14,12 +14,12 @@ from fastapi import APIRouter
 
 from models import AchievementList
 from services.achievements import conquistas_do_usuario
-from services.config import settings
+from services.auth import UserId
 
 router = APIRouter(prefix="/conquistas", tags=["conquistas"])
 
 
 @router.get("", response_model=AchievementList)
-def listar_conquistas():
-    items = conquistas_do_usuario(settings.MVP_USER_ID)
+def listar_conquistas(user_id: UserId):
+    items = conquistas_do_usuario(user_id)
     return {"items": items, "ganhas": sum(1 for i in items if i["ganha"]), "total": len(items)}

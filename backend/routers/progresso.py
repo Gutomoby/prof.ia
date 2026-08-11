@@ -12,7 +12,7 @@ por matéria. O progresso por matéria continua em /score/{professor_id}.
 from fastapi import APIRouter
 
 from models import DailyGoalUpdate, UserProgress
-from services.config import settings
+from services.auth import UserId
 from services.progress import (
     META_DIARIA_LICOES,
     get_or_create_progress,
@@ -45,18 +45,18 @@ def _serialize(row: dict) -> dict:
 
 
 @router.get("", response_model=UserProgress)
-def get_progress():
-    return _serialize(get_or_create_progress(settings.MVP_USER_ID))
+def get_progress(user_id: UserId):
+    return _serialize(get_or_create_progress(user_id))
 
 
 @router.patch("/meta", response_model=UserProgress)
-def update_daily_goal(payload: DailyGoalUpdate):
-    get_or_create_progress(settings.MVP_USER_ID)  # garante que a linha existe
+def update_daily_goal(payload: DailyGoalUpdate, user_id: UserId):
+    get_or_create_progress(user_id)  # garante que a linha existe
     sb = get_supabase()
     res = (
         sb.table("user_progress")
         .update({"daily_goal_xp": payload.daily_goal_xp})
-        .eq("user_id", settings.MVP_USER_ID)
+        .eq("user_id", user_id)
         .execute()
     )
     return _serialize(res.data[0])

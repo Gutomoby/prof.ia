@@ -16,7 +16,7 @@ import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
-import type { ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
+import type { Module, ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
 
 export default function MateriasPage() {
   const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
@@ -25,6 +25,10 @@ export default function MateriasPage() {
 
   const [scores, setScores] = useState<Record<string, ScoreSummary>>({});
   const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
+  // A trilha entra na conta do próximo passo, então precisa ser buscada aqui
+  // também — sem ela esta tela sugeriria um tópico enquanto a home e a sala
+  // sugerem um capítulo, para a mesma matéria.
+  const [modules, setModules] = useState<Record<string, Module[]>>({});
   const [detailsLoading, setDetailsLoading] = useState(true);
 
   const [progress, setProgress] = useState<UserProgress | null>(null);
@@ -66,22 +70,32 @@ export default function MateriasPage() {
 
     Promise.allSettled(
       professors.map((p) =>
-        Promise.all([api.getScoreSummary(p.id), api.listDocuments(p.id)]).then(
-          ([score, docs]) => ({ id: p.id, score, nDocs: docs.items.length })
-        )
+        Promise.all([
+          api.getScoreSummary(p.id),
+          api.listDocuments(p.id),
+          api.listModules(p.id).catch(() => ({ items: [] })),
+        ]).then(([score, docs, mods]) => ({
+          id: p.id,
+          score,
+          nDocs: docs.items.length,
+          modules: mods.items,
+        }))
       )
     ).then((results) => {
       if (cancelled) return;
       const nextScores: Record<string, ScoreSummary> = {};
       const nextCounts: Record<string, number> = {};
+      const nextModules: Record<string, Module[]> = {};
       results.forEach((res) => {
         if (res.status === "fulfilled") {
           nextScores[res.value.id] = res.value.score;
           nextCounts[res.value.id] = res.value.nDocs;
+          nextModules[res.value.id] = res.value.modules;
         }
       });
       setScores(nextScores);
       setDocumentCounts(nextCounts);
+      setModules(nextModules);
       setDetailsLoading(false);
     });
 
@@ -91,8 +105,8 @@ export default function MateriasPage() {
   }, [professors]);
 
   const globalStep = useMemo(
-    () => computeGlobalNextStep(professors, scores, documentCounts),
-    [professors, scores, documentCounts]
+    () => computeGlobalNextStep(professors, scores, documentCounts, modules),
+    [professors, scores, documentCounts, modules]
   );
 
   return (

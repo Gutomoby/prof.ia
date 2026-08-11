@@ -14,6 +14,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, HTTPException
 
+from services.auth import UserId, get_owned_professor
 from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_study_plan
 from services.rag import search_chunks
 from services.scoring import (
@@ -29,28 +30,14 @@ from services.supabase_client import get_supabase
 router = APIRouter(prefix="/score", tags=["score"])
 
 
-def _get_professor(professor_id: UUID) -> dict:
-    sb = get_supabase()
-    res = (
-        sb.table("professors")
-        .select("id, discipline, system_prompt, exam_dates")
-        .eq("id", str(professor_id))
-        .limit(1)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-    return res.data[0]
-
-
 # ---------------------------------------------------------------------------
 # Resumo (streak, tópicos, evolução, metas)
 # ---------------------------------------------------------------------------
 
 
 @router.get("/{professor_id}")
-def get_score_summary(professor_id: UUID):
-    professor = _get_professor(professor_id)
+def get_score_summary(professor_id: UUID, user_id: UserId):
+    professor = get_owned_professor(professor_id, user_id, "id, exam_dates")
     now = datetime.now(timezone.utc)
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
@@ -190,7 +177,8 @@ def _normalize_plan_content(content: dict) -> dict:
 
 
 @router.get("/{professor_id}/plano")
-def get_latest_study_plan(professor_id: UUID):
+def get_latest_study_plan(professor_id: UUID, user_id: UserId):
+    get_owned_professor(professor_id, user_id, "id")
     sb = get_supabase()
     res = (
         sb.table("study_plans")
@@ -209,8 +197,10 @@ def get_latest_study_plan(professor_id: UUID):
 
 
 @router.post("/{professor_id}/plano")
-def generate_plan(professor_id: UUID):
-    professor = _get_professor(professor_id)
+def generate_plan(professor_id: UUID, user_id: UserId):
+    professor = get_owned_professor(
+        professor_id, user_id, "id, discipline, system_prompt, exam_dates"
+    )
 
     topics = topic_stats(professor_id)
     pendentes = [t["topico"] for t in topics if t["status"] == "pendente"]

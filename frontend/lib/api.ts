@@ -38,6 +38,29 @@ export class ApiError extends Error {
   }
 }
 
+/*
+  Token de sessão em toda chamada.
+
+  O backend deriva o dono de cada dado do JWT (backend/services/auth.py) e
+  responde 401 sem ele. Antes o login existia só no frontend: o cookie de
+  sessão nunca virava header, e a API respondia como um usuário fixo de .env
+  para qualquer um.
+
+  Em Server Component não há navegador para ler o cookie — quem chama de lá
+  passa o token explicitamente pela opção `token` (ver app/(app)/layout.tsx).
+*/
+async function authHeader(explicitToken?: string): Promise<Record<string, string>> {
+  if (explicitToken) return { Authorization: `Bearer ${explicitToken}` };
+  if (typeof window === "undefined") return {};
+
+  const { createClient } = await import("./supabase");
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
+
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
+
 // FastAPI serializa HTTPException como {"detail": "mensagem"} — extrai isso
 // em vez de jogar o JSON cru na tela. Cai pro texto bruto/statusText se a
 // resposta não for esse formato (ex.: erro 502 de um proxy, HTML de erro).
@@ -52,14 +75,25 @@ async function extractErrorMessage(res: Response): Promise<string> {
   return body || res.statusText;
 }
 
+/** Opções extras aceitas por todos os métodos deste módulo. */
+export interface ApiOptions {
+  /** JWT explícito — para chamadas de Server Component, que não têm cookie. */
+  token?: string;
+}
+
 // Helper interno — todos os métodos abaixo passam por aqui.
 // Adiciona JSON headers e converte respostas em erro num ApiError com mensagem.
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function request<T>(
+  path: string,
+  init: RequestInit = {},
+  options: ApiOptions = {}
+): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     cache: "no-store",
     ...init,
     headers: {
       "Content-Type": "application/json",
+      ...(await authHeader(options.token)),
       ...(init.headers ?? {}),
     },
   });
@@ -74,8 +108,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 // Helper para uploads multipart (FormData) — não força Content-Type,
 // o browser define o boundary sozinho.
-async function requestForm<T>(path: string, formData: FormData): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { method: "POST", body: formData });
+async function requestForm<T>(
+  path: string,
+  formData: FormData,
+  options: ApiOptions = {}
+): Promise<T> {
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    body: formData,
+    headers: await authHeader(options.token),
+  });
 
   if (!res.ok) {
     throw new ApiError(res.status, await extractErrorMessage(res));
@@ -88,8 +130,8 @@ async function requestForm<T>(path: string, formData: FormData): Promise<T> {
 // Professores
 // ---------------------------------------------------------------------------
 
-export function listProfessors() {
-  return request<{ items: ProfessorListItem[] }>("/professores");
+export function listProfessors(options?: ApiOptions) {
+  return request<{ items: ProfessorListItem[] }>("/professores", {}, options);
 }
 
 export function getProfessor(id: string) {

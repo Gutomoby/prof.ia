@@ -9,8 +9,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Capsule } from "@/components/ui/capsule";
 import { PageHeader } from "@/components/layout/PageHeader";
+import { api, ApiError } from "@/lib/api";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const CORES = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 interface Resumo {
@@ -54,16 +54,22 @@ export default function FinanceiroPage() {
     setLoading(true);
     setError(null);
     try {
+      // Passa pelo api.request para herdar o header de autenticação: estas
+      // rotas agora exigem admin (backend/services/auth.py).
       const [resumoRes, kpisRes, usuariosRes] = await Promise.all([
-        fetch(`${API_URL}/admin/financeiro/resumo?dias=${dias}`).then((r) => r.json()),
-        fetch(`${API_URL}/admin/financeiro/kpis?dias=${dias}`).then((r) => r.json()),
-        fetch(`${API_URL}/admin/financeiro/usuarios?dias=${dias}`).then((r) => r.json()),
+        api.request<Resumo>(`/admin/financeiro/resumo?dias=${dias}`),
+        api.request<KPIs>(`/admin/financeiro/kpis?dias=${dias}`),
+        api.request<{ items: UsuarioItem[] }>(`/admin/financeiro/usuarios?dias=${dias}`),
       ]);
       setResumo(resumoRes);
       setKpis(kpisRes);
       setUsuarios(usuariosRes.items || []);
     } catch (err) {
-      setError("Erro ao carregar dados financeiros");
+      setError(
+        err instanceof ApiError && err.status === 403
+          ? "Esta área é restrita a administradores."
+          : "Erro ao carregar dados financeiros"
+      );
     } finally {
       setLoading(false);
     }

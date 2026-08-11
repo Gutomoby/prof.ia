@@ -20,7 +20,7 @@ import { computeNextStep } from "@/lib/next-step";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
 import { useStartQuiz } from "@/lib/use-start-quiz";
-import { montarTrilha } from "@/lib/trilha";
+import { faltamPontos, montarTrilha } from "@/lib/trilha";
 import { TopicNode } from "@/components/ui/topic-node";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { cn, pctInteiro } from "@/lib/utils";
@@ -165,9 +165,9 @@ export default function EstudarPage() {
   }, [professors]);
 
   // A matéria em foco: por padrão, a mais urgente via computeGlobalNextStep
-  // (tópico fraco > diagnóstico > praticar tudo > subir material).
-  // Se nenhuma está pronta (detalhes carregando), cai para a primeira.
-  // Trocar de matéria via chip volta para a Trilha.
+  // (capítulo da trilha > diagnóstico > tópico fraco > praticar tudo > subir
+  // material). Se nenhuma está pronta (detalhes carregando), cai para a
+  // primeira. Trocar de matéria via chip volta para a Trilha.
   const selecionada = useMemo(() => {
     if (selectedId) {
       return professors.find((p) => p.id === selectedId) ?? null;
@@ -177,9 +177,9 @@ export default function EstudarPage() {
     const docCounts = Object.fromEntries(
       Object.entries(docs).map(([k, v]) => [k, v.length])
     );
-    const globalStep = computeGlobalNextStep(professors, scores, docCounts);
+    const globalStep = computeGlobalNextStep(professors, scores, docCounts, modules);
     return globalStep?.professor ?? professors[0] ?? null;
-  }, [professors, scores, docs, selectedId]);
+  }, [professors, scores, docs, modules, selectedId]);
 
   useEffect(() => {
     if (!selecionada || aba !== "revisao") return;
@@ -273,6 +273,7 @@ export default function EstudarPage() {
   const step = computeNextStep({
     hasDocuments: material.length > 0,
     topics: score?.topics ?? [],
+    modules: modules[selecionada.id],
   });
   const dominio = score ? pctInteiro(score.overall_mastery_pct) : 0;
 
@@ -409,9 +410,9 @@ export default function EstudarPage() {
                   pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                   conector={i < (modules[selecionada.id]?.length ?? 0) - 1}
                   onClick={
-                    no.estado === "atual"
-                      ? () => start(null, { moduleId: no.id, rotulo: no.nome })
-                      : undefined
+                    no.estado === "bloqueado" || generating
+                      ? undefined
+                      : () => start(null, { moduleId: no.id, rotulo: no.nome })
                   }
                   detalhe={
                     no.estado === "dominado" ? (
@@ -422,7 +423,7 @@ export default function EstudarPage() {
                       no.tentativas === 0 ? (
                         "Clique para começar"
                       ) : (
-                        <>Você está aqui · faltam <MetricText tone="indigo">{Math.max(0, 70 - Math.round(no.pct ?? 0))}</MetricText> pontos</>
+                        <>Você está aqui · faltam <MetricText tone="indigo">{faltamPontos(no.pct)}</MetricText> pontos</>
                       )
                     ) : (
                       "Libera quando dominar o anterior"
@@ -481,7 +482,15 @@ export default function EstudarPage() {
                   <ChevronRight className="h-[18px] w-[18px]" />
                 </Link>
               ) : (
-                <Capsule block loading={generating} onClick={() => start(step.topic)}>
+                <Capsule
+                  block
+                  loading={generating}
+                  onClick={() =>
+                    step.moduleId
+                      ? start(null, { moduleId: step.moduleId, rotulo: step.title })
+                      : start(step.topic)
+                  }
+                >
                   {!generating && <Play className="h-4 w-4 fill-papel" />}
                   {generating ? "Gerando..." : "Começar lição"}
                 </Capsule>

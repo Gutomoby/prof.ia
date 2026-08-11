@@ -18,8 +18,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import Module
+from services.auth import UserId, get_owned_professor
 from services.claude import NOTACAO_MATEMATICA, generate_modules
-from services.config import settings
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/professores/{professor_id}/modulos", tags=["modulos"])
@@ -28,21 +28,6 @@ router = APIRouter(prefix="/professores/{professor_id}/modulos", tags=["modulos"
 # pode passar disso; nesse caso amostramos chunks uniformemente — para dividir
 # em capítulos basta ver a estrutura do material, não cada parágrafo.
 _MAX_DIGEST_CHARS = 60_000
-
-
-def _get_professor(professor_id: UUID) -> dict:
-    sb = get_supabase()
-    res = (
-        sb.table("professors")
-        .select("id, name, discipline")
-        .eq("id", str(professor_id))
-        .eq("user_id", settings.MVP_USER_ID)
-        .limit(1)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-    return res.data[0]
 
 
 def _material_digest(professor_id: UUID) -> str | None:
@@ -108,8 +93,8 @@ def _with_stats(rows: list[dict], stats: dict[str, dict]) -> list[dict]:
 
 
 @router.get("", response_model=dict[str, list[Module]])
-def list_modules(professor_id: UUID):
-    _get_professor(professor_id)
+def list_modules(professor_id: UUID, user_id: UserId):
+    get_owned_professor(professor_id, user_id, "id")
     sb = get_supabase()
     res = (
         sb.table("modules")
@@ -123,8 +108,8 @@ def list_modules(professor_id: UUID):
 
 
 @router.post("/gerar", response_model=dict[str, list[Module]])
-def gerar_modules(professor_id: UUID):
-    professor = _get_professor(professor_id)
+def gerar_modules(professor_id: UUID, user_id: UserId):
+    professor = get_owned_professor(professor_id, user_id, "id, name, discipline")
 
     digest = _material_digest(professor_id)
     if not digest:
@@ -196,7 +181,7 @@ def gerar_modules(professor_id: UUID):
     # Devolver a trilha atual deixa a tela consistente sem um alerta falso.
     if not modules:
         if existentes:
-            return list_modules(professor_id)
+            return list_modules(professor_id, user_id)
         raise HTTPException(status_code=502, detail="A IA não retornou nenhum módulo.")
 
     # Rede de segurança para o caso de o modelo repetir mesmo assim: descarta
@@ -204,7 +189,7 @@ def gerar_modules(professor_id: UUID):
     nomes_existentes = {(m["name"] or "").strip().casefold() for m in existentes}
     modules = [m for m in modules if (m.get("name") or "").strip().casefold() not in nomes_existentes]
     if not modules:
-        return list_modules(professor_id)
+        return list_modules(professor_id, user_id)
 
     max_position = (existentes[-1]["position"] if existentes else -1) + 1
 
@@ -229,4 +214,4 @@ def gerar_modules(professor_id: UUID):
 
     # Devolve a trilha INTEIRA (antiga + nova), não só o que acabou de entrar —
     # a tela que chamou está desenhando a trilha completa.
-    return list_modules(professor_id)
+    return list_modules(professor_id, user_id)

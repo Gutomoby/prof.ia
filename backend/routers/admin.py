@@ -7,17 +7,19 @@ Requer: auth.jwt() -> role = 'admin'
 from datetime import datetime, timedelta
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import Depends, APIRouter, HTTPException, Query
 
 from services.supabase_client import get_supabase
 
-router = APIRouter(prefix="/admin", tags=["admin"])
+from services.auth import require_admin
+
+router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 
-def _require_admin(user_roles: str | None) -> None:
-    """Protege rotas admin. Chamar no início de cada endpoint."""
-    if not user_roles or "admin" not in user_roles.split(","):
-        raise HTTPException(status_code=403, detail="Acesso de admin requerido")
+# A proteção destas rotas é a dependency `require_admin` (services/auth.py),
+# declarada no APIRouter acima — vale para todos os endpoints do arquivo, sem
+# depender de cada um lembrar de chamar. Havia aqui um _require_admin() que
+# nunca foi chamado de lugar nenhum: o painel de custos ficou aberto.
 
 
 @router.get("/users")

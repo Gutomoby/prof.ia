@@ -1,3 +1,5 @@
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { MobileNav } from "@/components/layout/MobileNav";
 import { QuizGuardProvider } from "@/components/layout/QuizGuardContext";
@@ -12,10 +14,32 @@ import type { ProfessorListItem } from "@/lib/types";
 // precisa envolver a Sidebar também — ela navega para fora de um quiz em
 // andamento tanto quanto o cabeçalho.
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  // Server Component não tem navegador para ler a sessão, então o token sai do
+  // cookie aqui e vai explícito para a API. Sem isso a sidebar viria vazia para
+  // todo mundo, agora que o backend exige autenticação.
+  const cookieStore = cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => cookieStore.getAll(),
+        // Layout não pode gravar cookie (o middleware já renova a sessão a cada
+        // request); sem este no-op o @supabase/ssr tenta e derruba o render.
+        setAll: () => {},
+      },
+    }
+  );
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   let professors: ProfessorListItem[] = [];
   try {
-    const res = await api.listProfessors();
-    professors = res.items;
+    if (session?.access_token) {
+      const res = await api.listProfessors({ token: session.access_token });
+      professors = res.items;
+    }
   } catch {
     // Backend fora do ar: sidebar mostra lista vazia em vez de quebrar a página.
   }

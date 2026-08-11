@@ -4,11 +4,19 @@ Router de Financeiro — dashboards de usuários, custos, receita e KPIs.
 
 from datetime import datetime, timedelta
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
+
+from services.auth import require_admin
 
 from services.supabase_client import get_supabase
 
-router = APIRouter(prefix="/admin/financeiro", tags=["financeiro"])
+# Custo, receita e uso por usuário: só admin. Sem a dependency abaixo
+# qualquer pessoa logada — ou qualquer request direto ao Railway — lia tudo.
+router = APIRouter(
+    prefix="/admin/financeiro",
+    tags=["financeiro"],
+    dependencies=[Depends(require_admin)],
+)
 
 PLANOS = {
     "basico": 3990,

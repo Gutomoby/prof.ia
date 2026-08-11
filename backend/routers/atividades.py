@@ -19,8 +19,8 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import ActivityGenerateRequest, ActivitySubmitRequest, QuestionCheckRequest
+from services.auth import UserId, get_owned_professor
 from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_json, MODEL_GEMINI
-from services.config import settings
 from services.progress import (
     XP_ATIVIDADE_CONCLUIDA,
     XP_QUESTAO_CORRETA,
@@ -33,20 +33,6 @@ from services.scoring import correct_questions, topic_stats
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/atividades", tags=["atividades"])
-
-
-def _get_professor(professor_id: UUID) -> dict:
-    sb = get_supabase()
-    res = (
-        sb.table("professors")
-        .select("id, discipline, system_prompt")
-        .eq("id", str(professor_id))
-        .limit(1)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
-    return res.data[0]
 
 
 def _strip_answers(questions: list[dict]) -> list[dict]:
@@ -96,14 +82,14 @@ def _get_module(module_id, professor_id) -> dict:
 
 
 @router.post("/gerar")
-def gerar_atividade(payload: ActivityGenerateRequest):
+def gerar_atividade(payload: ActivityGenerateRequest, user_id: UserId):
     if payload.activity_type != "quiz":
         raise HTTPException(
             status_code=400,
             detail="Só o tipo 'quiz' está implementado por enquanto.",
         )
 
-    professor = _get_professor(payload.professor_id)
+    professor = get_owned_professor(payload.professor_id, user_id, "id, discipline, system_prompt")
     difficulty = payload.difficulty or "medio"
 
     module = _get_module(payload.module_id, payload.professor_id) if payload.module_id else None
@@ -152,7 +138,7 @@ def gerar_atividade(payload: ActivityGenerateRequest):
         system_prompt,
         user_prompt,
         model=MODEL_HAIKU,
-        user_id=settings.MVP_USER_ID,
+        user_id=user_id,
         professor_id=str(payload.professor_id),
     )
     questions = result.get("questions") or []
@@ -193,7 +179,7 @@ def gerar_atividade(payload: ActivityGenerateRequest):
 
 
 @router.post("/conferir")
-def conferir_questao(payload: QuestionCheckRequest):
+def conferir_questao(payload: QuestionCheckRequest, user_id: UserId):
     """Corrige uma questão isolada, sem fechar a atividade.
 
     É o que a lição usa entre uma questão e a próxima. Não escreve nada: o
@@ -232,7 +218,7 @@ def conferir_questao(payload: QuestionCheckRequest):
 
 
 @router.post("/submeter")
-def submeter_atividade(payload: ActivitySubmitRequest):
+def submeter_atividade(payload: ActivitySubmitRequest, user_id: UserId):
     sb = get_supabase()
     found = (
         sb.table("activity_results")
@@ -274,7 +260,7 @@ def submeter_atividade(payload: ActivitySubmitRequest):
         elif question["resposta_usuario"] is not None:
             xp_ganho += XP_QUESTAO_ERRADA
 
-    progress = award_xp(settings.MVP_USER_ID, xp_ganho, counts_for_streak=True)
+    progress = award_xp(user_id, xp_ganho, counts_for_streak=True)
 
     return {
         "score_pct": score_pct,
@@ -291,7 +277,8 @@ def submeter_atividade(payload: ActivitySubmitRequest):
 
 
 @router.get("")
-def list_atividades(professor_id: UUID, activity_type: str = "quiz"):
+def list_atividades(professor_id: UUID, user_id: UserId, activity_type: str = "quiz"):
+    get_owned_professor(professor_id, user_id, "id")
     sb = get_supabase()
     res = (
         sb.table("activity_results")
@@ -305,7 +292,7 @@ def list_atividades(professor_id: UUID, activity_type: str = "quiz"):
 
 
 @router.get("/{activity_id}")
-def get_atividade(activity_id: UUID):
+def get_atividade(activity_id: UUID, user_id: UserId):
     """Detalhe de uma tentativa já respondida — usado pra "revisitar" um quiz do histórico.
 
     O gabarito (resposta_correta/explicacao) fica salvo permanentemente em

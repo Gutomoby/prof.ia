@@ -54,16 +54,24 @@ export default function AdminPage() {
     setLoading(true);
     setError(null);
     try {
-      // Fetch do admin
+      // Via api.request: prefixa a URL do backend (sem isso o fetch ia para o
+      // próprio Next.js e voltava 404) e manda o header de autenticação, que
+      // estas rotas agora exigem.
       const [metricsRes, trendsRes] = await Promise.all([
-        fetch("/admin/metrics").then((r) => r.json()),
-        fetch("/admin/costs/trend?days=30").then((r) => r.json()),
+        api.request<Metrics>("/admin/metrics"),
+        api.request<{ items: CostTrend[] }>("/admin/costs/trend?days=30"),
       ]);
 
       setMetrics(metricsRes);
       setTrends(trendsRes.items || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erro ao carregar métricas");
+      setError(
+        err instanceof ApiError && err.status === 403
+          ? "Esta área é restrita a administradores."
+          : err instanceof Error
+            ? err.message
+            : "Erro ao carregar métricas"
+      );
     } finally {
       setLoading(false);
     }

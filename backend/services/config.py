@@ -50,8 +50,20 @@ class Settings(BaseSettings):
     # --- Storage ---
     STORAGE_BUCKET: str = "materiais"
 
-    # --- MVP single-user (temporário, até implementarmos auth completa) ---
-    MVP_USER_ID: str
+    # --- Quem pode abrir /admin e /admin/financeiro ---
+    # UUIDs separados por vírgula. Fica em env, e não num claim do JWT, porque
+    # o papel teria de morar no user_metadata da conta — que é editável pelo
+    # próprio usuário. Vazio = ninguém entra, que é o padrão seguro.
+    ADMIN_USER_IDS: str = ""
+
+    def admin_user_ids(self) -> set[str]:
+        return {u.strip() for u in self.ADMIN_USER_IDS.split(",") if u.strip()}
+
+    # --- MVP single-user ---
+    # Sobrevive só como dono padrão dos dados criados antes do login existir.
+    # Nenhuma rota deve mais usar isto para decidir de quem é o dado: quem
+    # responde essa pergunta é services/auth.py.
+    MVP_USER_ID: str = ""
 
     # --- Fuso horário do usuário ---
     # "Dia de estudo" (sequência/streak) precisa ser contado no fuso de quem

@@ -7,10 +7,9 @@ Endpoints:
   GET    /professores/{id}       detalhe
   DELETE /professores/{id}       remove (cascata em documents/chunks/sessions/results)
 
-NOTA sobre auth: o MVP é single-user e o backend usa service_role (bypassa RLS),
-então por enquanto o `user_id` é lido de uma variável de ambiente única
-(MVP_USER_ID) ou do payload. Quando implementarmos auth, isso vira o auth.uid()
-do JWT do Supabase via dependency.
+NOTA sobre auth: o backend usa service_role, que bypassa RLS — então a
+separação entre usuários é feita aqui, filtrando por `user_id` em toda query.
+O user_id vem do JWT do Supabase via services/auth.py, nunca do payload.
 """
 
 from uuid import UUID
@@ -18,7 +17,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import Professor, ProfessorCreate, ProfessorUpdate
-from services.config import settings
+from services.auth import UserId
 from services.progress import reset_progress
 from services.supabase_client import get_supabase
 
@@ -66,22 +65,13 @@ def _build_system_prompt(
     )
 
 
-def _current_user_id() -> str:
-    """User ID temporário enquanto não implementamos auth Supabase.
-
-    Em produção (ou após Fase 7), trocar por uma dependency que lê o JWT
-    do header Authorization e devolve auth.uid().
-    """
-    return settings.MVP_USER_ID
-
-
 # ---------------------------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------------------------
 
 
 @router.post("", response_model=Professor)
-def create_professor(payload: ProfessorCreate):
+def create_professor(payload: ProfessorCreate, user_id: UserId):
     """Cria um professor virtual.
 
     O `system_prompt` é montado no servidor a partir do template fixo +
@@ -96,7 +86,7 @@ def create_professor(payload: ProfessorCreate):
         sb.table("professors")
         .insert(
             {
-                "user_id": _current_user_id(),
+                "user_id": user_id,
                 "name": payload.name,
                 "discipline": payload.discipline,
                 "teaching_style": payload.teaching_style,
@@ -112,13 +102,13 @@ def create_professor(payload: ProfessorCreate):
 
 
 @router.get("")
-def list_professors():
+def list_professors(user_id: UserId):
     """Lista os professores do usuário (mais recentes primeiro)."""
     sb = get_supabase()
     res = (
         sb.table("professors")
         .select("id, name, discipline, teaching_style, created_at")
-        .eq("user_id", _current_user_id())
+        .eq("user_id", user_id)
         .order("created_at", desc=True)
         .execute()
     )
@@ -126,13 +116,14 @@ def list_professors():
 
 
 @router.get("/{professor_id}", response_model=Professor)
-def get_professor(professor_id: UUID):
+def get_professor(professor_id: UUID, user_id: UserId):
     """Detalhe de um professor."""
     sb = get_supabase()
     res = (
         sb.table("professors")
         .select("*")
         .eq("id", str(professor_id))
+        .eq("user_id", user_id)
         .limit(1)
         .execute()
     )
@@ -142,7 +133,7 @@ def get_professor(professor_id: UUID):
 
 
 @router.patch("/{professor_id}", response_model=Professor)
-def update_professor(professor_id: UUID, payload: ProfessorUpdate):
+def update_professor(professor_id: UUID, payload: ProfessorUpdate, user_id: UserId):
     """Edita nome, disciplina, estilo de ensino e datas de prova.
 
     O system_prompt é derivado desses campos, então precisa ser remontado
@@ -155,7 +146,7 @@ def update_professor(professor_id: UUID, payload: ProfessorUpdate):
         sb.table("professors")
         .select("name, discipline, teaching_style, exam_dates")
         .eq("id", str(professor_id))
-        .eq("user_id", _current_user_id())
+        .eq("user_id", user_id)
         .limit(1)
         .execute()
     )
@@ -182,7 +173,7 @@ def update_professor(professor_id: UUID, payload: ProfessorUpdate):
         sb.table("professors")
         .update(novo)
         .eq("id", str(professor_id))
-        .eq("user_id", _current_user_id())
+        .eq("user_id", user_id)
         .execute()
     )
     if not res.data:
@@ -191,7 +182,7 @@ def update_professor(professor_id: UUID, payload: ProfessorUpdate):
 
 
 @router.delete("/{professor_id}")
-def delete_professor(professor_id: UUID):
+def delete_professor(professor_id: UUID, user_id: UserId):
     """Remove o professor e tudo associado (cascade via FKs).
 
     Vai junto, por cascade: materiais, chunks, quizzes respondidos, planos de
@@ -203,11 +194,11 @@ def delete_professor(professor_id: UUID):
         sb.table("professors")
         .delete()
         .eq("id", str(professor_id))
-        .eq("user_id", _current_user_id())
+        .eq("user_id", user_id)
         .execute()
     )
     if not res.data:
         raise HTTPException(status_code=404, detail="Professor não encontrado")
 
-    reset_progress(_current_user_id())
+    reset_progress(user_id)
     return {"deleted": str(professor_id)}

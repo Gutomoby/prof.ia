@@ -15,6 +15,7 @@ from uuid import UUID
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 
 from models import DocumentTextCreate
+from services.auth import UserId, get_owned_professor
 from services.config import settings
 from services.pdf import extract_text
 from services.progress import XP_MATERIAL_INDEXADO, award_xp
@@ -29,18 +30,14 @@ router = APIRouter(prefix="/documentos", tags=["documentos"])
 # ---------------------------------------------------------------------------
 
 
-def _ensure_professor_exists(professor_id: UUID) -> None:
-    """Confirma que o professor existe — evita inserir órfãos no banco."""
-    sb = get_supabase()
-    res = (
-        sb.table("professors")
-        .select("id")
-        .eq("id", str(professor_id))
-        .limit(1)
-        .execute()
-    )
-    if not res.data:
-        raise HTTPException(status_code=404, detail="Professor não encontrado")
+def _ensure_professor_exists(professor_id: UUID, user_id: str) -> None:
+    """Confirma que o professor existe E é de quem está chamando.
+
+    Antes só checava existência: com o id de outra pessoa dava para injetar
+    material na matéria dela — e a indexação roda embeddings, então também era
+    um jeito de gastar recurso na conta alheia.
+    """
+    get_owned_professor(professor_id, user_id, "id")
 
 
 # ---------------------------------------------------------------------------
@@ -50,6 +47,7 @@ def _ensure_professor_exists(professor_id: UUID) -> None:
 
 @router.post("/pdf")
 async def upload_pdf(
+    user_id: UserId,
     professor_id: UUID = Form(...),
     file: UploadFile = File(...),
 ):
@@ -68,7 +66,7 @@ async def upload_pdf(
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="O arquivo precisa ser um PDF (.pdf)")
 
-    _ensure_professor_exists(professor_id)
+    _ensure_professor_exists(professor_id, user_id)
 
     content = await file.read()
     if not content:
@@ -118,7 +116,7 @@ async def upload_pdf(
 
     # Material rende XP, mas não conta como "estudou hoje" — só atividade mantém
     # a sequência viva, senão bastaria subir arquivo pra não quebrar o streak.
-    award_xp(settings.MVP_USER_ID, XP_MATERIAL_INDEXADO, counts_for_streak=False)
+    award_xp(user_id, XP_MATERIAL_INDEXADO, counts_for_streak=False)
 
     return {
         "document_id": str(document_id),
@@ -133,7 +131,7 @@ async def upload_pdf(
 
 
 @router.post("/texto")
-def upload_text(payload: DocumentTextCreate):
+def upload_text(payload: DocumentTextCreate, user_id: UserId):
     """Adiciona um trecho de texto digitado (sem PDF) ao material do professor.
 
     Útil para anotações soltas, resumos pessoais, transcrições de aula, etc.
@@ -163,7 +161,7 @@ def upload_text(payload: DocumentTextCreate):
 
     n_chunks = index_document(payload.professor_id, document_id, payload.raw_text)
 
-    award_xp(settings.MVP_USER_ID, XP_MATERIAL_INDEXADO, counts_for_streak=False)
+    award_xp(user_id, XP_MATERIAL_INDEXADO, counts_for_streak=False)
 
     return {
         "document_id": str(document_id),
@@ -178,7 +176,7 @@ def upload_text(payload: DocumentTextCreate):
 
 
 @router.get("")
-def list_documents(professor_id: UUID | None = None):
+def list_documents(user_id: UserId, professor_id: UUID | None = None):
     """Documentos de um professor, ou de todos eles se `professor_id` for omitido.
 
     Sem `professor_id` a resposta traz nome e disciplina da matéria em cada item
@@ -187,6 +185,7 @@ def list_documents(professor_id: UUID | None = None):
     sb = get_supabase()
 
     if professor_id is not None:
+        get_owned_professor(professor_id, user_id, "id")
         res = (
             sb.table("documents")
             .select("id, name, type, created_at")
@@ -199,7 +198,7 @@ def list_documents(professor_id: UUID | None = None):
     professors_res = (
         sb.table("professors")
         .select("id, name, discipline")
-        .eq("user_id", settings.MVP_USER_ID)
+        .eq("user_id", user_id)
         .execute()
     )
     professors = {row["id"]: row for row in (professors_res.data or [])}
@@ -226,7 +225,7 @@ def list_documents(professor_id: UUID | None = None):
 
 
 @router.delete("/{document_id}")
-def delete_document(document_id: UUID):
+def delete_document(document_id: UUID, user_id: UserId):
     """Remove um documento e seus chunks (cascata via foreign key).
 
     Se for um PDF, também tenta remover do Storage. Erros de Storage não
@@ -237,13 +236,17 @@ def delete_document(document_id: UUID):
     # Buscamos antes para saber se há arquivo no Storage para limpar.
     found = (
         sb.table("documents")
-        .select("storage_path")
+        .select("storage_path, professor_id")
         .eq("id", str(document_id))
         .limit(1)
         .execute()
     )
     if not found.data:
         raise HTTPException(status_code=404, detail="Documento não encontrado")
+
+    # O id do documento vem do cliente: sem esta checagem, conhecer um id
+    # bastava para apagar o material de outra pessoa.
+    get_owned_professor(found.data[0]["professor_id"], user_id, "id")
 
     storage_path = found.data[0].get("storage_path")
     if storage_path:

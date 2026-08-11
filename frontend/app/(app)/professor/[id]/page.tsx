@@ -36,13 +36,17 @@ import type { DocumentItem, Module, ScoreSummary } from "@/lib/types";
 
   O cabeçalho (volta, nome, ponto de cor, abas) vem do layout da sala.
 
-  Sobre o número grande: overall_mastery_pct é a FRAÇÃO DE TÓPICOS DOMINADOS
-  (routers/score.py), não a média de acerto. E "dominado" exige >=70% com pelo
-  menos 2 questões no tópico (services/scoring.py). Como a maior parte dos
-  tópicos nasce com uma questão só, eles não podem ser dominados por
-  construção — a conta em produção hoje dá 5% de domínio para quem tem 85% de
-  média na semana. A tela mostra o número que o backend calcula e escreve ao
-  lado o que ele significa, em vez de deixar um "5%" solto parecendo nota.
+  Sobre o número grande: overall_mastery_pct é a FRAÇÃO DE CAPÍTULOS DOMINADOS
+  da trilha (routers/score.py), não a média de acerto — e "dominado" é melhor
+  nota >= 70% no módulo, o mesmo corte que lib/trilha.ts usa para pintar o nó
+  de verde. Anel, legenda e trilha contam a mesma coisa de propósito.
+
+  Era por tópicos até agosto/26, e as duas contas conviviam na mesma tela: o
+  anel dizia 71% (5 de 7 capítulos) e a legenda embaixo dizia "7 de 111 tópicos
+  dominados". Números sem relação um com o outro, no mesmo cartão. Os tópicos
+  continuam existindo e são úteis onde há espaço para o detalhe (aba
+  Progresso); aqui eles perdiam para o capítulo, que é a unidade que o aluno
+  navega.
 */
 
 export default function ProfessorHubPage({ params }: { params: { id: string } }) {
@@ -182,11 +186,25 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
     );
   }
 
-  const step = computeNextStep({ hasDocuments: documents.length > 0, topics: summary.topics });
-  const dominio = pctInteiro(summary.overall_mastery_pct);
-  const dominados = summary.topics.filter((t) => t.status === "dominado").length;
   const trilha = montarTrilha(modules);
+  const step = computeNextStep({
+    hasDocuments: documents.length > 0,
+    topics: summary.topics,
+    modules,
+  });
+  const dominio = pctInteiro(summary.overall_mastery_pct);
   const media = summary.weekly.media_score_pct;
+
+  // O anel mede CAPÍTULOS dominados (é o que overall_mastery_pct calcula desde
+  // que a conta passou a bater com a trilha). A legenda tem que contar a mesma
+  // coisa: antes ela dizia "7 de 111 tópicos" embaixo de um anel de 71%, dois
+  // números sem relação nenhuma um com o outro.
+  const capitulosDominados = trilha.filter((no) => no.estado === "dominado").length;
+
+  const trintaDiasAtras = Date.now() - 30 * 86400000;
+  const quizzesNoMes = summary.score_trend.filter(
+    (t) => new Date(t.data).getTime() >= trintaDiasAtras
+  ).length;
 
   return (
     /*
@@ -209,7 +227,11 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
               tela. No computador ele divide a linha com o anel, e dois fundos
               diferentes lado a lado brigariam: ali o cartão é de vidro e o
               acento fica no rótulo, que é o que o desenho da 52 faz. */}
-          <div className="flex flex-1 flex-col rounded-grupo bg-indigo/10 px-4 py-3.5 md:vidro-cartao md:p-5 md:shadow-vidro">
+          {/* md:justify-center espelha o cartão do anel ao lado. Antes um
+              espaçador flex-1 empurrava a cápsula para o pé do cartão: como o
+              cartão estica até a altura do anel, sobrava um vão morto de uns
+              150px entre o texto e o botão. */}
+          <div className="flex flex-1 flex-col rounded-grupo bg-indigo/10 px-4 py-3.5 md:vidro-cartao md:justify-center md:p-5 md:shadow-vidro">
         <p className="flex items-center gap-[7px] text-[11px] font-semibold uppercase tracking-[0.06em] text-indigo">
           <ChevronRight className="h-3.5 w-3.5" />
           Siga sua trilha
@@ -230,10 +252,6 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           </div>
         )}
 
-        {/* No computador o cartão estica até a altura do anel ao lado, e o
-            botão desce para o pé em vez de flutuar no meio. */}
-        <div className="hidden flex-1 md:block" />
-
         {/* No celular a cápsula ocupa a linha inteira, como toda ação
             principal de tela estreita. No computador ela volta ao tamanho do
             texto: uma cápsula de 900px de largura não é botão, é faixa. */}
@@ -250,10 +268,14 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
               block
               className="md:w-fit"
               loading={generating}
-              onClick={() => start(step.topic)}
+              onClick={() =>
+                step.moduleId
+                  ? start(null, { moduleId: step.moduleId, rotulo: step.title })
+                  : start(step.topic)
+              }
             >
               {!generating && <Play className="h-[15px] w-[15px] fill-papel" />}
-              {generating ? "Gerando..." : "Começar agora"}
+              {generating ? "Gerando..." : step.ctaLabel}
             </Capsule>
           )}
         </div>
@@ -275,9 +297,9 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
                 Você já domina <MetricText weight="bold">{dominio}%</MetricText> da matéria
               </p>
               <p className="mt-[3px] text-nota leading-[1.4] text-tinta-fraca">
-                <MetricText tone="fraca">{dominados}</MetricText> de{" "}
-                <MetricText tone="fraca">{summary.topics.length}</MetricText>{" "}
-                {summary.topics.length === 1 ? "tópico dominado" : "tópicos dominados"}
+                <MetricText tone="fraca">{capitulosDominados}</MetricText> de{" "}
+                <MetricText tone="fraca">{trilha.length}</MetricText>{" "}
+                {trilha.length === 1 ? "capítulo dominado" : "capítulos dominados"}
               </p>
               {media !== null && (
                 <p className="mt-1.5 flex flex-wrap items-center gap-1.5 text-nota leading-[1.4] text-tinta-fraca md:justify-center">
@@ -326,7 +348,14 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
                 // "você zerou", quando o capítulo sequer foi aberto.
                 pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                 conector={i < trilha.length - 1}
-                href={no.estado === "bloqueado" ? undefined : `/professor/${professorId}/quiz`}
+                // Um toque no capítulo já gera o quiz dele. Antes todos os nós
+                // levavam para /quiz, onde era preciso escolher o módulo de
+                // novo — a trilha sabia qual era e perguntava mesmo assim.
+                onClick={
+                  no.estado === "bloqueado" || generating
+                    ? undefined
+                    : () => start(null, { moduleId: no.id, rotulo: no.nome })
+                }
                 detalhe={
                   no.estado === "dominado" ? (
                     <>
@@ -381,12 +410,15 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
               className="h-[30px] w-[0.5px] flex-none bg-borda md:h-[0.5px] md:w-full"
             />
 
+            {/* Contagem de quizzes, não de tópicos dominados. O anel logo acima
+                já mede domínio, e em capítulos — um segundo número de domínio,
+                numa unidade diferente, competia com ele em vez de somar. */}
             <p className="flex-1 text-nota leading-[1.35] text-tinta-fraca md:flex-none">
               Este mês
               <br />
               <span className="text-corpo font-bold text-tinta">
-                +<MetricText weight="bold">{summary.monthly.topicos_dominados}</MetricText>{" "}
-                {summary.monthly.topicos_dominados === 1 ? "tópico dominado" : "tópicos dominados"}
+                <MetricText weight="bold">{quizzesNoMes}</MetricText>{" "}
+                {quizzesNoMes === 1 ? "quiz" : "quizzes"}
               </span>
             </p>
           </GlassCard>

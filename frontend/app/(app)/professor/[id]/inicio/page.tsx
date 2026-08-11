@@ -47,7 +47,7 @@ function Coluna({ rotulo, valor }: { rotulo: string; valor: React.ReactNode }) {
 
 export default function ProgressoPage({ params }: { params: { id: string } }) {
   const professorId = params.id;
-  const { start } = useStartQuiz(professorId);
+  const { start, generating } = useStartQuiz(professorId);
 
   const [summary, setSummary] = useState<ScoreSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -168,10 +168,13 @@ export default function ProgressoPage({ params }: { params: { id: string } }) {
                 nome={<MathText>{no.nome}</MathText>}
                 pct={no.tentativas === 0 ? undefined : (no.pct ?? undefined)}
                 conector={i < trilha.length - 1}
+                // Capítulo dominado também abre: refazer é revisão, e era o
+                // único jeito de voltar a um capítulo antigo sem passar pela
+                // tela de montar quiz.
                 onClick={
-                  no.estado === "atual"
-                    ? () => start(null, { moduleId: no.id, rotulo: no.nome })
-                    : undefined
+                  no.estado === "bloqueado" || generating
+                    ? undefined
+                    : () => start(null, { moduleId: no.id, rotulo: no.nome })
                 }
                 detalhe={
                   no.estado === "dominado" ? (

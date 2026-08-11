@@ -46,7 +46,14 @@ export function TodayCard({ globalStep }: { globalStep: GlobalNextStep }) {
             <ArrowRight className="h-[18px] w-[18px]" />
           </Link>
         ) : (
-          <Capsule onClick={() => start(step.topic)} loading={generating}>
+          <Capsule
+            onClick={() =>
+              step.moduleId
+                ? start(null, { moduleId: step.moduleId, rotulo: step.title })
+                : start(step.topic)
+            }
+            loading={generating}
+          >
             {generating ? "Gerando..." : step.ctaLabel}
             {!generating && <ArrowRight className="h-[18px] w-[18px]" />}
           </Capsule>

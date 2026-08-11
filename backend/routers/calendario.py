@@ -18,7 +18,7 @@ from uuid import UUID
 from fastapi import APIRouter, HTTPException
 
 from models import CalendarEventCreate, CalendarResponse
-from services.config import settings
+from services.auth import UserId
 from services.progress import user_professor_ids
 from services.supabase_client import get_supabase
 
@@ -32,9 +32,8 @@ def _professors_by_id(user_id: str) -> dict[str, dict]:
 
 
 @router.get("", response_model=CalendarResponse)
-def get_calendario(inicio: date, fim: date):
+def get_calendario(inicio: date, fim: date, user_id: UserId):
     """Atividades respondidas e eventos marcados entre `inicio` e `fim` (inclusive)."""
-    user_id = settings.MVP_USER_ID
     professors = _professors_by_id(user_id)
     professor_ids = list(professors.keys())
 
@@ -84,8 +83,7 @@ def get_calendario(inicio: date, fim: date):
 
 
 @router.post("/eventos")
-def create_evento(payload: CalendarEventCreate):
-    user_id = settings.MVP_USER_ID
+def create_evento(payload: CalendarEventCreate, user_id: UserId):
 
     if payload.professor_id is not None:
         if str(payload.professor_id) not in _professors_by_id(user_id):
@@ -111,13 +109,13 @@ def create_evento(payload: CalendarEventCreate):
 
 
 @router.delete("/eventos/{event_id}")
-def delete_evento(event_id: UUID):
+def delete_evento(event_id: UUID, user_id: UserId):
     sb = get_supabase()
     res = (
         sb.table("calendar_events")
         .delete()
         .eq("id", str(event_id))
-        .eq("user_id", settings.MVP_USER_ID)
+        .eq("user_id", user_id)
         .execute()
     )
     if not res.data:
