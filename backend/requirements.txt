@@ -17,6 +17,13 @@ google-generativeai>=0.8.0           # Google Gemini API (teste de custo)
 sentence-transformers>=3.1.0
 torch>=2.5.0                        # backend do sentence-transformers (Python 3.13+ requer 2.5+)
 
+# --- Auth ---
+# Valida o JWT do Supabase (ES256) contra o JWKS do projeto — ver services/auth.py.
+# Já vinha de carona no supabase-py, mas é dependência DIRETA nossa: sem declarar,
+# uma atualização do cliente que trocasse de lib derrubaria a API inteira.
+# O extra [crypto] traz o cryptography, exigido para curvas ES256/RS256.
+PyJWT[crypto]>=2.9.0
+
 # --- Supabase / Postgres ---
 supabase==2.7.4                     # cliente oficial; usa o REST e Storage do Supabase
 psycopg[binary]==3.2.3              # acesso direto ao Postgres (queries com pgvector)
