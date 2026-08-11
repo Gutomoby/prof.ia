@@ -99,6 +99,9 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   // nesta visita. Sem isso a ação não tinha resposta visível: o botão voltava
   // ao normal e não dava para saber se a trilha cresceu, encolheu ou nada mudou.
   const [novosCapitulos, setNovosCapitulos] = useState<number | null>(null);
+  // Ligado assim que um material entra: a trilha não se atualiza sozinha, e sem
+  // dizer isso a pessoa sobe o PDF e fica esperando o quiz aparecer.
+  const [precisaAtualizarTrilha, setPrecisaAtualizarTrilha] = useState(false);
 
   // Tópicos que o Kango tirou do material (vêm dos módulos) e quantos
   // capítulos a trilha tem hoje.
@@ -136,9 +139,40 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [professorId]);
 
+  /*
+    Erro de envio, escrito do lado de quem está esperando.
+
+    "Falha ao enviar o PDF" não diz o que houve nem o que fazer — e o caso mais
+    comum aqui é justamente o que mais assusta: arquivo grande, a leitura
+    demora, algo estoura no caminho. O usuário via o erro, saía da tela, voltava
+    e encontrava o arquivo listado; concluía que o app mente. (Ele meio que
+    mentia: o registro entrava e a indexação não — corrigido em 22de548, com o
+    documento sendo removido quando a leitura falha.)
+
+    Cada mensagem abaixo termina no próximo passo concreto.
+  */
+  function mensagemDeEnvio(err: unknown, arquivo: string): string {
+    if (!(err instanceof ApiError)) {
+      // Sem status HTTP: a requisição nem chegou ao fim. Em arquivo grande é o
+      // caso típico — a conexão cai antes da leitura terminar.
+      return `A conexão caiu antes do Kango terminar de ler ${arquivo}. Nada foi salvo. Tente de novo — em arquivo grande, ficar nesta tela até o fim ajuda.`;
+    }
+    if (err.status === 401) {
+      return "Sua sessão expirou enquanto o arquivo subia. Entre de novo e reenvie.";
+    }
+    if (err.status === 413) {
+      return `${arquivo} passou do tamanho aceito. Divida em partes menores (por capítulo, por exemplo) e envie uma de cada vez.`;
+    }
+    if (err.status >= 500) {
+      return `O Kango não conseguiu ler ${arquivo} até o fim, então não salvou nada pela metade. Tente enviar de novo; se repetir, divida o arquivo em partes.`;
+    }
+    return err.message;
+  }
+
   async function handlePdfSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!pdfFile) return;
+    const nome = pdfFile.name;
     setPdfError(null);
     setPdfSemTexto(null);
     setPdfLoading(true);
@@ -147,14 +181,18 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       setPdfFile(null);
       if (inputRef.current) inputRef.current.value = "";
       await refreshDocuments();
+      // Material novo só vira questão depois de entrar na trilha, e isso é uma
+      // ação separada — dizer isso aqui evita a espera por algo que não vem.
+      setNovosCapitulos(null);
+      setPrecisaAtualizarTrilha(true);
     } catch (err) {
       // 43 · PDF sem texto. O backend recusa PDF escaneado antes de gravar
       // qualquer coisa (services/pdf.py não extraiu nada), e um alerta seco não
       // diz o que fazer — este é o erro mais comum de quem sobe slide fotografado.
       const semTexto =
         err instanceof ApiError && /extrair texto|escaneado/i.test(err.message);
-      if (semTexto) setPdfSemTexto(pdfFile?.name ?? "o arquivo");
-      else setPdfError(err instanceof ApiError ? err.message : "Falha ao enviar o PDF.");
+      if (semTexto) setPdfSemTexto(nome);
+      else setPdfError(mensagemDeEnvio(err, nome));
     } finally {
       setPdfLoading(false);
     }
@@ -169,8 +207,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       setTextName("");
       setTextContent("");
       await refreshDocuments();
+      setNovosCapitulos(null);
+      setPrecisaAtualizarTrilha(true);
     } catch (err) {
-      setTextError(err instanceof ApiError ? err.message : "Falha ao salvar o texto.");
+      setTextError(mensagemDeEnvio(err, textName || "o texto"));
     } finally {
       setTextLoading(false);
     }
@@ -201,8 +241,15 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       // Zero capítulos novos é resposta legítima (o material já está coberto),
       // não erro — o backend devolve a trilha atual nesse caso.
       setNovosCapitulos(Math.max(0, res.items.length - antes));
+      setPrecisaAtualizarTrilha(false);
     } catch (err) {
-      setUpdateError(err instanceof ApiError ? err.message : "Falha ao atualizar trilha.");
+      setUpdateError(
+        err instanceof ApiError && err.status >= 500
+          ? "O Kango não conseguiu ler o material inteiro desta vez. A trilha continua como estava — nada foi perdido. Tente de novo em alguns instantes."
+          : err instanceof ApiError
+            ? err.message
+            : "A conexão caiu no meio da leitura. A trilha continua como estava; tente de novo."
+      );
     } finally {
       setUpdatingModules(false);
     }
@@ -454,6 +501,13 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
           <p className="mt-1.5 text-pretty text-corpo leading-[1.5] text-tinta">
             {nCapitulos === 0 ? (
               "O Kango ainda não organizou este material em capítulos. Monte a trilha para começar a estudar em ordem."
+            ) : precisaAtualizarTrilha ? (
+              <>
+                <strong className="font-semibold">Material novo esperando.</strong> A trilha ainda
+                tem <MetricText weight="bold">{nCapitulos}</MetricText>{" "}
+                {nCapitulos === 1 ? "capítulo" : "capítulos"} e não muda sozinha — o que você acabou
+                de enviar só vira quiz depois de entrar nela.
+              </>
             ) : (
               <>
                 A trilha tem{" "}
@@ -500,6 +554,14 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
                   ? "Montar trilha"
                   : "Atualizar trilha"}
             </Capsule>
+            {/* Um livro leva ~30s para ser lido. Sem dizer isso, o botão parado
+                em "Lendo o material..." parece travado e a pessoa recarrega a
+                página no meio. */}
+            {updatingModules && (
+              <p className="text-nota text-tinta-fraca md:self-center">
+                Pode levar até um minuto em material grande. Fique nesta tela.
+              </p>
+            )}
             {novosCapitulos !== null && novosCapitulos > 0 && (
               <Link
                 href={`/professor/${professorId}`}
