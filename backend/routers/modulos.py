@@ -155,17 +155,25 @@ def gerar_modules(professor_id: UUID):
         raise HTTPException(status_code=502, detail="A IA não retornou nenhum módulo.")
 
     sb = get_supabase()
-    # Regenerar substitui a organização anterior. Os quizzes antigos continuam
-    # no histórico — o vínculo module_id deles vira null (FK on delete set null).
-    sb.table("modules").delete().eq("professor_id", str(professor_id)).execute()
+    # Buscar posição máxima atual pra ADICIONAR novos módulos (não deletar antigos)
+    existing = (
+        sb.table("modules")
+        .select("position")
+        .eq("professor_id", str(professor_id))
+        .order("position", desc=True)
+        .limit(1)
+        .execute()
+    )
+    max_position = (existing.data[0]["position"] if existing.data else -1) + 1
 
+    # Adicionar novos módulos mantendo a trilha anterior intacta
     inserted = (
         sb.table("modules")
         .insert(
             [
                 {
                     "professor_id": str(professor_id),
-                    "position": i,
+                    "position": max_position + i,
                     "name": m["name"],
                     "description": m.get("description"),
                     "topics": m.get("topics") or [],
