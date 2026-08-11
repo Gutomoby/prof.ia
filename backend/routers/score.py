@@ -74,10 +74,35 @@ def get_score_summary(professor_id: UUID):
         "topicos_totais": len(dominados_agora),
     }
 
-    # Calcula domínio baseado em tópicos dominados
-    overall_mastery_pct = (
-        round((len(dominados_agora) / len(topics_now)) * 100, 1) if topics_now else 0.0
+    # Calcula domínio baseado em módulos da trilha
+    sb = get_supabase()
+    modules_res = (
+        sb.table("modules")
+        .select("id")
+        .eq("professor_id", str(professor_id))
+        .execute()
     )
+    modules = modules_res.data or []
+
+    if modules:
+        # Para cada módulo, busca o melhor score
+        dominados = 0
+        for module in modules:
+            quiz_res = (
+                sb.table("activity_results")
+                .select("score_pct")
+                .eq("professor_id", str(professor_id))
+                .eq("module_id", module["id"])
+                .not_.is_("score_pct", "null")
+                .order("score_pct", desc=True)
+                .limit(1)
+                .execute()
+            )
+            if quiz_res.data and quiz_res.data[0]["score_pct"] >= 80:
+                dominados += 1
+        overall_mastery_pct = round((dominados / len(modules)) * 100, 1)
+    else:
+        overall_mastery_pct = 0.0
 
     return {
         "streak_days": compute_streak(activity_dates),
