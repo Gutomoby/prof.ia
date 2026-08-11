@@ -140,6 +140,11 @@ def gerar_atividade(payload: ActivityGenerateRequest):
         "Baseie as questões prioritariamente no material de contexto do system prompt; "
         "se ele não cobrir o tópico, use conhecimento geral da matéria. "
         f"{NOTACAO_MATEMATICA} "
+        "CÁLCULOS: Se a questão envolver cálculos matemáticos, SEMPRE verifique duas vezes: "
+        "(1) execute o cálculo passo a passo, (2) confira se a resposta correta está nas alternativas. "
+        "Evite arredondar prematuramente — mantenha precisão máxima até a resposta final. "
+        "Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada), "
+        "nunca aleatórios. "
         "Use a tool return_quiz para responder."
     )
 
