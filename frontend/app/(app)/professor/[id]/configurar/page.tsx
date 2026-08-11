@@ -81,6 +81,9 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
+  const [updatingModules, setUpdatingModules] = useState(false);
+  const [updateError, setUpdateError] = useState<string | null>(null);
+
   // Só para a coluna auxiliar do computador (tela 56): o que o Kango tirou do
   // material são os tópicos dos módulos.
   const [topicos, setTopicos] = useState<string[]>([]);
@@ -160,6 +163,19 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       setDeleteError(err instanceof ApiError ? err.message : "Falha ao excluir o material.");
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleUpdateTrilha() {
+    setUpdateError(null);
+    setUpdatingModules(true);
+    try {
+      const res = await api.listModules(professorId, { regen: true });
+      setTopicos([...new Set(res.items.flatMap((m) => m.topics))]);
+    } catch (err) {
+      setUpdateError(err instanceof ApiError ? err.message : "Falha ao atualizar trilha.");
+    } finally {
+      setUpdatingModules(false);
     }
   }
 
@@ -400,6 +416,20 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
               Se um assunto não está nesses arquivos, o Kango diz que não sabe em vez de inventar.
             </p>
           </div>
+
+          {/* Botão pra atualizar trilha quando novo material é adicionado */}
+          {documents.length > 0 && (
+            <>
+              {updateError && <InlineAlert>{updateError}</InlineAlert>}
+              <Capsule
+                block
+                loading={updatingModules}
+                onClick={handleUpdateTrilha}
+              >
+                {updatingModules ? "Atualizando..." : "Atualizar trilha"}
+              </Capsule>
+            </>
+          )}
 
           {/* Tópicos que ele tirou daqui: são os dos módulos, que é a leitura
               que o Kango fez do material. Sem módulos gerados a seção some, em
