@@ -285,8 +285,11 @@ export function updateDailyGoal(daily_goal_xp: number) {
 // Módulos (capítulos do material, organizados por IA)
 // ---------------------------------------------------------------------------
 
-export function listModules(professorId: string) {
-  return request<{ items: Module[] }>(`/professores/${professorId}/modulos`);
+export function listModules(professorId: string, options?: { regen?: boolean }) {
+  const url = options?.regen
+    ? `/professores/${professorId}/modulos/gerar`
+    : `/professores/${professorId}/modulos`;
+  return request<{ items: Module[] }>(url, options?.regen ? { method: "POST" } : {});
 }
 
 // Reorganizar substitui os módulos atuais; o histórico de quizzes permanece.

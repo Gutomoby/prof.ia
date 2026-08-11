@@ -419,7 +419,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
 
           {/* Botão pra atualizar trilha quando novo material é adicionado */}
           {documents.length > 0 && (
-            <>
+            <div className="mt-4">
               {updateError && <InlineAlert>{updateError}</InlineAlert>}
               <Capsule
                 block
@@ -428,7 +428,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
               >
                 {updatingModules ? "Atualizando..." : "Atualizar trilha"}
               </Capsule>
-            </>
+            </div>
           )}
 
           {/* Tópicos que ele tirou daqui: são os dos módulos, que é a leitura
