@@ -74,8 +74,19 @@ def get_score_summary(professor_id: UUID):
         "topicos_totais": len(dominados_agora),
     }
 
+    # Calcula domínio baseado em MÓDULOS da trilha (não tópicos)
+    # Assim conforme adiciona material, trilha cresce e % recalcula progressivamente
+    sb = get_supabase()
+    modules_res = (
+        sb.table("modules")
+        .select("id, state")
+        .eq("professor_id", str(professor_id))
+        .execute()
+    )
+    modules = modules_res.data or []
+    dominados_modules = [m for m in modules if m.get("state") == "dominado"]
     overall_mastery_pct = (
-        round((len(dominados_agora) / len(topics_now)) * 100, 1) if topics_now else 0.0
+        round((len(dominados_modules) / len(modules)) * 100, 1) if modules else 0.0
     )
 
     return {
