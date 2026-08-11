@@ -10,6 +10,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { Capsule } from "@/components/ui/capsule";
 import { PageHeader } from "@/components/layout/PageHeader";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 const CORES = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 interface Resumo {
@@ -46,8 +47,8 @@ export default function FinanceiroPage() {
     setError(null);
     try {
       const [resumoRes, kpisRes] = await Promise.all([
-        fetch(`/admin/financeiro/resumo?dias=${dias}`).then((r) => r.json()),
-        fetch(`/admin/financeiro/kpis?dias=${dias}`).then((r) => r.json()),
+        fetch(`${API_URL}/admin/financeiro/resumo?dias=${dias}`).then((r) => r.json()),
+        fetch(`${API_URL}/admin/financeiro/kpis?dias=${dias}`).then((r) => r.json()),
       ]);
       setResumo(resumoRes);
       setKpis(kpisRes);
