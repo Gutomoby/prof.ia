@@ -134,8 +134,8 @@ export function listProfessors(options?: ApiOptions) {
   return request<{ items: ProfessorListItem[] }>("/professores", {}, options);
 }
 
-export function getProfessor(id: string) {
-  return request<Professor>(`/professores/${id}`);
+export function getProfessor(id: string, options?: ApiOptions) {
+  return request<Professor>(`/professores/${id}`, {}, options);
 }
 
 export function createProfessor(payload: {

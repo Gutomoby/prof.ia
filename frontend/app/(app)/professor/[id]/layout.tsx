@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
+import { tokenDaSessao } from "@/lib/supabase-server";
 import { ProfessorHeader } from "@/components/layout/ProfessorHeader";
 import { HeaderActionProvider } from "@/components/layout/HeaderActionContext";
 import { InlineAlert } from "@/components/ui/inline-alert";
@@ -12,7 +13,10 @@ export default async function ProfessorLayout({
   params: { id: string };
 }) {
   try {
-    const professor = await api.getProfessor(params.id);
+    // Server Component: o token tem que ir explícito. Sem ele a chamada sai sem
+    // Authorization e o backend responde 401 — que esta tela traduzia como
+    // "o backend está no ar?", com o backend no ar.
+    const professor = await api.getProfessor(params.id, { token: await tokenDaSessao() });
     return (
       // O provider precisa envolver o cabecalho E a pagina: e a pagina que
       // registra a acao do canto, e o cabecalho que a renderiza.

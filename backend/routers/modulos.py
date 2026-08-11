@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException
 from models import Module
 from services.auth import UserId, get_owned_professor
 from services.claude import NOTACAO_MATEMATICA, generate_modules
+from services.notacao import normalizar_profundo
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/professores/{professor_id}/modulos", tags=["modulos"])
@@ -175,7 +176,9 @@ def gerar_modules(professor_id: UUID, user_id: UserId):
     )
 
     result = generate_modules(system_prompt, user_prompt)
-    modules = result.get("modules") or []
+    # Nome e tópicos do capítulo aparecem na trilha e no título do quiz — a
+    # notação solta era visível ali antes de qualquer questão ser gerada.
+    modules = normalizar_profundo(result.get("modules") or [])
 
     # Nenhum módulo novo é sucesso, não erro: o material já está todo coberto.
     # Devolver a trilha atual deixa a tela consistente sem um alerta falso.

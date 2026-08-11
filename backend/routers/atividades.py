@@ -21,6 +21,7 @@ from fastapi import APIRouter, HTTPException
 from models import ActivityGenerateRequest, ActivitySubmitRequest, QuestionCheckRequest
 from services.auth import UserId, get_owned_professor
 from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_json, MODEL_GEMINI
+from services.notacao import normalizar_profundo
 from services.progress import (
     XP_ATIVIDADE_CONCLUIDA,
     XP_QUESTAO_CORRETA,
@@ -144,6 +145,13 @@ def gerar_atividade(payload: ActivityGenerateRequest, user_id: UserId):
     questions = result.get("questions") or []
     if not questions:
         raise HTTPException(status_code=502, detail="Claude não retornou nenhuma questão.")
+
+    # A instrução NOTACAO_MATEMATICA pede LaTeX entre cifrões, mas o modelo não
+    # cumpre de forma confiável: medido em 377 questões de produção, 42 saíram
+    # com subscrito Unicode ("q₄₀") e 47 com "_"/"^" fora dos cifrões — tudo
+    # isso chega literal na tela. Consertar aqui vale para Gemini e Haiku, e
+    # não custa token nem latência. Ver services/notacao.py.
+    questions = normalizar_profundo(questions)
 
     sb = get_supabase()
     insert_res = (

@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException
 
 from services.auth import UserId, get_owned_professor
 from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_study_plan
+from services.notacao import normalizar_profundo
 from services.rag import search_chunks
 from services.scoring import (
     MASTERY_THRESHOLD_PCT,
@@ -168,12 +169,12 @@ def _normalize_plan_content(content: dict) -> dict:
     resumo = content.get("resumo") or ""
     if isinstance(resumo, list):
         resumo = " ".join(str(x) for x in resumo)
-    return {
+    return normalizar_profundo({
         "resumo": str(resumo),
         "prioridades": _coerce_str_list(content.get("prioridades")),
         "semana": _coerce_str_list(content.get("semana")),
         "mes": _coerce_str_list(content.get("mes")),
-    }
+    })
 
 
 @router.get("/{professor_id}/plano")

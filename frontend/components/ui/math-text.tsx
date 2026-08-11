@@ -23,22 +23,34 @@ import katex from "katex";
   emite \href nem \includegraphics, então o texto do modelo nunca vira markup.
 */
 
-// Captura $...$ sem permitir quebra de linha nem cifrão dentro — assim um
-// cifrão solto no texto não abre uma fórmula que engole o parágrafo.
-const FORMULA = /\$([^$\n]+?)\$/g;
+// Captura $...$ sem permitir quebra de linha, e ignorando cifrão ESCAPADO nas
+// duas pontas. O `\$` é dinheiro, não delimitador: o modelo escreve preço em
+// português como "R\$ 50.000,00", e sem essa guarda aquele cifrão abria uma
+// fórmula que ia até o próximo `$` do texto — o KaTeX recebia
+// " 50.000,00, pagável no final do ano de morte. Dado " como se fosse LaTeX e
+// o aluno via um "R\" vermelho no meio do enunciado. Medido em produção: 14
+// fórmulas quebradas por esse motivo.
+//
+// Mesma regra em backend/services/notacao.py, que normaliza antes de salvar.
+const FORMULA = /(?<!\\)\$((?:[^$\n\\]|\\.)+?)(?<!\\)\$/g;
 
 type Parte = { tipo: "texto"; valor: string } | { tipo: "math"; valor: string };
+
+/** Fora da fórmula, "\$" é só um cifrão — quem escapou foi o modelo. */
+function desescapar(texto: string): string {
+  return texto.replace(/\\\$/g, "$");
+}
 
 function dividir(texto: string): Parte[] {
   const partes: Parte[] = [];
   let ultimo = 0;
   for (const m of texto.matchAll(FORMULA)) {
     const i = m.index ?? 0;
-    if (i > ultimo) partes.push({ tipo: "texto", valor: texto.slice(ultimo, i) });
+    if (i > ultimo) partes.push({ tipo: "texto", valor: desescapar(texto.slice(ultimo, i)) });
     partes.push({ tipo: "math", valor: m[1] });
     ultimo = i + m[0].length;
   }
-  if (ultimo < texto.length) partes.push({ tipo: "texto", valor: texto.slice(ultimo) });
+  if (ultimo < texto.length) partes.push({ tipo: "texto", valor: desescapar(texto.slice(ultimo)) });
   return partes;
 }
 
