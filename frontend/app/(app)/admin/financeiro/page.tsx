@@ -30,9 +30,17 @@ interface KPIs {
   custo_medio_usuario: number;
 }
 
+interface UsuarioItem {
+  user_id: string;
+  custo_total: number;
+  tokens_total: number;
+  operacoes: number;
+}
+
 export default function FinanceiroPage() {
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [kpis, setKpis] = useState<KPIs | null>(null);
+  const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "kpis">("resumo");
@@ -46,12 +54,14 @@ export default function FinanceiroPage() {
     setLoading(true);
     setError(null);
     try {
-      const [resumoRes, kpisRes] = await Promise.all([
+      const [resumoRes, kpisRes, usuariosRes] = await Promise.all([
         fetch(`${API_URL}/admin/financeiro/resumo?dias=${dias}`).then((r) => r.json()),
         fetch(`${API_URL}/admin/financeiro/kpis?dias=${dias}`).then((r) => r.json()),
+        fetch(`${API_URL}/admin/financeiro/usuarios?dias=${dias}`).then((r) => r.json()),
       ]);
       setResumo(resumoRes);
       setKpis(kpisRes);
+      setUsuarios(usuariosRes.items || []);
     } catch (err) {
       setError("Erro ao carregar dados financeiros");
     } finally {
@@ -203,8 +213,33 @@ export default function FinanceiroPage() {
 
         {aba === "usuarios" && (
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
-            <p className="text-corpo font-bold text-tinta">Dados de usuários carregando...</p>
-            <p className="mt-2 text-nota text-tinta-fraca">Em breve</p>
+            <p className="mb-4 text-corpo font-bold text-tinta">Custo por Usuário</p>
+            {usuarios.length === 0 ? (
+              <p className="text-nota text-tinta-fraca">Nenhum usuário encontrado</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-corpo">
+                  <thead>
+                    <tr className="border-b border-borda">
+                      <th className="text-left py-2 px-3 text-nota text-tinta-fraca font-semibold">User ID</th>
+                      <th className="text-right py-2 px-3 text-nota text-tinta-fraca font-semibold">Custo Total</th>
+                      <th className="text-right py-2 px-3 text-nota text-tinta-fraca font-semibold">Tokens</th>
+                      <th className="text-right py-2 px-3 text-nota text-tinta-fraca font-semibold">Operações</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usuarios.map((user) => (
+                      <tr key={user.user_id} className="border-b border-borda/50 hover:bg-indigo/5">
+                        <td className="py-3 px-3 text-nota text-tinta-fraca font-mono">{user.user_id.slice(0, 8)}...</td>
+                        <td className="py-3 px-3 text-right text-tinta font-semibold">${user.custo_total.toFixed(2)}</td>
+                        <td className="py-3 px-3 text-right text-tinta">{user.tokens_total.toLocaleString()}</td>
+                        <td className="py-3 px-3 text-right text-tinta">{user.operacoes}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </GlassCard>
         )}
 

@@ -66,8 +66,55 @@ async def list_usuarios(
     dias: int = Query(30, ge=1, le=365),
     limit: int = Query(50, ge=1, le=500),
 ):
-    """Lista usuários."""
-    return {"items": [], "total": 0}
+    """Lista usuários com custo gasto."""
+    try:
+        sb = get_supabase()
+        data_limite = datetime.utcnow() - timedelta(days=dias)
+
+        # Busca logs de token por usuário
+        res = sb.table("token_logs")\
+            .select("user_id, cost_usd, tokens_in, tokens_out")\
+            .gte("created_at", data_limite.isoformat())\
+            .execute()
+
+        # Agrega por usuário
+        usuarios_custos = {}
+        for row in (res.data or []):
+            uid = row["user_id"]
+            if uid not in usuarios_custos:
+                usuarios_custos[uid] = {
+                    "user_id": uid,
+                    "custo_total": 0.0,
+                    "tokens_total": 0,
+                    "operacoes": 0,
+                }
+            usuarios_custos[uid]["custo_total"] += float(row.get("cost_usd", 0))
+            usuarios_custos[uid]["tokens_total"] += row.get("tokens_in", 0) + row.get("tokens_out", 0)
+            usuarios_custos[uid]["operacoes"] += 1
+
+        # Ordena por custo (maior primeiro) e limita
+        items = sorted(
+            usuarios_custos.values(),
+            key=lambda x: x["custo_total"],
+            reverse=True
+        )[:limit]
+
+        # Formata resultado
+        for item in items:
+            item["custo_total"] = round(item["custo_total"], 2)
+
+        return {
+            "items": items,
+            "total": len(usuarios_custos),
+            "total_custo": round(sum(u["custo_total"] for u in items), 2),
+        }
+    except Exception as e:
+        return {
+            "error": str(e),
+            "items": [],
+            "total": 0,
+            "total_custo": 0,
+        }
 
 
 @router.get("/custos")

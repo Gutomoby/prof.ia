@@ -133,17 +133,57 @@ def gerar_modules(professor_id: UUID):
             detail="Nenhum material enviado ainda — suba PDFs ou textos antes de gerar os módulos.",
         )
 
+    # A trilha CRESCE: os módulos que já existem ficam de pé (o histórico de
+    # quiz aponta para eles) e a IA só acrescenta o que ainda não está coberto.
+    #
+    # Isso precisa ser dito no prompt, não só no INSERT. Sem a lista do que já
+    # existe, o modelo relê o material inteiro — inclusive os PDFs antigos — e
+    # devolve um currículo completo de novo, que ao ser anexado duplica a
+    # trilha e derruba o % de domínio (5 de 7 vira 5 de 14 sem o aluno errar
+    # nada). Foi exatamente o que aconteceu em produção.
+    sb = get_supabase()
+    existing_res = (
+        sb.table("modules")
+        .select("position, name, topics")
+        .eq("professor_id", str(professor_id))
+        .order("position")
+        .execute()
+    )
+    existentes = existing_res.data or []
+
     system_prompt = (
         f"Você é um planejador pedagógico da disciplina {professor['discipline']}. "
         "Sua tarefa é organizar o material de estudo do aluno em módulos, como os "
         "capítulos de um livro didático: em ordem pedagógica (do fundamento ao "
         "avançado), sem sobreposição entre módulos, cobrindo todo o material."
     )
+
+    if existentes:
+        ja_cobertos = "\n".join(
+            f"- {m['name']}: {', '.join(m.get('topics') or []) or '(sem tópicos)'}"
+            for m in existentes
+        )
+        instrucao = (
+            "O aluno JÁ TEM uma trilha montada, listada abaixo em MÓDULOS "
+            "EXISTENTES. Ela não pode ser refeita nem repetida.\n\n"
+            "Compare o MATERIAL com os MÓDULOS EXISTENTES e devolva APENAS "
+            "módulos NOVOS, cobrindo assuntos do material que nenhum módulo "
+            "existente já cobre. Um assunto conta como coberto mesmo que o "
+            "título esteja escrito de outro jeito — compare o conteúdo, não a "
+            "redação.\n"
+            "Se todo o material já estiver coberto, devolva uma lista vazia. "
+            "É um resultado válido e esperado: significa que a trilha já dá "
+            "conta do material.\n\n"
+            f"MÓDULOS EXISTENTES:\n{ja_cobertos}\n"
+        )
+    else:
+        instrucao = "Organize o material abaixo em 3 a 8 módulos.\n"
+
     user_prompt = (
-        "Organize o material abaixo em 3 a 8 módulos. Para cada módulo dê um "
-        "título curto (como capítulo de livro), uma descrição de 1-2 frases e a "
-        "lista de tópicos cobertos — cada tópico específico o suficiente para "
-        "virar questão de quiz. "
+        f"{instrucao}\n"
+        "Para cada módulo devolvido dê um título curto (como capítulo de "
+        "livro), uma descrição de 1-2 frases e a lista de tópicos cobertos — "
+        "cada tópico específico o suficiente para virar questão de quiz. "
         f"{NOTACAO_MATEMATICA} "
         "Use a tool return_modules para responder.\n\n"
         f"MATERIAL:\n{digest}"
@@ -151,22 +191,23 @@ def gerar_modules(professor_id: UUID):
 
     result = generate_modules(system_prompt, user_prompt)
     modules = result.get("modules") or []
+
+    # Nenhum módulo novo é sucesso, não erro: o material já está todo coberto.
+    # Devolver a trilha atual deixa a tela consistente sem um alerta falso.
     if not modules:
+        if existentes:
+            return list_modules(professor_id)
         raise HTTPException(status_code=502, detail="A IA não retornou nenhum módulo.")
 
-    sb = get_supabase()
-    # Buscar posição máxima atual pra ADICIONAR novos módulos (não deletar antigos)
-    existing = (
-        sb.table("modules")
-        .select("position")
-        .eq("professor_id", str(professor_id))
-        .order("position", desc=True)
-        .limit(1)
-        .execute()
-    )
-    max_position = (existing.data[0]["position"] if existing.data else -1) + 1
+    # Rede de segurança para o caso de o modelo repetir mesmo assim: descarta
+    # nome que já existe (ignorando caixa e espaços). Barato e evita o pior caso.
+    nomes_existentes = {(m["name"] or "").strip().casefold() for m in existentes}
+    modules = [m for m in modules if (m.get("name") or "").strip().casefold() not in nomes_existentes]
+    if not modules:
+        return list_modules(professor_id)
 
-    # Adicionar novos módulos mantendo a trilha anterior intacta
+    max_position = (existentes[-1]["position"] if existentes else -1) + 1
+
     inserted = (
         sb.table("modules")
         .insert(
@@ -186,5 +227,6 @@ def gerar_modules(professor_id: UUID):
     if not inserted.data:
         raise HTTPException(status_code=500, detail="Falha ao salvar os módulos gerados.")
 
-    rows = sorted(inserted.data, key=lambda r: r["position"])
-    return {"items": _with_stats(rows, {})}
+    # Devolve a trilha INTEIRA (antiga + nova), não só o que acabou de entrar —
+    # a tela que chamou está desenhando a trilha completa.
+    return list_modules(professor_id)

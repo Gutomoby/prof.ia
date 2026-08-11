@@ -48,17 +48,27 @@ def correct_questions(questions: list[dict], answers: dict) -> tuple[list[dict],
     return corrected, score_pct
 
 
-def answered_activities(professor_id: UUID, before: datetime | None = None) -> list[dict]:
+def answered_activities(
+    professor_id: UUID,
+    before: datetime | None = None,
+    with_questions: bool = True,
+) -> list[dict]:
     """Tentativas de quiz já respondidas de um professor, mais recentes por último.
 
     `before`, se informado, limita às tentativas respondidas antes daquele
     instante — usado para comparar um snapshot de domínio por tópico "hoje"
     contra um snapshot de "N dias atrás" (ver monthly em routers/score.py).
+
+    `with_questions=False` deixa de fora o JSONB `questions`/`answers`, que
+    carrega enunciado, alternativas e explicação de cada questão. Quem só quer
+    data e nota (sequência, gráfico de evolução) não deve pagar por isso: é a
+    coluna mais pesada da tabela e cresce a cada quiz respondido.
     """
     sb = get_supabase()
+    colunas = "questions, answers, score_pct, created_at" if with_questions else "score_pct, created_at"
     query = (
         sb.table("activity_results")
-        .select("questions, answers, score_pct, created_at")
+        .select(colunas)
         .eq("professor_id", str(professor_id))
         .eq("activity_type", "quiz")
         .not_.is_("score_pct", "null")
@@ -69,15 +79,15 @@ def answered_activities(professor_id: UUID, before: datetime | None = None) -> l
     return res.data or []
 
 
-def topic_stats(professor_id: UUID, before: datetime | None = None) -> list[dict]:
-    """Acerto agregado por tópico, juntando questões de todas as tentativas já respondidas.
+def topic_stats_from(activities: list[dict]) -> list[dict]:
+    """Mesma agregação de `topic_stats`, mas sobre tentativas já buscadas.
 
-    Cada questão tem seu próprio `topico` (atribuído pelo Claude na geração) —
-    diferente do `topic` da atividade como um todo, que é só o que o usuário
-    digitou (ou None) ao pedir o quiz.
+    Existe para que quem precisa de dois recortes do mesmo histórico (hoje e
+    30 dias atrás) faça UMA ida ao banco e filtre em memória, em vez de puxar
+    o histórico inteiro duas vezes.
     """
     totals: dict[str, dict[str, int]] = {}
-    for activity in answered_activities(professor_id, before=before):
+    for activity in activities:
         corrected, _ = correct_questions(activity["questions"], activity["answers"] or {})
         for q in corrected:
             topico = q.get("topico") or "Geral"
@@ -103,6 +113,16 @@ def topic_stats(professor_id: UUID, before: datetime | None = None) -> list[dict
         )
     stats.sort(key=lambda s: s["accuracy_pct"])
     return stats
+
+
+def topic_stats(professor_id: UUID, before: datetime | None = None) -> list[dict]:
+    """Acerto agregado por tópico, juntando questões de todas as tentativas já respondidas.
+
+    Cada questão tem seu próprio `topico` (atribuído pelo Claude na geração) —
+    diferente do `topic` da atividade como um todo, que é só o que o usuário
+    digitou (ou None) ao pedir o quiz.
+    """
+    return topic_stats_from(answered_activities(professor_id, before=before))
 
 
 def compute_streak(activity_dates: list[date]) -> int:

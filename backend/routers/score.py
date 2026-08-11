@@ -16,7 +16,14 @@ from fastapi import APIRouter, HTTPException
 
 from services.claude import MODEL_HAIKU, NOTACAO_MATEMATICA, generate_study_plan
 from services.rag import search_chunks
-from services.scoring import answered_activities, compute_streak, to_local_date, topic_stats
+from services.scoring import (
+    MASTERY_THRESHOLD_PCT,
+    answered_activities,
+    compute_streak,
+    to_local_date,
+    topic_stats,
+    topic_stats_from,
+)
 from services.supabase_client import get_supabase
 
 router = APIRouter(prefix="/score", tags=["score"])
@@ -48,7 +55,10 @@ def get_score_summary(professor_id: UUID):
     week_ago = now - timedelta(days=7)
     month_ago = now - timedelta(days=30)
 
-    activities = answered_activities(professor_id)
+    # Sequência e gráfico de evolução só precisam de data e nota. Buscar sem o
+    # JSONB `questions` evita trazer o enunciado de todo quiz já respondido
+    # para calcular uma bolinha no calendário.
+    activities = answered_activities(professor_id, with_questions=False)
     activity_dates = [to_local_date(a["created_at"]) for a in activities]
     score_trend = [
         {"data": a["created_at"], "score_pct": a["score_pct"]} for a in activities
@@ -64,8 +74,13 @@ def get_score_summary(professor_id: UUID):
         ),
     }
 
-    topics_now = topic_stats(professor_id)
-    topics_month_ago = topic_stats(professor_id, before=month_ago)
+    # Os dois recortes (hoje e 30 dias atrás) saem do MESMO histórico: uma ida
+    # ao banco com as questões, e o recorte antigo é um filtro em memória.
+    respondidas = answered_activities(professor_id)
+    topics_now = topic_stats_from(respondidas)
+    topics_month_ago = topic_stats_from(
+        [a for a in respondidas if datetime.fromisoformat(a["created_at"]) < month_ago]
+    )
     dominados_antes = {t["topico"] for t in topics_month_ago if t["status"] == "dominado"}
     dominados_agora = [t for t in topics_now if t["status"] == "dominado"]
     novos_dominados_mes = [t for t in dominados_agora if t["topico"] not in dominados_antes]
@@ -74,7 +89,12 @@ def get_score_summary(professor_id: UUID):
         "topicos_totais": len(dominados_agora),
     }
 
-    # Calcula domínio baseado em módulos da trilha
+    # Domínio da matéria = % de módulos da trilha dominados. É a mesma conta que
+    # a trilha desenha na tela ("5 de 7"), então o número no topo e os nós
+    # verdes embaixo não podem discordar — foi por isso que a versão anterior,
+    # baseada em tópicos, mostrava 6% com a trilha quase toda concluída.
+    #
+    # Duas queries no total (módulos + melhores notas), não uma por módulo.
     sb = get_supabase()
     modules_res = (
         sb.table("modules")
@@ -82,25 +102,27 @@ def get_score_summary(professor_id: UUID):
         .eq("professor_id", str(professor_id))
         .execute()
     )
-    modules = modules_res.data or []
+    module_ids = [m["id"] for m in (modules_res.data or [])]
 
-    if modules:
-        # Para cada módulo, busca o melhor score
-        dominados = 0
-        for module in modules:
-            quiz_res = (
-                sb.table("activity_results")
-                .select("score_pct")
-                .eq("professor_id", str(professor_id))
-                .eq("module_id", module["id"])
-                .not_.is_("score_pct", "null")
-                .order("score_pct", desc=True)
-                .limit(1)
-                .execute()
-            )
-            if quiz_res.data and quiz_res.data[0]["score_pct"] >= 80:
-                dominados += 1
-        overall_mastery_pct = round((dominados / len(modules)) * 100, 1)
+    if module_ids:
+        notas_res = (
+            sb.table("activity_results")
+            .select("module_id, score_pct")
+            .eq("professor_id", str(professor_id))
+            .not_.is_("module_id", "null")
+            .not_.is_("score_pct", "null")
+            .execute()
+        )
+        melhor_por_modulo: dict[str, float] = {}
+        for row in notas_res.data or []:
+            mid = row["module_id"]
+            if row["score_pct"] > melhor_por_modulo.get(mid, -1):
+                melhor_por_modulo[mid] = row["score_pct"]
+
+        dominados = sum(
+            1 for mid in module_ids if melhor_por_modulo.get(mid, 0) >= MASTERY_THRESHOLD_PCT
+        )
+        overall_mastery_pct = round((dominados / len(module_ids)) * 100, 1)
     else:
         overall_mastery_pct = 0.0
 
