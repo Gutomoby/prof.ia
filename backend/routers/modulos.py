@@ -40,38 +40,88 @@ router = APIRouter(prefix="/professores/{professor_id}/modulos", tags=["modulos"
 _MAX_DIGEST_CHARS = 240_000
 
 
+# Pedidos ao PostgREST vêm com teto de 1000 linhas. Acima disso é preciso
+# paginar com .range(), senão o resto é cortado em silêncio — sem erro, sem
+# aviso, só material faltando.
+_PAGINA = 1000
+
+# Piso de chunks por documento na amostragem. Um material pequeno ao lado de um
+# livro receberia fração de chunk pela regra proporcional e sumiria do digest.
+_MIN_CHUNKS_POR_DOC = 6
+
+
+def _chunks_do_professor(professor_id: UUID) -> list[dict]:
+    """Todos os chunks do professor, paginando de verdade.
+
+    A versão anterior fazia um `.execute()` só. Com 1374 chunks na matéria (um
+    livro de 600 páginas rende mais de mil sozinho), os 374 últimos eram
+    descartados pelo teto do PostgREST — e "Livro atu.pdf" desapareceu inteiro
+    do digest, mesmo tendo 229 chunks indexados corretamente.
+    """
+    sb = get_supabase()
+    todos: list[dict] = []
+    inicio = 0
+    while True:
+        res = (
+            sb.table("chunks")
+            .select("document_id, chunk_index, content")
+            .eq("professor_id", str(professor_id))
+            .order("document_id")
+            .order("chunk_index")
+            .range(inicio, inicio + _PAGINA - 1)
+            .execute()
+        )
+        lote = res.data or []
+        todos.extend(lote)
+        if len(lote) < _PAGINA:
+            return todos
+        inicio += _PAGINA
+
+
 def _material_digest(professor_id: UUID) -> str | None:
-    """Concatena o material do professor num texto só, com cabeçalho por documento."""
+    """Concatena o material do professor num texto só, com cabeçalho por documento.
+
+    A amostragem é POR DOCUMENTO, não global. Antes um único `rows[::stride]`
+    percorria a lista inteira ordenada por document_id: a fatia que cada
+    material recebia dependia de onde os chunks dele caíam nessa ordenação, e
+    um documento podia não ser sorteado nenhuma vez. Aqui cada documento ganha
+    uma fatia proporcional ao seu tamanho, com um piso — a IA precisa ver que
+    o material existe para decidir se a trilha já o cobre.
+    """
     sb = get_supabase()
     docs = sb.table("documents").select("id, name").eq("professor_id", str(professor_id)).execute()
     if not docs.data:
         return None
     doc_names = {d["id"]: d["name"] for d in docs.data}
 
-    chunks_res = (
-        sb.table("chunks")
-        .select("document_id, chunk_index, content")
-        .eq("professor_id", str(professor_id))
-        .order("document_id")
-        .order("chunk_index")
-        .execute()
-    )
-    rows = chunks_res.data or []
+    rows = _chunks_do_professor(professor_id)
     if not rows:
         return None
 
-    total = sum(len(r["content"]) for r in rows)
-    if total > _MAX_DIGEST_CHARS:
-        stride = max(1, round(total / _MAX_DIGEST_CHARS))
-        rows = rows[::stride]
-
-    parts: list[str] = []
-    last_doc = None
+    por_doc: dict[str, list[dict]] = {}
     for r in rows:
-        if r["document_id"] != last_doc:
-            parts.append(f"\n\n===== DOCUMENTO: {doc_names.get(r['document_id'], 'sem nome')} =====\n")
-            last_doc = r["document_id"]
-        parts.append(r["content"])
+        por_doc.setdefault(r["document_id"], []).append(r)
+
+    total_chars = sum(len(r["content"]) for r in rows)
+    parts: list[str] = []
+
+    for doc_id, chunks in por_doc.items():
+        chars_doc = sum(len(c["content"]) for c in chunks)
+        if total_chars > _MAX_DIGEST_CHARS:
+            cota = max(
+                _MIN_CHUNKS_POR_DOC,
+                round(len(chunks) * (_MAX_DIGEST_CHARS / total_chars)),
+            )
+            if cota < len(chunks):
+                # Passo uniforme: pega do começo, do meio e do fim do documento,
+                # em vez dos primeiros N — o índice e o sumário não dizem o que
+                # o capítulo 12 cobre.
+                passo = len(chunks) / cota
+                chunks = [chunks[min(len(chunks) - 1, round(i * passo))] for i in range(cota)]
+
+        parts.append(f"\n\n===== DOCUMENTO: {doc_names.get(doc_id, 'sem nome')} =====\n")
+        parts.extend(c["content"] for c in chunks)
+
     return "\n".join(parts)
 
 
