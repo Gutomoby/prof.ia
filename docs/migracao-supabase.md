@@ -8,7 +8,7 @@
 - [x] **B2** — tabela `profiles` + trigger de signup (migration aplicada em produção, backfill confirmado)
 - [x] **Fase 1** — `conquistas` + `progresso` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado — ver `CLAUDE.md`)
 - [x] **Fase 2** — `professores` + `calendario` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado)
-- [ ] Fase 3 — `admin` + `admin/financeiro`
+- [x] **Fase 3** — `admin` + `admin/financeiro` (`list_users` agora usa `profiles`; resto portado como estava, inclusive limitações conhecidas)
 - [ ] Fase 4 — `score` + `modulos` (entra `_shared/embeddings.ts`, `_shared/claude.ts`)
 - [ ] Fase 5 — `atividades`
 - [ ] Fase 6 — `documentos` (entra `_shared/pdf.ts`)
