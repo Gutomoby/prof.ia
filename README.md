@@ -191,6 +191,7 @@ npm run dev
 - **Biblioteca global** de materiais
 - **Progressão** — XP, níveis e sequência diária (contada no fuso do usuário)
 - **Auth Supabase**, navegação mobile, temas claro/escuro (WCAG AA), deploy contínuo
+- **Login social funcionando de ponta a ponta** (Google/Apple) + perfil criado automaticamente no signup (`profiles` + trigger)
 
 ### 🚨 Urgente — Rebranding Kango (Fase A)
 
@@ -215,7 +216,7 @@ npm run dev
 ### 🔜 Fase C — Arquitetura core
 
 - [ ] Três modos de quiz: **Aprender** · **Exercitar** · **Desafiar** *(educacional)*
-- [ ] Login fácil — social login / magic link *(facilidade)*
+- [x] Login fácil — social login *(magic link ainda não)*
 - [ ] Novos quizzes gerados todo dia + trilha reprocessada automaticamente *(oxigenação)*
 - [ ] Várias opções de IA por tipo de task *(eficiência)*
 - [ ] Modo Kids e modo normal *(aderência)*
@@ -235,7 +236,10 @@ npm run dev
 
 Ordem de prioridade combinada, do que destrava o próximo até o que só faz sentido no fim:
 
-- [ ] **1. Migrar o backend para Supabase Edge Functions** *(em andamento — ver `supabase/functions/`)* — sai do Railway, roteador preserva os paths do FastAPI para migrar domínio por domínio sem reescrever telas
+- [ ] **1. Migrar o backend para Supabase Edge Functions** *(em andamento — status e plano completo em [`docs/migracao-supabase.md`](docs/migracao-supabase.md))* — sai do Railway, roteador preserva os paths do FastAPI para migrar domínio por domínio sem reescrever telas
+  - [x] Conta: `/auth/callback` (login social) + `profiles`/trigger de signup
+  - [x] Fase 1 — `conquistas` + `progresso`
+  - [ ] Fases 2 a 6 — `professores`, `calendario`, `admin`, `score`, `modulos`, `atividades`, `documentos`
 - [ ] **2. Atualizar o site** já rodando na arquitetura nova
 - [ ] **3. App mobile (Android + iOS)** — construir até **criar conta** funcionar de ponta a ponta primeiro; gestão de usuários fica para depois
 - [ ] **4. Gestão de usuários** no app mobile
