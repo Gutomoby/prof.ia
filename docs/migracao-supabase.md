@@ -9,10 +9,24 @@
 - [x] **Fase 1** — `conquistas` + `progresso` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado — ver `CLAUDE.md`)
 - [x] **Fase 2** — `professores` + `calendario` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado)
 - [x] **Fase 3** — `admin` + `admin/financeiro` (`list_users` agora usa `profiles`; resto portado como estava, inclusive limitações conhecidas)
-- [ ] Fase 4 — `score` + `modulos` (entra `_shared/embeddings.ts`, `_shared/claude.ts`)
-- [ ] Fase 5 — `atividades`
-- [ ] Fase 6 — `documentos` (entra `_shared/pdf.ts`)
+- [x] **Fase 4** — `score` + `modulos` (código deployado e testado — roteamento/auth; caminho feliz depende do item pendente abaixo)
+- [x] **Fase 5** — `atividades` (idem)
+- [x] **Fase 6** — `documentos` (idem)
+- [ ] **Pendente antes de ativar de vez** — ver seção "Falta pra ativar" abaixo
 - [ ] Flip de `NEXT_PUBLIC_API_URL` + desligar Railway
+
+Todas as 6 fases de rota estão com código escrito, portado com fidelidade linha-a-linha do Python, typechecado (`deno check`), lintado (`deno lint`) e deployado. O roteamento e a cadeia de autenticação de **todas** as rotas (Fases 1-6) foram confirmados via JWT sem sessão real (ver seção Verificação). O que falta é exclusivamente o caminho que depende de IA/RAG rodar com dado de verdade — ver abaixo.
+
+## Falta pra ativar (bloqueios reais, não decisões de arquitetura)
+
+1. **`GEMINI_API_KEY` como secret da Edge Function.** O valor já existe no Railway (o backend Python usa a mesma chave), mas não há uma forma automatizada de copiá-lo pra cá: não existe um tool de "set secret" no MCP do Supabase, e o CLI local (`supabase secrets set`) precisa de `supabase login` — um fluxo de navegador interativo que não dá pra completar por aqui. Ação: rodar `supabase login` uma vez (abre o navegador), depois `supabase secrets set GEMINI_API_KEY=<valor do Railway> --project-ref rwvvfvxyfmhsftctquhd`. Sem isso, `_shared/claude.ts` e `_shared/embeddings.ts` funcionam (typecheck, deploy, roteamento) mas falham em runtime ao tentar chamar a API do Gemini.
+2. **Migration de schema dos embeddings (384 → 768 dims) + reindexação completa — NÃO aplicada de propósito.** `chunks.embedding` continua `vector(384)` hoje. Rodar essa migration agora zeraria os embeddings de TODO o material já indexado — e como a tabela `chunks` é compartilhada entre o Railway (ainda em produção, servindo usuários reais agora) e a Edge Function nova, isso quebraria o RAG do Railway imediatamente, antes mesmo de terminar de validar o caminho novo. Fazer só depois do item 1 resolvido, numa janela dedicada:
+   - `alter table chunks alter column embedding type vector(768) using null;` (não há cast válido de 384→768: os embeddings antigos são semanticamente inválidos na dimensão nova de qualquer forma)
+   - Atualizar a assinatura de `match_chunks(query_embedding vector(768), ...)` e recriar o índice `ivfflat`
+   - Rodar o backfill: para cada chunk com `embedding is null`, reembedar `content` via `_shared/embeddings.ts::embedTexts` e `update`
+   - Confirmar com uma busca conhecida que os resultados fazem sentido antes de seguir
+
+## Contexto
 
 ## Contexto
 
@@ -68,26 +82,30 @@ PyMuPDF é nativo, não roda no Edge Runtime. Usar `npm:unpdf` (wrapper WASM do 
 - Criar `supabase/functions/_shared/pdf.ts` — porta de `backend/services/pdf.py`.
 - Testar cedo com o maior PDF real do produto (caso conhecido de 600 páginas/1.4M caracteres) contra o teto de memória/tempo de uma Edge Function.
 
-### Ordem das fases (risco crescente)
+### Ordem das fases (risco crescente) — todas concluídas
 
 1. ~~`conquistas` + `progresso`~~ — ✅ feito.
-2. **`professores`** + **`calendario`** — CRUD, sem dependência nova além do `SYSTEM_PROMPT_TEMPLATE` (string estática).
-3. **`admin`** + **`admin/financeiro`** — `list_users` vira `db().from("profiles").select(...)`. `financeiro` é majoritariamente placeholder — portar como está.
-4. **`score`** + **`modulos`** — primeiras a consumir `_shared/embeddings.ts` e um novo `_shared/claude.ts` (wrapper Anthropic/Gemini). `modulos` carrega a lógica sensível de paginação/amostragem de chunks (já teve bug de produção) — comparar digest gerado com o Python.
-5. **`atividades`** — geração com fallback Gemini→Haiku, correção, XP/streak, normalização de notação matemática (`_shared/notacao.ts`), log de tokens.
-6. **`documentos`** — por último: depende de `_shared/pdf.ts` + `_shared/embeddings.ts` + Storage, precisa replicar a compensação/rollback (se indexação falhar, apaga documento e arquivo do Storage).
+2. ~~`professores` + `calendario`~~ — ✅ feito.
+3. ~~`admin` + `admin/financeiro`~~ — ✅ feito. `list_users` virou `db().from("profiles").select(...)`.
+4. ~~`score` + `modulos`~~ — ✅ feito. Entrou `_shared/embeddings.ts` e `_shared/claude.ts`. `modulos` replicou a lógica sensível de paginação/amostragem de chunks linha-a-linha.
+5. ~~`atividades`~~ — ✅ feito. Geração com fallback Gemini→Haiku, correção, XP/streak, `_shared/notacao.ts`, log de tokens.
+6. ~~`documentos`~~ — ✅ feito. `_shared/pdf.ts` (via `npm:unpdf`, testado em runtime) + Storage + compensação/rollback replicados.
 
 `chat` fica fora do escopo — stub vazio, nada a portar.
 
+Detalhes de implementação de cada peça nova ficam nos próprios arquivos (`_shared/claude.ts`, `_shared/embeddings.ts`, `_shared/pdf.ts`, `_shared/notacao.ts`) — os comentários de cabeçalho de cada um linkam de volta pro Python original.
+
 ### Critério de "pronto para desligar o Railway"
 
-- Todas as fases (exceto chat) com paridade validada contra o Railway.
-- Backfill de embeddings 100% concluído.
-- `NEXT_PUBLIC_API_URL` trocado no Vercel, validado em produção real por alguns dias, sem regressão.
-- Secrets (`GEMINI_API_KEY`, `ADMIN_USER_IDS`, `EXTRA_CORS_ORIGINS`) replicados na function.
+- [x] Todas as fases (exceto chat) deployadas com roteamento/auth validados contra o Railway.
+- [ ] `GEMINI_API_KEY` configurada como secret da function (ver "Falta pra ativar").
+- [ ] Migration de schema (768 dims) aplicada + backfill de embeddings 100% concluído.
+- [ ] Caminho feliz de cada fase testado com dado real (usuário logado de verdade, não só JWT sem sessão) — pendente até ter uma forma limpa de gerar sessão de teste, ou até o usuário validar manualmente.
+- [ ] `NEXT_PUBLIC_API_URL` trocado no Vercel, validado em produção real por alguns dias cobrindo upload de PDF grande, geração de quiz e geração de módulos, sem regressão.
+- [ ] Secrets (`ADMIN_USER_IDS`, `EXTRA_CORS_ORIGINS`) replicados na function (`GEMINI_API_KEY` já coberta acima).
 - Só então desprovisionar o serviço no Railway.
 
 ## Verificação
 
-- **A, por fase**: deploy + chamada direta com JWT real comparando payload/status com a mesma chamada no Railway, antes de avançar pra próxima fase.
+- **Por fase (feito para as 6 fases)**: deploy + chamada direta com um JWT válido-mas-sem-sessão (a própria anon key como Bearer — passa pelo gateway `verify_jwt` do Supabase mas não corresponde a nenhum usuário real) confirma roteamento, CORS e a cadeia de autenticação sem precisar de credencial nenhuma. Não substitui testar o caminho feliz com dado real.
 - **Embeddings**: após o backfill, rodar uma busca conhecida (`match_chunks`) e conferir que os resultados fazem sentido (não uma mistura de espaços vetoriais).
