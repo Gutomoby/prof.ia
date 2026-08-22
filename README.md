@@ -44,6 +44,8 @@ Tudo apoiado em **RAG**: o professor responde com base nos PDFs e textos que **v
 | Embeddings | **sentence-transformers** (local, CPU) | **Zero custo recorrente** |
 | Deploy | **Vercel** (front) + **Railway** (API) | Free tiers cobrem o uso pessoal |
 
+> 🚧 **Migração em andamento**: o backend está sendo portado de FastAPI/Railway para **Supabase Edge Functions** (Deno), rota por rota, sem trocar o contrato com o frontend. As 6 fases já estão com código deployado; o Railway continua sendo quem atende produção até o corte final. Embeddings passam de sentence-transformers local para a API do Gemini nessa troca. Status e plano completo em [`docs/migracao-supabase.md`](docs/migracao-supabase.md).
+
 ---
 
 ## 💰 Custo estimado (uso pessoal)
@@ -76,14 +78,22 @@ kango/  (repo: prof.ia)
 │   ├── components/{ui,layout,professor,atividade,score,calendario,progress}/
 │   └── lib/                     # api.ts · supabase.ts · next-step.ts · professor-color.ts
 │
-├── backend/                     # FastAPI
+├── backend/                     # FastAPI (Railway — ainda em produção, ver nota da migração acima)
 │   ├── main.py                  # CORS + healthcheck + routers
 │   ├── routers/                 # professores · documentos · atividades · score
 │   │                            # progresso · calendario · chat (stub)
 │   ├── services/                # rag.py · claude.py · pdf.py · scoring.py · progress.py
 │   └── models.py                # schemas Pydantic
 │
-└── supabase/migrations/         # 001 inicial · 002 planos · 003 calendário + progressão
+├── supabase/
+│   ├── functions/               # Edge Functions (Deno) — destino da migração
+│   │   ├── _shared/             # porta 1:1 dos services Python (auth, db, claude,
+│   │   │                        # embeddings, notacao, pdf, scoring, progresso...)
+│   │   └── api/routes/          # um arquivo por domínio, mesmos paths do FastAPI
+│   └── migrations/              # schema do Postgres (initial, planos, calendário,
+│                                 # progressão, profiles + trigger de signup...)
+│
+└── docs/migracao-supabase.md    # status e plano da migração pro Supabase
 ```
 
 ---
@@ -192,6 +202,7 @@ npm run dev
 - **Progressão** — XP, níveis e sequência diária (contada no fuso do usuário)
 - **Auth Supabase**, navegação mobile, temas claro/escuro (WCAG AA), deploy contínuo
 - **Login social funcionando de ponta a ponta** (Google/Apple) + perfil criado automaticamente no signup (`profiles` + trigger)
+- **Recuperação de senha funcionando de ponta a ponta** (o link de e-mail voltou a autenticar de verdade)
 
 ### 🚨 Urgente — Rebranding Kango (Fase A)
 
@@ -236,10 +247,12 @@ npm run dev
 
 Ordem de prioridade combinada, do que destrava o próximo até o que só faz sentido no fim:
 
-- [ ] **1. Migrar o backend para Supabase Edge Functions** *(em andamento — status e plano completo em [`docs/migracao-supabase.md`](docs/migracao-supabase.md))* — sai do Railway, roteador preserva os paths do FastAPI para migrar domínio por domínio sem reescrever telas
-  - [x] Conta: `/auth/callback` (login social) + `profiles`/trigger de signup
-  - [x] Fase 1 — `conquistas` + `progresso`
-  - [ ] Fases 2 a 6 — `professores`, `calendario`, `admin`, `score`, `modulos`, `atividades`, `documentos`
+- [ ] **1. Migrar o backend para Supabase Edge Functions** *(código das 6 fases pronto e deployado — faltam 2 passos antes do corte final, ver [`docs/migracao-supabase.md`](docs/migracao-supabase.md))*
+  - [x] Conta: `/auth/callback` (login social) + recuperação de senha + `profiles`/trigger de signup
+  - [x] Fases 1 a 6 — `conquistas`, `progresso`, `professores`, `calendario`, `admin`, `financeiro`, `score`, `modulos`, `atividades`, `documentos`
+  - [ ] Configurar `GEMINI_API_KEY` como secret da Edge Function
+  - [ ] Migration dos embeddings (384→768 dims) + reindexar o material já enviado
+  - [ ] Trocar `NEXT_PUBLIC_API_URL` no Vercel e desligar o Railway
 - [ ] **2. Atualizar o site** já rodando na arquitetura nova
 - [ ] **3. App mobile (Android + iOS)** — construir até **criar conta** funcionar de ponta a ponta primeiro; gestão de usuários fica para depois
 - [ ] **4. Gestão de usuários** no app mobile
