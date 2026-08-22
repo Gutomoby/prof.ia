@@ -119,6 +119,7 @@ export async function resetarProgresso(userId: string): Promise<void> {
   await db().from("user_progress").delete().eq("user_id", userId);
 }
 
+// deno-lint-ignore no-explicit-any
 export async function progressoOuCriar(userId: string): Promise<Record<string, any>> {
   const { data } = await db().from("user_progress").select("*").eq("user_id", userId).limit(1);
   if (data && data.length) return data[0];
@@ -159,6 +160,7 @@ export async function licoesHoje(userId: string): Promise<number> {
 }
 
 /** XP de hoje. A coluna só vale se a data bater — zerar à meia-noite é implícito. */
+// deno-lint-ignore no-explicit-any
 export function xpHojeDe(linha: Record<string, any>): number {
   return linha.xp_today_date === hojeLocal() ? (linha.xp_today ?? 0) : 0;
 }
@@ -173,6 +175,7 @@ export async function creditarXp(
   userId: string,
   quantidade: number,
   contaParaStreak = false,
+  // deno-lint-ignore no-explicit-any
 ): Promise<Record<string, any>> {
   const atual = await progressoOuCriar(userId);
 
