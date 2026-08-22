@@ -1,0 +1,17 @@
+/*
+  Entrypoint da API migrada — substitui o FastAPI (backend/main.py), rota a
+  rota, mantendo os mesmos paths (ver _shared/router.ts).
+
+  Cada domínio migrado ganha um import + register(router) aqui. O arquivo
+  cresce por importação a cada fase da migração; nunca é reescrito.
+*/
+
+import { Router } from "../_shared/router.ts";
+import { register as registerConquistas } from "./routes/conquistas.ts";
+import { register as registerProgresso } from "./routes/progresso.ts";
+
+const router = new Router();
+registerConquistas(router);
+registerProgresso(router);
+
+Deno.serve((req) => router.handle(req, "api"));

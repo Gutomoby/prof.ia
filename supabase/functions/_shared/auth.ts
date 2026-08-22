@@ -67,5 +67,5 @@ export async function getOwnedProfessor(
 
   if (error) throw new HttpError(500, error.message);
   if (!data || data.length === 0) throw new HttpError(404, "Professor não encontrado");
-  return data[0] as Record<string, unknown>;
+  return data[0] as unknown as Record<string, unknown>;
 }
