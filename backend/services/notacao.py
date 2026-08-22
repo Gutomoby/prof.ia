@@ -172,6 +172,20 @@ def _juntar_vizinhos(texto: str) -> str:
 # (math-text.tsx) desescapa na hora de exibir.
 _MOEDA = re.compile(r"(?<!\\)\b(R|US|U\$S)\$(?=\s*\d)")
 
+# Cifrão solto também sem prefixo de moeda: linguagem de atuária escreve
+# "benefício de $1 unidade" (unidade monetária genérica, sem "R$"/"US$"). Sem
+# escapar, esse $ desemparelha a contagem de cifrões do resto do enunciado e
+# gruda com a PRÓXIMA fórmula válida do texto — tudo entre os dois vira
+# "fórmula" pro KaTeX, que não preserva espaço entre palavras em modo
+# matemático (achado em produção: "1unidadepagávelnoinstanteexato...").
+# Heurística: dígito(s) seguidos de espaço e uma PALAVRA (2+ letras) é prosa,
+# não LaTeX. O {2,} é o que separa "$1 unidade" (prosa, escapar) de
+# "$14400 e^{-\delta t}...$" (fórmula legítima: variável solta de 1 letra
+# como e/x/t é sempre seguida de ^, _ ou operador, nunca de mais letras) —
+# sem essa exigência, a primeira versão desta regex quebrava justamente esse
+# tipo de fórmula válida, achado ao rodar contra o histórico real.
+_DOLAR_SOLTO = re.compile(r"(?<!\\)\$(?=\d+\s+[a-zà-ÿ]{2,})")
+
 
 def normalizar(texto: str) -> str:
     """Põe a matemática solta entre cifrões, sem tocar no que já está certo."""
@@ -179,6 +193,7 @@ def normalizar(texto: str) -> str:
         return texto
 
     texto = _MOEDA.sub(r"\1\\$", texto)
+    texto = _DOLAR_SOLTO.sub(r"\\$", texto)
 
     def passe(trecho: str) -> str:
         trecho = _TOKEN_UNICODE.sub(_converte_unicode, trecho)
