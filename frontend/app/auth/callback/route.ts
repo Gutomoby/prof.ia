@@ -3,11 +3,15 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 /*
-  Troca o `code` do PKCE (login social) por sessão e grava o cookie.
+  Troca o `code` do PKCE por sessão e grava o cookie. Serve duas origens:
+  login social (SocialButtons.tsx, signInWithOAuth) e recuperação de senha
+  (recuperar-senha/page.tsx, resetPasswordForEmail) — as duas mandam o
+  usuário de volta com o mesmo tipo de `code` na URL, e o exchange é
+  idêntico independente do que iniciou o fluxo.
 
-  Sem isto, signInWithOAuth (SocialButtons.tsx) redireciona de volta com o
-  `code` na URL mas nada nunca chama exchangeCodeForSession — o middleware não
-  vê usuário logado e manda de volta pro /login.
+  Sem isto, o `code` fica na URL sem nada chamar exchangeCodeForSession — o
+  middleware não vê usuário logado e manda de volta pro /login (ou, no caso
+  de atualizar-senha, a tela mostra "link inválido" mesmo num link fresco).
 */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { TriangleAlert, XCircle } from "lucide-react";
@@ -28,6 +28,19 @@ export default function LoginPage() {
   const [tentativas, setTentativas] = useState(0);
 
   const senhaErrada = error !== null && tentativas > 0;
+
+  // /auth/callback manda pra cá com ?erro=... quando a troca do code do PKCE
+  // falha (link de OAuth ou de recuperação de senha expirado/já usado). Lido
+  // via window em vez de useSearchParams pra não exigir Suspense boundary
+  // nesta página 100% client-side. Limpa a URL depois pra não reaparecer num
+  // refresh.
+  useEffect(() => {
+    const erro = new URLSearchParams(window.location.search).get("erro");
+    if (erro === "nao-foi-possivel-entrar") {
+      setError("Não foi possível entrar. O link pode ter expirado — tente de novo.");
+      window.history.replaceState({}, "", "/login");
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
