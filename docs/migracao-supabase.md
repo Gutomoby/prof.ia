@@ -7,7 +7,7 @@
 - [x] **B1** — rota `/auth/callback` (PKCE OAuth)
 - [x] **B2** — tabela `profiles` + trigger de signup (migration aplicada em produção, backfill confirmado)
 - [x] **Fase 1** — `conquistas` + `progresso` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado — ver `CLAUDE.md`)
-- [ ] Fase 2 — `professores` + `calendario`
+- [x] **Fase 2** — `professores` + `calendario` (deployado, roteamento/auth testados; caminho feliz com dado real ainda não testado)
 - [ ] Fase 3 — `admin` + `admin/financeiro`
 - [ ] Fase 4 — `score` + `modulos` (entra `_shared/embeddings.ts`, `_shared/claude.ts`)
 - [ ] Fase 5 — `atividades`
