@@ -231,6 +231,19 @@ npm run dev
 
 ---
 
+## 🎯 Foco — Próximos meses
+
+Ordem de prioridade combinada, do que destrava o próximo até o que só faz sentido no fim:
+
+- [ ] **1. Migrar o backend para Supabase Edge Functions** *(em andamento — ver `supabase/functions/`)* — sai do Railway, roteador preserva os paths do FastAPI para migrar domínio por domínio sem reescrever telas
+- [ ] **2. Atualizar o site** já rodando na arquitetura nova
+- [ ] **3. App mobile (Android + iOS)** — construir até **criar conta** funcionar de ponta a ponta primeiro; gestão de usuários fica para depois
+- [ ] **4. Gestão de usuários** no app mobile
+- [ ] **5. Otimizar custo e IA** (modelo de embeddings, prompt caching, escolha de modelo por tarefa)
+- [ ] **6. Publicar nas lojas** — App Store e Google Play
+
+---
+
 ## ☁️ Deploy no Vercel (frontend)
 
 O frontend já está pronto pra subir. Em ~3 minutos:
