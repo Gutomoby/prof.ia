@@ -58,7 +58,7 @@ export function SocialButtons({ onError }: { onError: (msg: string) => void }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/dashboard` },
+      options: { redirectTo: `${window.location.origin}/auth/callback?next=/dashboard` },
     });
     if (error) {
       setCarregando(null);
