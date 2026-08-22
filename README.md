@@ -247,12 +247,13 @@ npm run dev
 
 Ordem de prioridade combinada, do que destrava o próximo até o que só faz sentido no fim:
 
-- [ ] **1. Migrar o backend para Supabase Edge Functions** *(código das 6 fases pronto e deployado — faltam 2 passos antes do corte final, ver [`docs/migracao-supabase.md`](docs/migracao-supabase.md))*
+- [ ] **1. Migrar o backend para Supabase Edge Functions** *(código das 6 fases pronto e deployado — o que falta antes do corte final está em [`docs/migracao-supabase.md`](docs/migracao-supabase.md))*
   - [x] Conta: `/auth/callback` (login social) + recuperação de senha + `profiles`/trigger de signup
   - [x] Fases 1 a 6 — `conquistas`, `progresso`, `professores`, `calendario`, `admin`, `financeiro`, `score`, `modulos`, `atividades`, `documentos`
-  - [ ] Configurar `GEMINI_API_KEY` como secret da Edge Function
-  - [ ] Migration dos embeddings (384→768 dims) + reindexar o material já enviado
-  - [ ] Trocar `NEXT_PUBLIC_API_URL` no Vercel e desligar o Railway
+  - [x] Secrets da Edge Function (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `ADMIN_USER_IDS`)
+  - [ ] Migration dos embeddings (384→768 dims, Gemini) + reindexar o material — tentada e **revertida em 22/08**: quebrou quiz, plano de estudos e upload em produção porque o Railway ainda gera a busca localmente em 384 dims. Fazer só depois do próximo passo (Railway fora do caminho de requisição real), não antes
+  - [ ] Testar caminho feliz de cada fase com usuário real logado (só JWT sem sessão até agora)
+  - [ ] Trocar `NEXT_PUBLIC_API_URL` no Vercel, validar em produção por alguns dias e só então desligar o Railway
 - [ ] **2. Atualizar o site** já rodando na arquitetura nova
 - [ ] **3. App mobile (Android + iOS)** — construir até **criar conta** funcionar de ponta a ponta primeiro; gestão de usuários fica para depois
 - [ ] **4. Gestão de usuários** no app mobile
