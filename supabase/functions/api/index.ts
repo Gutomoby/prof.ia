@@ -11,11 +11,15 @@ import { register as registerConquistas } from "./routes/conquistas.ts";
 import { register as registerProgresso } from "./routes/progresso.ts";
 import { register as registerProfessores } from "./routes/professores.ts";
 import { register as registerCalendario } from "./routes/calendario.ts";
+import { register as registerAdmin } from "./routes/admin.ts";
+import { register as registerFinanceiro } from "./routes/financeiro.ts";
 
 const router = new Router();
 registerConquistas(router);
 registerProgresso(router);
 registerProfessores(router);
 registerCalendario(router);
+registerAdmin(router);
+registerFinanceiro(router);
 
 Deno.serve((req) => router.handle(req, "api"));
