@@ -25,6 +25,9 @@ import type {
   CalendarEvent,
   EventKind,
   AchievementList,
+  PlanId,
+  SubscriptionStatus,
+  SubscriptionRow,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -383,6 +386,36 @@ export function listAllDocuments() {
   return request<{ items: DocumentWithProfessor[] }>("/documentos");
 }
 
+// ---------------------------------------------------------------------------
+// Assinaturas (painel admin)
+// ---------------------------------------------------------------------------
+
+export function listAssinaturas(options?: { limit?: number; offset?: number }) {
+  const params = new URLSearchParams();
+  if (options?.limit) params.set("limit", String(options.limit));
+  if (options?.offset) params.set("offset", String(options.offset));
+  const query = params.toString();
+  return request<{ items: SubscriptionRow[]; limit: number; offset: number }>(
+    `/admin/assinaturas${query ? `?${query}` : ""}`
+  );
+}
+
+export function setAssinatura(
+  userId: string,
+  payload: {
+    plan: PlanId;
+    status?: SubscriptionStatus;
+    price_brl?: number;
+    notes?: string | null;
+    period_end?: string | null;
+  }
+) {
+  return request<SubscriptionRow>(`/admin/assinaturas/${userId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
 export const api = {
   request,
   listProfessors,
@@ -411,4 +444,6 @@ export const api = {
   deleteEvent,
   listAllDocuments,
   listConquistas,
+  listAssinaturas,
+  setAssinatura,
 };

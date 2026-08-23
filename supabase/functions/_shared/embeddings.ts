@@ -6,7 +6,7 @@
 
   DIFERENÇA DELIBERADA do Python: embeddings deixam de ser locais
   (sentence-transformers, 384 dims, zero custo) e passam a usar a API do
-  Gemini (gemini-embedding-001, truncado para 768 dims via
+  Gemini (gemini-embedding-2, truncado para 768 dims via
   outputDimensionality — o checkpoint recomendado mais baixo do modelo, ver
   docs/migracao-supabase.md). Motivo: Deno/Edge Functions não rodam modelos
   PyTorch locais. Reaproveita GEMINI_API_KEY, que o projeto já usa para quiz.
@@ -26,7 +26,13 @@ const RAG_TOP_K = 5;
 // Dimensão do embedding — precisa bater com chunks.embedding (vector(768)) e
 // com a assinatura de match_chunks. Ver nota no topo do arquivo.
 export const EMBEDDING_DIMS = 768;
-const EMBEDDING_MODEL = "gemini-embedding-001";
+// gemini-embedding-001 esgotou a cota diária do free tier duas vezes no dia
+// do backfill (22/08) — cota é rastreada por modelo (quotaDimensions.model
+// no próprio erro 429), então gemini-embedding-2 (estável, sucessora) tem
+// bucket próprio. Todos os 361 chunks já em produção foram (re)embedados com
+// este modelo — trocar de novo exige reindexar tudo (espaços vetoriais não
+// são compatíveis entre modelos). Ver docs/migracao-supabase.md.
+const EMBEDDING_MODEL = "gemini-embedding-2";
 
 let _encoder: ReturnType<typeof getEncoding> | null = null;
 function encoder() {

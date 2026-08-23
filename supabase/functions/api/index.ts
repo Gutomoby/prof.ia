@@ -7,6 +7,7 @@
 */
 
 import { Router } from "../_shared/router.ts";
+import { register as registerAssinaturas } from "./routes/assinaturas.ts";
 import { register as registerConquistas } from "./routes/conquistas.ts";
 import { register as registerProgresso } from "./routes/progresso.ts";
 import { register as registerProfessores } from "./routes/professores.ts";
@@ -19,6 +20,7 @@ import { register as registerAtividades } from "./routes/atividades.ts";
 import { register as registerDocumentos } from "./routes/documentos.ts";
 
 const router = new Router();
+registerAssinaturas(router);
 registerConquistas(router);
 registerProgresso(router);
 registerProfessores(router);

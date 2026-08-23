@@ -15,8 +15,19 @@ const CORES = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 interface Resumo {
   usuarios: { ativos: number; inativos: number; assinantes: number; total: number };
-  financeiro: { receita_total: number; custo_total: number; margem: number; margem_pct: number };
+  financeiro: {
+    receita_total: number;
+    custo_total: number;
+    custo_total_brl: number;
+    margem: number;
+    margem_pct: number;
+  };
   periodo_dias: number;
+}
+
+interface CustoItem {
+  categoria: string;
+  custo: number;
 }
 
 interface KPIs {
@@ -41,6 +52,7 @@ export default function FinanceiroPage() {
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
+  const [custos, setCustos] = useState<CustoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "kpis">("resumo");
@@ -56,14 +68,20 @@ export default function FinanceiroPage() {
     try {
       // Passa pelo api.request para herdar o header de autenticação: estas
       // rotas agora exigem admin (backend/services/auth.py).
-      const [resumoRes, kpisRes, usuariosRes] = await Promise.all([
+      const dataFim = new Date().toISOString().slice(0, 10);
+      const dataInicio = new Date(Date.now() - dias * 86400_000).toISOString().slice(0, 10);
+      const [resumoRes, kpisRes, usuariosRes, custosRes] = await Promise.all([
         api.request<Resumo>(`/admin/financeiro/resumo?dias=${dias}`),
         api.request<KPIs>(`/admin/financeiro/kpis?dias=${dias}`),
         api.request<{ items: UsuarioItem[] }>(`/admin/financeiro/usuarios?dias=${dias}`),
+        api.request<{ items: CustoItem[] }>(
+          `/admin/financeiro/custos?por=operacao&data_inicio=${dataInicio}&data_fim=${dataFim}`
+        ),
       ]);
       setResumo(resumoRes);
       setKpis(kpisRes);
       setUsuarios(usuariosRes.items || []);
+      setCustos(custosRes.items || []);
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 403
@@ -144,9 +162,9 @@ export default function FinanceiroPage() {
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
             <p className="text-nota text-tinta-fraca">Receita ({dias}d)</p>
             <p className="mt-2 text-[28px] font-bold text-tinta">
-              <MetricText>${resumo.financeiro.receita_total.toFixed(2)}</MetricText>
+              <MetricText>R${resumo.financeiro.receita_total.toFixed(2)}</MetricText>
             </p>
-            <p className="mt-1 text-nota text-tinta-fraca">Ano: ${(resumo.financeiro.receita_total * 365 / dias).toFixed(2)}</p>
+            <p className="mt-1 text-nota text-tinta-fraca">Ano: R${(resumo.financeiro.receita_total * 365 / dias).toFixed(2)}</p>
           </GlassCard>
 
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
@@ -154,7 +172,7 @@ export default function FinanceiroPage() {
             <p className={`mt-2 text-[28px] font-bold ${resumo.financeiro.margem >= 0 ? "text-acerto" : "text-erro"}`}>
               <MetricText>{resumo.financeiro.margem_pct}%</MetricText>
             </p>
-            <p className="mt-1 text-nota text-tinta-fraca">${resumo.financeiro.margem.toFixed(2)}</p>
+            <p className="mt-1 text-nota text-tinta-fraca">R${resumo.financeiro.margem.toFixed(2)}</p>
           </GlassCard>
         </div>
       )}
@@ -177,13 +195,13 @@ export default function FinanceiroPage() {
           <div className="grid gap-6 md:grid-cols-2">
             {/* Receita vs Custo */}
             <GlassCard nivel="cartao" radius="grupo" className="p-4">
-              <p className="mb-4 text-corpo font-bold text-tinta">Receita vs Custo</p>
+              <p className="mb-4 text-corpo font-bold text-tinta">Receita vs Custo (R$)</p>
               <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={[{ name: "Período", receita: resumo.financeiro.receita_total, custo: resumo.financeiro.custo_total }]}>
+                <BarChart data={[{ name: "Período", receita: resumo.financeiro.receita_total, custo: resumo.financeiro.custo_total_brl }]}>
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
                   <XAxis dataKey="name" stroke="hsl(var(--tinta-fraca))" />
                   <YAxis stroke="hsl(var(--tinta-fraca))" />
-                  <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
+                  <Tooltip formatter={(v: any) => `R$${Number(v).toFixed(2)}`} />
                   <Legend />
                   <Bar dataKey="receita" fill="hsl(var(--acerto))" />
                   <Bar dataKey="custo" fill="hsl(var(--erro))" />
@@ -251,8 +269,20 @@ export default function FinanceiroPage() {
 
         {aba === "custos" && (
           <GlassCard nivel="cartao" radius="grupo" className="p-4">
-            <p className="text-corpo font-bold text-tinta">Custos por operação</p>
-            <p className="mt-2 text-nota text-tinta-fraca">Em breve</p>
+            <p className="mb-4 text-corpo font-bold text-tinta">Custo por operação ({dias}d, USD)</p>
+            {custos.length === 0 ? (
+              <p className="text-nota text-tinta-fraca">Nenhum custo registrado no período</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={custos}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
+                  <XAxis dataKey="categoria" stroke="hsl(var(--tinta-fraca))" />
+                  <YAxis stroke="hsl(var(--tinta-fraca))" />
+                  <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
+                  <Bar dataKey="custo" fill="hsl(var(--indigo))" />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </GlassCard>
         )}
 
@@ -299,7 +329,14 @@ export default function FinanceiroPage() {
               <p className="mt-2 text-[28px] font-bold text-tinta">
                 <MetricText>{kpis.financiadores}</MetricText>
               </p>
-              <p className="mt-1 text-nota text-tinta-fraca">sem uso</p>
+              <p className="mt-1 text-nota text-tinta-fraca">assinaturas ativas</p>
+            </GlassCard>
+
+            <GlassCard nivel="cartao" radius="grupo" className="p-4">
+              <p className="text-nota text-tinta-fraca">Receita Mensal (MRR)</p>
+              <p className="mt-2 text-[28px] font-bold text-tinta">
+                <MetricText>R${kpis.receita_mensal.toFixed(2)}</MetricText>
+              </p>
             </GlassCard>
           </div>
         )}

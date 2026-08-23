@@ -245,3 +245,22 @@ export interface AchievementList {
   ganhas: number;
   total: number;
 }
+
+// ---------------------------------------------------------------------------
+// Assinaturas (painel admin) — GET/PATCH /admin/assinaturas
+// ---------------------------------------------------------------------------
+
+export type PlanId = "basico" | "pro" | "kango";
+export type SubscriptionStatus = "active" | "canceled";
+
+export interface SubscriptionRow {
+  user_id: string;
+  email: string | null;
+  full_name: string | null;
+  plan: PlanId | null;
+  status: SubscriptionStatus | null;
+  price_brl: number | null;
+  notes: string | null;
+  period_end: string | null;
+  updated_at: string | null;
+}
