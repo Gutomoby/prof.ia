@@ -13,7 +13,7 @@
 
 import type { Router } from "../../_shared/router.ts";
 import { requireAdmin } from "../../_shared/auth.ts";
-import { db } from "../../_shared/db.ts";
+import { db, selectAll } from "../../_shared/db.ts";
 import { HttpError } from "../../_shared/http.ts";
 
 function parseIntParam(valor: string | null, padrao: number, min: number, max: number): number {
@@ -117,25 +117,30 @@ export function register(router: Router): void {
     const days = parseIntParam(ctx.query.get("days"), 30, 1, 90);
     const desde = new Date(Date.now() - days * 86400_000).toISOString().slice(0, 10);
 
-    // Replica o comportamento original: o select com sum() inline não é
-    // sintaxe válida de PostgREST — o próprio type-checker do supabase-js
-    // confirma isso em compile-time (ParserError). Mesma limitação do
-    // Python, portada como está (fora de escopo corrigir agora — ver nota
-    // equivalente em financeiro.py).
-    const { data, error } = await db()
-      .from("user_usage_daily")
-      .select("date, sum(tokens_total) as tokens, sum(cost_usd) as cost")
-      .gte("date", desde)
-      .order("date", { ascending: true });
-    if (error) throw new HttpError(500, error.message);
+    // select() com sum() inline não é sintaxe válida de PostgREST (o próprio
+    // type-checker do supabase-js confirmava isso em compile-time) — quebrava
+    // em produção com "Could not find a relationship between ... and 'sum'".
+    // Mesmo defeito existia no Python original; corrigido agora agregando em
+    // JS, mesmo padrão já usado em financeiro.ts (custos/usuarios).
+    const linhas = await selectAll<{
+      date: string;
+      tokens_total: number | null;
+      cost_usd: number | null;
+    }>((de, ate) =>
+      db()
+        .from("user_usage_daily")
+        .select("date, tokens_total, cost_usd")
+        .gte("date", desde)
+        .order("date", { ascending: true })
+        .range(de, ate)
+    );
 
     const daily = new Map<string, { tokens: number; cost: number }>();
-    // deno-lint-ignore no-explicit-any
-    for (const row of (data ?? []) as any[]) {
-      daily.set(row.date as string, {
-        tokens: (row.tokens as number) ?? 0,
-        cost: Number(row.cost ?? 0),
-      });
+    for (const row of linhas) {
+      const atual = daily.get(row.date) ?? { tokens: 0, cost: 0 };
+      atual.tokens += row.tokens_total ?? 0;
+      atual.cost += Number(row.cost_usd ?? 0);
+      daily.set(row.date, atual);
     }
 
     const items = [...daily.entries()]
