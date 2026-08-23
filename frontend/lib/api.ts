@@ -400,6 +400,17 @@ export function listAssinaturas(options?: { limit?: number; offset?: number }) {
   );
 }
 
+// Só pra decidir se mostra o link "Painel Admin" nas Configurações — nunca
+// lança: quem não é admin recebe 403 do backend, aqui vira só "false".
+export async function souAdmin(): Promise<boolean> {
+  try {
+    const res = await request<{ is_admin: boolean }>("/admin/whoami");
+    return res.is_admin === true;
+  } catch {
+    return false;
+  }
+}
+
 export function setAssinatura(
   userId: string,
   payload: {
@@ -446,4 +457,5 @@ export const api = {
   listConquistas,
   listAssinaturas,
   setAssinatura,
+  souAdmin,
 };

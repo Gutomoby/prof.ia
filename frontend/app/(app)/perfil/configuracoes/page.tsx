@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Download, KeyRound, Loader2, LogOut, Target } from "lucide-react";
+import { ChevronRight, Download, KeyRound, Loader2, LogOut, ShieldCheck, Target } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -73,6 +73,7 @@ export default function ConfiguracoesPage() {
   const [enviandoReset, setEnviandoReset] = useState(false);
   const [avisoReset, setAvisoReset] = useState<string | null>(null);
   const [saindo, setSaindo] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     createClient()
@@ -81,6 +82,9 @@ export default function ConfiguracoesPage() {
       .catch(() => setEmail(null));
 
     api.getProgress().then(setProgress).catch(() => setProgress(null)).finally(() => setLoading(false));
+
+    // Silencioso de propósito: quem não é admin recebe false, sem erro na tela.
+    api.souAdmin().then(setIsAdmin);
   }, []);
 
   async function mudarMeta(xp: number) {
@@ -278,6 +282,24 @@ export default function ConfiguracoesPage() {
             </div>
           )}
         </div>
+
+        {isAdmin && (
+          <div>
+            <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+              Administração
+            </p>
+            <InsetList>
+              <InsetRow
+                href="/admin"
+                icon={<ShieldCheck />}
+                iconTone="indigo"
+                title="Painel Admin"
+                subtitle="Métricas, financeiro e assinaturas"
+                trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+              />
+            </InsetList>
+          </div>
+        )}
 
         {saindo && (
           <Capsule variant="texto" block disabled>

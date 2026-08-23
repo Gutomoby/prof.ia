@@ -26,6 +26,14 @@ function parseIntParam(valor: string | null, padrao: number, min: number, max: n
 }
 
 export function register(router: Router): void {
+  // Usado pelo frontend só pra decidir se mostra o link "Painel Admin" nas
+  // Configurações — reaproveita requireAdmin (ADMIN_USER_IDS), sem duplicar
+  // a checagem em outro lugar. Chegar na resposta já prova que é admin.
+  router.get("/admin/whoami", async (ctx) => {
+    await requireAdmin(ctx.req);
+    return { is_admin: true };
+  });
+
   router.get("/admin/users", async (ctx) => {
     await requireAdmin(ctx.req);
     const limit = parseIntParam(ctx.query.get("limit"), 50, 1, 1000);
