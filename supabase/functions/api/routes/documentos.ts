@@ -16,7 +16,6 @@ import type { Router } from "../../_shared/router.ts";
 import { currentUserId, getOwnedProfessor } from "../../_shared/auth.ts";
 import { db } from "../../_shared/db.ts";
 import { HttpError } from "../../_shared/http.ts";
-import { extractPdfText } from "../../_shared/pdf.ts";
 import { indexDocument } from "../../_shared/embeddings.ts";
 import { creditarXp, XP_MATERIAL_INDEXADO } from "../../_shared/progresso.ts";
 
@@ -27,6 +26,40 @@ async function ensureProfessorExists(professorId: string, userId: string): Promi
   // o id de outra pessoa permitia injetar material (e gastar embeddings) na
   // matéria dela.
   await getOwnedProfessor(professorId, userId, "id");
+}
+
+// Extração + chunking + embeddings + insert de PDF rodam no Cloud Run, não
+// aqui: Edge Functions têm teto de 2s de CPU por requisição (ver
+// docs/migracao-supabase.md), insuficiente para PDFs grandes — já quebrou em
+// produção com um livro de 600 páginas / 1374 chunks. O Cloud Run baixa o
+// arquivo direto do Storage (service_role), então o payload aqui é só os ids.
+async function processarPdfNoCloudRun(args: {
+  documentId: string;
+  professorId: string;
+  storagePath: string;
+}): Promise<number> {
+  const url = Deno.env.get("PDF_PROCESSOR_URL");
+  const secret = Deno.env.get("PDF_PROCESSOR_SECRET");
+  if (!url || !secret) throw new Error("PDF_PROCESSOR_URL/PDF_PROCESSOR_SECRET não configurados no ambiente");
+
+  const res = await fetch(`${url}/processar`, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": secret },
+    body: JSON.stringify({
+      document_id: args.documentId,
+      professor_id: args.professorId,
+      storage_path: args.storagePath,
+    }),
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 422 && data.error === "sem_texto") {
+    // Sinal reconhecido pelo frontend por regex (/extrair texto|escaneado/i)
+    // pra mostrar a tela de "PDF sem texto" — não pode mudar o texto à toa.
+    throw new HttpError(400, "Não foi possível extrair texto. O PDF pode ser escaneado/imagem.");
+  }
+  if (!res.ok) throw new Error(`Cloud Run /processar ${res.status}: ${JSON.stringify(data)}`);
+  return data.chunks as number;
 }
 
 export function register(router: Router): void {
@@ -50,20 +83,15 @@ export function register(router: Router): void {
     const content = new Uint8Array(await file.arrayBuffer());
     if (!content.length) throw new HttpError(400, "Arquivo vazio");
 
-    // 1) Extração local (sem rede)
-    const text = await extractPdfText(content);
-    if (!text.trim()) {
-      throw new HttpError(400, "Não foi possível extrair texto. O PDF pode ser escaneado/imagem.");
-    }
-
-    // 2) Upload para o Storage. Caminho organizado por professor.
+    // 1) Upload para o Storage. Caminho organizado por professor.
     const storagePath = `${professorId}/${file.name}`;
     const { error: erroStorage } = await db()
       .storage.from(STORAGE_BUCKET)
       .upload(storagePath, content, { contentType: "application/pdf", upsert: true });
     if (erroStorage) throw new HttpError(500, `Falha no upload: ${erroStorage.message}`);
 
-    // 3) Registro do documento
+    // 2) Registro do documento. raw_text fica vazio até o Cloud Run extrair
+    // (passo 3) — evita reenviar os bytes do PDF de novo por HTTP.
     const { data: docRows, error: erroDoc } = await db()
       .from("documents")
       .insert({
@@ -71,20 +99,19 @@ export function register(router: Router): void {
         name: file.name,
         type: "pdf",
         storage_path: storagePath,
-        raw_text: text,
       })
       .select();
     if (erroDoc) throw new HttpError(500, erroDoc.message);
     if (!docRows || !docRows.length) throw new HttpError(500, "Falha ao criar registro de documento");
     const documentId = docRows[0].id as string;
 
-    // 4) Indexação RAG (chunking + embeddings + insert). Se falhar, o
-    // registro do documento TEM que sair junto — senão fica um material
-    // "fantasma" com zero chunks (já aconteceu em produção: livro de 600
-    // páginas, 1.4M caracteres extraídos, nenhum pedaço indexado).
+    // 3) Extração + chunking + embeddings + insert (Cloud Run, ver comentário
+    // acima). Se falhar, o registro do documento TEM que sair junto — senão
+    // fica um material "fantasma" com zero chunks (já aconteceu em produção:
+    // livro de 600 páginas, 1.4M caracteres extraídos, nenhum pedaço indexado).
     let nChunks: number;
     try {
-      nChunks = await indexDocument(professorId, documentId, text);
+      nChunks = await processarPdfNoCloudRun({ documentId, professorId, storagePath });
     } catch (exc) {
       await db().from("documents").delete().eq("id", documentId);
       try {
@@ -92,6 +119,7 @@ export function register(router: Router): void {
       } catch {
         // Storage é best-effort na compensação também.
       }
+      if (exc instanceof HttpError) throw exc;
       console.error("Falha ao indexar documento:", exc);
       throw new HttpError(500, "Não foi possível ler o arquivo até o fim. Tente enviar de novo.");
     }
