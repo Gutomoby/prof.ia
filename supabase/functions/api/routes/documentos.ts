@@ -28,6 +28,16 @@ async function ensureProfessorExists(professorId: string, userId: string): Promi
   await getOwnedProfessor(professorId, userId, "id");
 }
 
+// Nome de arquivo com acento ("Avaliação", "Provisões") quebra a key do
+// Storage com "Invalid key" — mesmo bug já existia no Python original
+// (routers/documentos.py usava file.filename direto), só nunca tinha sido
+// exercitado com nome acentuado até agora. O nome exibido ao aluno
+// (documents.name) continua o original; só a key vira ASCII.
+function sanitizeStorageKey(nome: string): string {
+  const semAcento = nome.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  return semAcento.replace(/[^a-zA-Z0-9._-]/g, "_");
+}
+
 // Extração + chunking + embeddings + insert de PDF rodam no Cloud Run, não
 // aqui: Edge Functions têm teto de 2s de CPU por requisição (ver
 // docs/migracao-supabase.md), insuficiente para PDFs grandes — já quebrou em
@@ -84,7 +94,7 @@ export function register(router: Router): void {
     if (!content.length) throw new HttpError(400, "Arquivo vazio");
 
     // 1) Upload para o Storage. Caminho organizado por professor.
-    const storagePath = `${professorId}/${file.name}`;
+    const storagePath = `${professorId}/${sanitizeStorageKey(file.name)}`;
     const { error: erroStorage } = await db()
       .storage.from(STORAGE_BUCKET)
       .upload(storagePath, content, { contentType: "application/pdf", upsert: true });
