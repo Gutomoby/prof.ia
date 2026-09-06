@@ -3,9 +3,12 @@
   Porta de services/claude.py.
 
   Centraliza a escolha de modelo por feature:
-    - Módulos (qualidade):           claude-sonnet-5
     - Quiz (custo ultra-baixo):      gemini-2.0-flash (com fallback a haiku)
     - Plano de estudos (qualidade):  claude-haiku-4-5-20251001
+
+  Geração de módulos (claude-sonnet-5) roda no Cloud Run, não aqui — ver
+  gcp/pdf-processor/main.py::generate_modules e o comentário em
+  api/routes/modulos.ts.
 
   Chamadas via fetch direto às APIs REST — sem SDK, para manter a Edge
   Function leve e sem surpresa de compatibilidade Deno/npm.
@@ -13,7 +16,6 @@
 
 import { db } from "./db.ts";
 
-export const MODEL_SONNET = "claude-sonnet-5";
 export const MODEL_HAIKU = "claude-haiku-4-5-20251001";
 export const MODEL_GEMINI = "gemini-2.0-flash";
 
@@ -158,33 +160,6 @@ const _QUIZ_TOOL = {
   },
 };
 
-const _MODULES_TOOL = {
-  name: "return_modules",
-  description: "Retorna os módulos (capítulos) em que o material foi organizado.",
-  input_schema: {
-    type: "object",
-    properties: {
-      modules: {
-        type: "array",
-        items: {
-          type: "object",
-          properties: {
-            name: { type: "string", description: "Título curto do módulo, como um capítulo de livro." },
-            description: { type: "string", description: "1-2 frases sobre o que o módulo cobre." },
-            topics: {
-              type: "array",
-              items: { type: "string" },
-              description: "3-8 tópicos específicos cobertos pelo módulo.",
-            },
-          },
-          required: ["name", "description", "topics"],
-        },
-      },
-    },
-    required: ["modules"],
-  },
-};
-
 const _STUDY_PLAN_TOOL = {
   name: "return_study_plan",
   description: "Retorna o plano de estudos gerado.",
@@ -211,25 +186,6 @@ const _STUDY_PLAN_TOOL = {
     required: ["resumo", "prioridades", "semana", "mes"],
   },
 };
-
-/** Pede ao Claude a divisão do material em módulos, via tool-forcing. */
-export async function generateModules(
-  systemPrompt: string,
-  userPrompt: string,
-  model: string = MODEL_SONNET,
-): Promise<{ modules: unknown[] }> {
-  const response = await anthropicMessages({
-    model,
-    max_tokens: 8192,
-    system: systemPrompt,
-    messages: [{ role: "user", content: userPrompt }],
-    tools: [_MODULES_TOOL],
-    tool_choice: { type: "tool", name: "return_modules" },
-  });
-  const input = toolInput(response, "return_modules");
-  if (!input) throw new Error("Claude não retornou os módulos no formato esperado.");
-  return input as { modules: unknown[] };
-}
 
 /** Pede ao Claude um plano de estudos em JSON estruturado, via tool-forcing. */
 export async function generateStudyPlan(

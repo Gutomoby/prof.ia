@@ -13,6 +13,7 @@ supabase/functions/_shared/embeddings.ts) — trocar de modelo aqui
 misturaria espaços vetoriais incompatíveis com os chunks já indexados.
 """
 
+import json
 import os
 
 import fitz  # PyMuPDF
@@ -26,8 +27,69 @@ app = Flask(__name__)
 SUPABASE_URL = os.environ["SUPABASE_URL"]
 SUPABASE_SERVICE_ROLE_KEY = os.environ["SUPABASE_SERVICE_ROLE_KEY"]
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 PDF_PROCESSOR_SECRET = os.environ["PDF_PROCESSOR_SECRET"]
 STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET", "materiais")
+
+# Mesmos valores de _shared/claude.ts — trilha (módulos) usa o Sonnet, não o
+# modelo de custo baixo do quiz.
+MODEL_SONNET = "claude-sonnet-5"
+
+# Orçamento de texto enviado ao Claude na organização — mesmo valor e mesma
+# lógica de amostragem de api/routes/modulos.ts::materialDigest (que essa
+# função porta). 240 mil caracteres são ~60 mil tokens, folgado nos 200 mil
+# de contexto do Sonnet.
+_MAX_DIGEST_CHARS = 240_000
+_MIN_CHUNKS_POR_DOC = 6
+
+# Mesmo texto de _shared/claude.ts::NOTACAO_MATEMATICA — regra única para
+# tudo que a IA escreve e a tela mostra (ver ali as métricas de produção que
+# a motivaram).
+NOTACAO_MATEMATICA = (
+    "NOTAÇÃO MATEMÁTICA OBRIGATÓRIA: "
+    "1. TODA fórmula, variável com índice/expoente deve estar em LaTeX puro entre $ e $ "
+    "2. Exemplos CORRETOS: $q_x$, $_tp_x$, $\\bar{A}_x$, $A_x^{(m)}$, $\\mu_{x+t}$, $\\ell_x$, $\\delta$, $\\int_0^1 f(t)\\,dt$ "
+    "3. Use $ corretamente: 'a força $\\mu_{x+t}$ cresce' (no meio de frase também) "
+    "4. PROIBIDO: subscrito Unicode (qₓ, ℓ₄₀), sobrescrito Unicode (ᵗ, ²), underscore/acento fora de $ "
+    "5. LaTeX deve estar COMPLETO e VÁLIDO — sem quebras de linha, sem misturar notações "
+    "6. Quando escrever fórmula complexa, mantenha tudo entre os mesmos $ ... $ "
+    "7. Teste mentalmente: se copiar o texto entre $ para um compilador LaTeX, deve funcionar "
+    "NUNCA misture LaTeX com Unicode ou extensão. Texto comum fica FORA dos cifrões."
+)
+
+# Mesmo schema de _MODULES_TOOL em _shared/claude.ts.
+_MODULES_TOOL = {
+    "name": "return_modules",
+    "description": "Retorna os módulos (capítulos) em que o material foi organizado.",
+    "input_schema": {
+        "type": "object",
+        "properties": {
+            "modules": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "Título curto do módulo, como um capítulo de livro.",
+                        },
+                        "description": {
+                            "type": "string",
+                            "description": "1-2 frases sobre o que o módulo cobre.",
+                        },
+                        "topics": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "3-8 tópicos específicos cobertos pelo módulo.",
+                        },
+                    },
+                    "required": ["name", "description", "topics"],
+                },
+            },
+        },
+        "required": ["modules"],
+    },
+}
 
 # Mesmos valores de backend/services/config.py (CHUNK_SIZE_TOKENS/
 # CHUNK_OVERLAP_TOKENS) e de _shared/embeddings.ts (EMBEDDING_MODEL/DIMS) —
@@ -170,6 +232,216 @@ def processar():
         pass
 
     return jsonify({"chunks": indexados}), 200
+
+
+def chunks_do_professor(sb, professor_id: str) -> list[dict]:
+    """Todos os chunks do professor, paginando (mesmo teto de 1000 do PostgREST
+    que motivou _shared/db.ts::selectAll)."""
+    linhas: list[dict] = []
+    pagina = 1000
+    inicio = 0
+    while True:
+        resp = (
+            sb.table("chunks")
+            .select("document_id, chunk_index, content")
+            .eq("professor_id", professor_id)
+            .order("document_id")
+            .order("chunk_index")
+            .range(inicio, inicio + pagina - 1)
+            .execute()
+        )
+        lote = resp.data or []
+        linhas.extend(lote)
+        if len(lote) < pagina:
+            break
+        inicio += pagina
+    return linhas
+
+
+def material_digest(sb, professor_id: str) -> str | None:
+    """Porta de api/routes/modulos.ts::materialDigest — amostragem POR
+    DOCUMENTO quando o material completo passa de _MAX_DIGEST_CHARS."""
+    docs_resp = (
+        sb.table("documents").select("id, name").eq("professor_id", professor_id).execute()
+    )
+    docs = docs_resp.data or []
+    if not docs:
+        return None
+    nomes_doc = {d["id"]: d["name"] for d in docs}
+
+    linhas = chunks_do_professor(sb, professor_id)
+    if not linhas:
+        return None
+
+    por_doc: dict[str, list[dict]] = {}
+    for linha in linhas:
+        por_doc.setdefault(linha["document_id"], []).append(linha)
+
+    total_chars = sum(len(linha["content"]) for linha in linhas)
+    partes: list[str] = []
+
+    for doc_id, chunks_originais in por_doc.items():
+        chunks = chunks_originais
+        if total_chars > _MAX_DIGEST_CHARS:
+            cota = max(
+                _MIN_CHUNKS_POR_DOC,
+                round(len(chunks) * (_MAX_DIGEST_CHARS / total_chars)),
+            )
+            if cota < len(chunks):
+                # Passo uniforme: começo, meio e fim do documento — o índice
+                # e o sumário não dizem o que o capítulo 12 cobre.
+                passo = len(chunks) / cota
+                chunks = [
+                    chunks[min(len(chunks) - 1, round(i * passo))] for i in range(cota)
+                ]
+
+        partes.append(f"\n\n===== DOCUMENTO: {nomes_doc.get(doc_id, 'sem nome')} =====\n")
+        partes.extend(c["content"] for c in chunks)
+
+    return "\n".join(partes)
+
+
+def _coerce_modules(valor):
+    """Claude às vezes serializa o campo `modules` (array grande, com LaTeX)
+    como uma STRING JSON em vez de um array de verdade dentro do próprio
+    tool_use.input — mesmo comportamento que já motivou coerceStrList em
+    score.ts, só que aqui no campo inteiro, não só numa lista de strings.
+    Cobre os dois formatos vistos: string de `[...]` e string de todo o
+    objeto `{"modules": [...]}`."""
+    if isinstance(valor, str):
+        try:
+            valor = json.loads(valor)
+        except (json.JSONDecodeError, TypeError):
+            return []
+    if isinstance(valor, dict):
+        valor = valor.get("modules", [])
+    return valor if isinstance(valor, list) else []
+
+
+def generate_modules(system_prompt: str, user_prompt: str) -> list:
+    """Porta de _shared/claude.ts::generateModules — tool-forcing pra JSON estruturado."""
+    resp = httpx.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+        json={
+            "model": MODEL_SONNET,
+            "max_tokens": 8192,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}],
+            "tools": [_MODULES_TOOL],
+            "tool_choice": {"type": "tool", "name": "return_modules"},
+        },
+        timeout=180.0,
+    )
+    if not resp.is_success:
+        # raise_for_status() sozinho não mostra o corpo do erro — e é
+        # exatamente o corpo que diz o motivo real (ex.: limite de tokens,
+        # parâmetro inválido), não o texto genérico "400 Bad Request".
+        raise RuntimeError(f"Anthropic API {resp.status_code}: {resp.text}")
+    data = resp.json()
+    for bloco in data.get("content", []):
+        if bloco.get("type") == "tool_use" and bloco.get("name") == "return_modules":
+            return _coerce_modules(bloco.get("input", {}).get("modules", []))
+    raise RuntimeError("Claude não retornou os módulos no formato esperado.")
+
+
+@app.post("/gerar-modulos")
+def gerar_modulos():
+    if request.headers.get("X-Api-Key") != PDF_PROCESSOR_SECRET:
+        return jsonify({"error": "nao_autorizado"}), 401
+
+    payload = request.get_json(force=True, silent=True) or {}
+    professor_id = payload.get("professor_id")
+    if not professor_id:
+        return jsonify({"error": "payload_invalido"}), 400
+
+    sb = get_supabase()
+
+    try:
+        prof_resp = (
+            sb.table("professors")
+            .select("id, name, discipline")
+            .eq("id", professor_id)
+            .limit(1)
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"falha_professor: {exc}"}), 500
+    if not prof_resp.data:
+        return jsonify({"error": "professor_nao_encontrado"}), 404
+    professor = prof_resp.data[0]
+
+    try:
+        digest = material_digest(sb, professor_id)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"falha_digest: {exc}"}), 500
+    if not digest:
+        # Sinal reconhecido pela rota chamadora (modulos.ts) pra manter a
+        # mesma mensagem de "nenhum material enviado ainda".
+        return jsonify({"error": "sem_material"}), 422
+
+    try:
+        existentes_resp = (
+            sb.table("modules")
+            .select("position, name, topics")
+            .eq("professor_id", professor_id)
+            .order("position")
+            .execute()
+        )
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"falha_modulos_existentes: {exc}"}), 500
+    existentes = existentes_resp.data or []
+
+    system_prompt = (
+        f"Você é um planejador pedagógico da disciplina {professor['discipline']}. "
+        "Sua tarefa é organizar o material de estudo do aluno em módulos, como os "
+        "capítulos de um livro didático: em ordem pedagógica (do fundamento ao "
+        "avançado), sem sobreposição entre módulos, cobrindo todo o material."
+    )
+
+    # A trilha CRESCE: módulos existentes ficam de pé, a IA só acrescenta o
+    # que ainda não está coberto — ver o mesmo raciocínio em modulos.ts.
+    if existentes:
+        ja_cobertos = "\n".join(
+            f"- {m['name']}: {', '.join(m.get('topics') or []) or '(sem tópicos)'}"
+            for m in existentes
+        )
+        instrucao = (
+            "O aluno JÁ TEM uma trilha montada, listada abaixo em MÓDULOS "
+            "EXISTENTES. Ela não pode ser refeita nem repetida.\n\n"
+            "Compare o MATERIAL com os MÓDULOS EXISTENTES e devolva APENAS "
+            "módulos NOVOS, cobrindo assuntos do material que nenhum módulo "
+            "existente já cobre. Um assunto conta como coberto mesmo que o "
+            "título esteja escrito de outro jeito — compare o conteúdo, não a "
+            "redação.\n"
+            "Se todo o material já estiver coberto, devolva uma lista vazia. "
+            "É um resultado válido e esperado: significa que a trilha já dá "
+            "conta do material.\n\n"
+            f"MÓDULOS EXISTENTES:\n{ja_cobertos}\n"
+        )
+    else:
+        instrucao = "Organize o material abaixo em 3 a 8 módulos.\n"
+
+    user_prompt = (
+        f"{instrucao}\n"
+        "Para cada módulo devolvido dê um título curto (como capítulo de "
+        "livro), uma descrição de 1-2 frases e a lista de tópicos cobertos — "
+        "cada tópico específico o suficiente para virar questão de quiz. "
+        f"{NOTACAO_MATEMATICA} "
+        "Use a tool return_modules para responder.\n\n"
+        f"MATERIAL:\n{digest}"
+    )
+
+    try:
+        modules = generate_modules(system_prompt, user_prompt)
+    except Exception as exc:  # noqa: BLE001
+        return jsonify({"error": f"falha_claude: {exc}"}), 500
+
+    return jsonify({"modules": modules}), 200
 
 
 @app.get("/")
