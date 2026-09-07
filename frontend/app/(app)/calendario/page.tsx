@@ -13,13 +13,9 @@ import { MonthGrid, dateKey } from "@/components/calendario/MonthGrid";
 import { DayPanel } from "@/components/calendario/DayPanel";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { professorColor } from "@/lib/professor-color";
+import { useProfessors } from "@/lib/shared-data";
 import { cn, localDateKey } from "@/lib/utils";
-import type {
-  CalendarActivity,
-  CalendarEvent,
-  EventKind,
-  ProfessorListItem,
-} from "@/lib/types";
+import type { CalendarActivity, CalendarEvent, EventKind } from "@/lib/types";
 
 /*
   Tela 32 · Calendário.
@@ -47,7 +43,7 @@ export default function CalendarioPage() {
 
   const [activities, setActivities] = useState<CalendarActivity[]>([]);
   const [events, setEvents] = useState<CalendarEvent[]>([]);
-  const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
+  const { professors } = useProfessors();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -73,10 +69,6 @@ export default function CalendarioPage() {
   useEffect(() => {
     load();
   }, [load]);
-
-  useEffect(() => {
-    api.listProfessors().then((res) => setProfessors(res.items)).catch(() => setProfessors([]));
-  }, []);
 
   const activitiesByDay = useMemo(() => {
     const map: Record<string, CalendarActivity[]> = {};

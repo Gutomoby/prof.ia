@@ -14,7 +14,8 @@ import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
-import { DIFFICULTY_LABELS, type UserProgress } from "@/lib/types";
+import { useProgress } from "@/lib/shared-data";
+import { DIFFICULTY_LABELS } from "@/lib/types";
 
 /*
   Tela 35 · Configurações.
@@ -62,8 +63,7 @@ export default function ConfiguracoesPage() {
   const { unsaved } = useQuizGuard();
 
   const [email, setEmail] = useState<string | null>(null);
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { progress, loading, mutate: mutateProgress } = useProgress();
   const [salvandoMeta, setSalvandoMeta] = useState<number | null>(null);
   const [erroMeta, setErroMeta] = useState<string | null>(null);
 
@@ -81,8 +81,6 @@ export default function ConfiguracoesPage() {
       .then(({ data }) => setEmail(data.user?.email ?? null))
       .catch(() => setEmail(null));
 
-    api.getProgress().then(setProgress).catch(() => setProgress(null)).finally(() => setLoading(false));
-
     // Silencioso de propósito: quem não é admin recebe false, sem erro na tela.
     api.souAdmin().then(setIsAdmin);
   }, []);
@@ -92,7 +90,7 @@ export default function ConfiguracoesPage() {
     setErroMeta(null);
     setSalvandoMeta(xp);
     try {
-      setProgress(await api.updateDailyGoal(xp));
+      await mutateProgress(api.updateDailyGoal(xp));
     } catch (err) {
       setErroMeta(err instanceof ApiError ? err.message : "Não foi possível salvar a meta.");
     } finally {

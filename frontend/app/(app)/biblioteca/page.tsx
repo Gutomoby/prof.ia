@@ -13,6 +13,7 @@ import { Tabela, TabelaLinha, type Coluna } from "@/components/ui/tabela";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { professorColor } from "@/lib/professor-color";
+import { useAllDocuments } from "@/lib/shared-data";
 import { cn } from "@/lib/utils";
 import type { DocumentWithProfessor } from "@/lib/types";
 
@@ -71,27 +72,13 @@ function LinhaDocumento({ doc, curto = false }: { doc: DocumentWithProfessor; cu
 }
 
 export default function BibliotecaPage() {
-  const [items, setItems] = useState<DocumentWithProfessor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { documents: items, error: docsError, loading, mutate: reload } = useAllDocuments();
+  const error = docsError
+    ? docsError instanceof ApiError
+      ? docsError.message
+      : "Não foi possível carregar seus materiais."
+    : null;
   const [query, setQuery] = useState("");
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.listAllDocuments();
-      setItems(res.items);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Não foi possível carregar seus materiais.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
 
   // Agrupado por matéria, preservando a ordem em que os professores aparecem
   // (a API já devolve os documentos mais recentes primeiro).
@@ -133,7 +120,7 @@ export default function BibliotecaPage() {
         <InlineAlert>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>{error}</span>
-            <Capsule variant="secundaria" onClick={load}>
+            <Capsule variant="secundaria" onClick={() => reload()}>
               Tentar novamente
             </Capsule>
           </div>

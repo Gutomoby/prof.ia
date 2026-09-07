@@ -19,6 +19,7 @@ import { Skeleton, SkeletonLinha } from "@/components/ui/skeleton";
 import { computeNextStep } from "@/lib/next-step";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
 import { professorColor } from "@/lib/professor-color";
+import { useProfessors, useProgress } from "@/lib/shared-data";
 import { useStartQuiz } from "@/lib/use-start-quiz";
 import { faltamPontos, montarTrilha } from "@/lib/trilha";
 import { TopicNode } from "@/components/ui/topic-node";
@@ -84,41 +85,22 @@ function ChipMateria({
 }
 
 export default function EstudarPage() {
-  const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { professors, error: professorsError, loading, mutate: reload } = useProfessors();
+  const error = professorsError
+    ? professorsError instanceof ApiError
+      ? professorsError.message
+      : "Não foi possível carregar suas matérias. O backend está no ar?"
+    : null;
 
   const [scores, setScores] = useState<Record<string, ScoreSummary>>({});
   const [docs, setDocs] = useState<Record<string, DocumentItem[]>>({});
   const [modules, setModules] = useState<Record<string, any[]>>({});
   const [detailsLoading, setDetailsLoading] = useState(true);
 
-  const [progress, setProgress] = useState<UserProgress | null>(null);
+  const { progress } = useProgress();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [aba, setAba] = useState<"trilha" | "revisao" | "material">("trilha");
   const [revisoes, setRevisoes] = useState<ActivityHistoryItem[]>([]);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.listProfessors();
-      setProfessors(res.items);
-    } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : "Não foi possível carregar suas matérias. O backend está no ar?"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-    api.getProgress().then(setProgress).catch(() => setProgress(null));
-  }, []);
 
   useEffect(() => {
     if (professors.length === 0) {
@@ -232,7 +214,7 @@ export default function EstudarPage() {
       <InlineAlert>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span>{error}</span>
-          <Capsule variant="secundaria" onClick={load}>
+          <Capsule variant="secundaria" onClick={() => reload()}>
             Tentar novamente
           </Capsule>
         </div>

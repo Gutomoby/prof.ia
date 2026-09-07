@@ -16,12 +16,16 @@ import { ProgressStrip } from "@/components/progress/ProgressStrip";
 import { TodayCard } from "@/components/progress/TodayCard";
 import { MiniCalendar } from "@/components/progress/MiniCalendar";
 import { computeGlobalNextStep } from "@/lib/global-next-step";
-import type { Module, ProfessorListItem, ScoreSummary, UserProgress } from "@/lib/types";
+import { useProfessors, useProgress } from "@/lib/shared-data";
+import type { Module, ScoreSummary } from "@/lib/types";
 
 export default function MateriasPage() {
-  const [professors, setProfessors] = useState<ProfessorListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { professors, error: professorsError, loading, mutate: reload } = useProfessors();
+  const error = professorsError
+    ? professorsError instanceof ApiError
+      ? professorsError.message
+      : "Não foi possível carregar seus professores. O backend está no ar?"
+    : null;
 
   const [scores, setScores] = useState<Record<string, ScoreSummary>>({});
   const [documentCounts, setDocumentCounts] = useState<Record<string, number>>({});
@@ -31,32 +35,7 @@ export default function MateriasPage() {
   const [modules, setModules] = useState<Record<string, Module[]>>({});
   const [detailsLoading, setDetailsLoading] = useState(true);
 
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [progressLoading, setProgressLoading] = useState(true);
-
-  async function load() {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.listProfessors();
-      setProfessors(res.items);
-    } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Não foi possível carregar seus professores. O backend está no ar?"
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    load();
-    api
-      .getProgress()
-      .then(setProgress)
-      .catch(() => setProgress(null))
-      .finally(() => setProgressLoading(false));
-  }, []);
+  const { progress, loading: progressLoading } = useProgress();
 
   // Score e contagem de material de cada matéria, em paralelo e resiliente:
   // se uma falhar, as outras continuam aparecendo normalmente.
@@ -185,7 +164,7 @@ export default function MateriasPage() {
         <InlineAlert>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <span>{error}</span>
-            <Capsule variant="secundaria" onClick={load}>
+            <Capsule variant="secundaria" onClick={() => reload()}>
               Tentar novamente
             </Capsule>
           </div>
