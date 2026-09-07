@@ -4,15 +4,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CalendarDays, Flame, Library, Plus, Settings, Target, Trophy } from "lucide-react";
-import { api } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
+import { useProfessors, useProgress } from "@/lib/shared-data";
 import { Brand } from "./Brand";
 import { useQuizGuard } from "./QuizGuardContext";
 import { cn } from "@/lib/utils";
 import { professorColor } from "@/lib/professor-color";
 import { MetricText } from "@/components/ui/metric-text";
 import { ProgressBar } from "@/components/ui/gauge";
-import type { ProfessorListItem, UserProgress } from "@/lib/types";
 
 /*
   Sidebar do desktop — 280px em vidro, substitui a barra de abas.
@@ -48,20 +47,16 @@ function SecaoLabel({ children, contagem }: { children: React.ReactNode; contage
   );
 }
 
-export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
+export function Sidebar() {
   const pathname = usePathname();
   const { unsaved } = useQuizGuard();
-  const [progress, setProgress] = useState<UserProgress | null>(null);
-  const [email, setEmail] = useState<string | null>(null);
-
+  const { professors, loading: carregandoProfessores } = useProfessors();
   // Sequência e nível ficam sempre visíveis — é o que faz sentir que há algo
-  // em jogo ao fechar o app.
-  useEffect(() => {
-    api
-      .getProgress()
-      .then(setProgress)
-      .catch(() => setProgress(null));
-  }, [pathname]);
+  // em jogo ao fechar o app. Vem do mesmo cache compartilhado que o resto do
+  // app usa (lib/shared-data.ts) — antes buscava de novo a cada troca de
+  // pathname, agora reaproveita o que já foi buscado.
+  const { progress } = useProgress();
+  const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
     createClient()
@@ -152,7 +147,12 @@ export function Sidebar({ professors }: { professors: ProfessorListItem[] }) {
       <div className="flex min-h-0 flex-1 flex-col gap-[18px] overflow-y-auto">
         <div>
           <SecaoLabel contagem={professors.length}>Matérias</SecaoLabel>
-          {professors.length === 0 && (
+          {/* Antes a sidebar vinha pronta do servidor; agora busca no
+              cliente (cache compartilhado), então "nenhuma matéria" só
+              aparece depois que a busca resolveu de verdade — senão pisca
+              essa mensagem pra quem tem matérias, no instante antes de
+              carregar. */}
+          {!carregandoProfessores && professors.length === 0 && (
             <p className="px-3 text-nota text-tinta-fraca">Nenhuma matéria ainda.</p>
           )}
           {professors.map((p) => {
