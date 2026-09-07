@@ -1,45 +1,35 @@
 /*
-  Wrapper para chamadas à Claude API (Anthropic) e Google Gemini API.
+  Wrapper para chamadas à Claude API (Anthropic).
   Porta de services/claude.py.
 
-  Centraliza a escolha de modelo por feature:
-    - Quiz (custo ultra-baixo):      gemini-2.0-flash (com fallback a haiku)
-    - Plano de estudos (qualidade):  claude-haiku-4-5-20251001
+  Quiz e plano de estudos usam claude-haiku-4-5-20251001. Já existiu um
+  caminho de quiz via Gemini (gemini-2.0-flash, ~10x mais barato por token)
+  com fallback a Haiku — removido em 2026-09-07 porque o Google desativou
+  esse modelo em 01/06/2026 e o substituto atual (gemini-3.8-flash) custa
+  quase o mesmo que o Haiku ($0.75/$3.75 vs $0.80/$4.00 por 1M), sem
+  vantagem de custo que justifique manter dois provedores e o parsing
+  manual de JSON que isso exigia (Gemini não tem tool-forcing nativo).
 
   Geração de módulos (claude-sonnet-5) roda no Cloud Run, não aqui — ver
   gcp/pdf-processor/main.py::generate_modules e o comentário em
   api/routes/modulos.ts.
 
-  Chamadas via fetch direto às APIs REST — sem SDK, para manter a Edge
+  Chamadas via fetch direto à API REST — sem SDK, para manter a Edge
   Function leve e sem surpresa de compatibilidade Deno/npm.
 */
 
 import { db } from "./db.ts";
 
 export const MODEL_HAIKU = "claude-haiku-4-5-20251001";
-export const MODEL_GEMINI = "gemini-2.0-flash";
 
-// Backslash que não inicia um escape JSON válido — caso típico: LaTeX que o
-// próprio prompt pede via NOTACAO_MATEMATICA ("\mu", "\ell", "\int"...).
-// Mesmo problema (e mesma correção) de score.ts::_INVALID_JSON_ESCAPE, só
-// que aqui no JSON inteiro do quiz, não numa lista de strings — sem isso, a
-// Gemini falhava o parse em toda matéria com notação matemática e cada quiz
-// caía silenciosamente pro fallback Haiku, ~10x mais caro por token.
-const _INVALID_JSON_ESCAPE = /\\(?!["\\/bfnrtu])/g;
-
-function modelKey(model: string): "haiku" | "sonnet" | "gemini" {
-  const m = model.toLowerCase();
-  if (m.includes("haiku")) return "haiku";
-  if (m.includes("sonnet")) return "sonnet";
-  if (m.includes("gemini")) return "gemini";
-  return "haiku";
+function modelKey(model: string): "haiku" | "sonnet" {
+  return model.toLowerCase().includes("sonnet") ? "sonnet" : "haiku";
 }
 
 // Preços por 1M tokens (janeiro 2026) — mesma tabela de services/claude.py.
 const _PRICING: Record<string, { in: number; out: number }> = {
   haiku: { in: 0.8, out: 4.0 },
   sonnet: { in: 3.0, out: 15.0 },
-  gemini: { in: 0.075, out: 0.3 },
 };
 
 function estimateCost(model: string, tokensIn: number, tokensOut: number): number {
@@ -244,84 +234,11 @@ async function generateJsonClaude(
   return input as { questions: unknown[] };
 }
 
-async function generateJsonGemini(
-  systemPrompt: string,
-  userPrompt: string,
-  userId?: string,
-  professorId?: string,
-): Promise<{ questions: unknown[] }> {
-  const apiKey = Deno.env.get("GEMINI_API_KEY");
-  if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no ambiente");
-
-  const schema = JSON.stringify(
-    {
-      questions: [
-        {
-          topico: "string",
-          enunciado: "string",
-          alternativas: ["string", "string", "string", "string"],
-          resposta_correta: 0,
-          explicacao: "string",
-        },
-      ],
-    },
-    null,
-    2,
-  );
-
-  // Gemini não tem tool-forcing nativo, então pedimos JSON direto.
-  const promptComSchema =
-    `${systemPrompt}\n\n${userPrompt}\n\n` +
-    `Responda **APENAS** em JSON válido (sem markdown, sem "\`\`\`json") com a seguinte estrutura:\n${schema}`;
-
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_GEMINI}:generateContent?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: promptComSchema }] }],
-        generationConfig: { maxOutputTokens: 8192 },
-      }),
-    },
-  );
-  if (!res.ok) throw new Error(`Gemini API ${res.status}: ${await res.text()}`);
-
-  const data = await res.json();
-  const tokensIn = data.usageMetadata?.promptTokenCount ?? 0;
-  const tokensOut = data.usageMetadata?.candidatesTokenCount ?? 0;
-
-  if (userId && professorId) {
-    const cost = estimateCost(MODEL_GEMINI, tokensIn, tokensOut);
-    await logTokenUsage(userId, professorId, "gemini", "quiz", tokensIn, tokensOut, cost);
-  }
-
-  let text: string = data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  text = text.trim();
-  // Stripar ```json ... ``` se Gemini devolveu com cercas.
-  if (text.startsWith("```json")) text = text.slice(7);
-  else if (text.startsWith("```")) text = text.slice(3);
-  if (text.endsWith("```")) text = text.slice(0, -3);
-  text = text.trim();
-
-  for (const candidato of [text, text.replace(_INVALID_JSON_ESCAPE, "\\\\")]) {
-    try {
-      const result = JSON.parse(candidato);
-      if (result && typeof result === "object" && "questions" in result) {
-        return result as { questions: unknown[] };
-      }
-    } catch {
-      // tenta o próximo candidato (ou cai no throw abaixo, no último)
-    }
-  }
-  throw new Error("Gemini não retornou o quiz no formato JSON esperado.");
-}
-
 /**
- * Pede a Gemini (com fallback a Claude) um quiz em JSON estruturado.
+ * Pede ao Claude (Haiku) um quiz em JSON estruturado, via tool-forcing.
  *
- * Estratégia: Gemini por padrão (quando GEMINI_API_KEY está configurada), com
- * fallback silencioso para Haiku se falhar. Sem a chave, vai direto para Haiku.
+ * Já existiu uma tentativa de gerar via Gemini primeiro — ver o histórico do
+ * arquivo se precisar entender o porquê de ter sido removida.
  */
 export async function generateJson(
   systemPrompt: string,
@@ -333,12 +250,5 @@ export async function generateJson(
   userId?: string,
   professorId?: string,
 ): Promise<{ questions: unknown[] }> {
-  if (Deno.env.get("GEMINI_API_KEY")) {
-    try {
-      return await generateJsonGemini(systemPrompt, userPrompt, userId, professorId);
-    } catch (e) {
-      console.error("Aviso: falha ao chamar Gemini, caindo para Haiku:", e);
-    }
-  }
   return await generateJsonClaude(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId);
 }
