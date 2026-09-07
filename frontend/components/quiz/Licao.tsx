@@ -270,20 +270,22 @@ export function Licao({
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3.5">
           <div
             className={cn(
-              "pointer-events-auto w-full max-w-[536px] rounded-[30px] p-[18px]",
+              "pointer-events-auto relative w-full max-w-[536px] rounded-[30px] p-[18px] pt-6",
               "animate-subir-rodape backdrop-blur-[24px] shadow-vidro-flutuante",
               acertou ? "bg-acerto/14" : "bg-erro/12"
             )}
           >
-            {/* Alinhado ao topo. O desenho centra o Kango porque ali a
-                explicação tem uma linha; as que o modelo escreve têm um
-                parágrafo, e centrado o mascote fica boiando no meio do texto. */}
-            <div className="flex items-start gap-3">
+            {/* O Kango salta por cima da borda do painel — mais destaque do
+                que encaixado embutido na linha de texto. */}
+            <div className="absolute -top-[26px] left-[18px] flex h-14 w-14 items-center justify-center rounded-[18px] bg-papel p-1.5 shadow-vidro-flutuante">
               <KangoPlaceholder
-                px={52}
+                px={44}
                 tom={acertou ? "indigo" : "neutro"}
                 estado={acertou ? "comemora" : "confuso"}
               />
+            </div>
+
+            <div className="flex items-start gap-3">
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(

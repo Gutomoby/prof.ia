@@ -56,7 +56,16 @@ export function KangoPlaceholder({
   if (arte) {
     return (
       <span aria-hidden className={cn("relative flex-none", className)} style={{ width: px, height: px }}>
-        <Image src={arte} alt="" fill sizes={`${px}px`} className="object-contain" />
+        {/* mix-blend-multiply: os PNGs têm fundo branco sólido (não
+            transparente) — sem isso, sobra um quadrado branco visível toda
+            vez que o card por baixo não é branco (ex.: o rosa do "errou"). */}
+        <Image
+          src={arte}
+          alt=""
+          fill
+          sizes={`${px}px`}
+          className="object-contain mix-blend-multiply"
+        />
       </span>
     );
   }
