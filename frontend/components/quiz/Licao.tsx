@@ -279,7 +279,11 @@ export function Licao({
                 explicação tem uma linha; as que o modelo escreve têm um
                 parágrafo, e centrado o mascote fica boiando no meio do texto. */}
             <div className="flex items-start gap-3">
-              <KangoPlaceholder px={52} tom={acertou ? "indigo" : "neutro"} />
+              <KangoPlaceholder
+                px={52}
+                tom={acertou ? "indigo" : "neutro"}
+                estado={acertou ? "comemora" : "confuso"}
+              />
               <div className="min-w-0 flex-1">
                 <p
                   className={cn(

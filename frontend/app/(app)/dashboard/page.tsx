@@ -566,7 +566,7 @@ export default function EstudarPage() {
         </GlassCard>
 
         <GlassCard nivel="hud" radius="cartao" className="flex flex-1 items-center gap-3 px-4 py-3.5">
-          <KangoPlaceholder px={40} />
+          <KangoPlaceholder px={40} estado="avatar" />
           <p className="min-w-0 text-nota leading-[1.35] text-tinta-fraca">
             {/* O verbo concorda junto com o substantivo: "Falta 1 lição", mas
                 "Faltam 2 lições". A copy da tela 20 só mostra o singular. */}

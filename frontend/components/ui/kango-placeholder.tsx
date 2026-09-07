@@ -1,9 +1,13 @@
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /*
-  Kango, placeholder. A persona 3D não existe ainda — até existir, o mascote é
-  um círculo listrado a 135° com o estado escrito em mono por cima. Mantenha o
-  tamanho e a posição; troque só o conteúdo quando a persona chegar.
+  Kango. Até 2026-09-06 a persona 3D não existia e o mascote era só um círculo
+  listrado a 135° com o estado escrito em mono por cima. As primeiras poses já
+  foram desenhadas — KANGO_ART mapeia o texto de `estado` pro PNG real em
+  public/kango/. Estado sem arte ainda (ex.: "esperando", até chegar) ou sem
+  `estado` passado continua caindo no listrado de antes — por isso a lógica
+  de fallback foi mantida, não removida.
 
   A listra acompanha o diâmetro (medido nas telas): 8px de faixa no de 104,
   7px no de 60–64, 6px no de 38–44. O tom "neutro" é o da tela 03, quando o
@@ -15,6 +19,17 @@ type Tom = "indigo" | "neutro";
 const COR: Record<Tom, string> = {
   indigo: "rgba(67,56,202,.2)",
   neutro: "rgba(0,0,0,.08)",
+};
+
+// Chave = exatamente a string passada em `estado` pelos call sites.
+const KANGO_ART: Record<string, string> = {
+  "com estante": "/kango/com-estante.png",
+  lendo: "/kango/lendo.png",
+  confuso: "/kango/confuso.png",
+  "com livro": "/kango/com-livro.png",
+  comemora: "/kango/comemora.png",
+  "com saudade": "/kango/com-saudade.png",
+  avatar: "/kango/avatar.png",
 };
 
 /** Faixa da listra e corpo do rótulo por faixa de diâmetro. */
@@ -37,6 +52,15 @@ export function KangoPlaceholder({
   tom?: Tom;
   className?: string;
 }) {
+  const arte = estado ? KANGO_ART[estado] : undefined;
+  if (arte) {
+    return (
+      <span aria-hidden className={cn("relative flex-none", className)} style={{ width: px, height: px }}>
+        <Image src={arte} alt="" fill sizes={`${px}px`} className="object-contain" />
+      </span>
+    );
+  }
+
   const { faixa, fonte, lh } = escala(px);
 
   return (

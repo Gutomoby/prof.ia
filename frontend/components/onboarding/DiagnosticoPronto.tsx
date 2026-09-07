@@ -227,7 +227,7 @@ export function DiagnosticoPronto({
       </div>
 
       <div className="mt-4 flex flex-none items-center gap-3 rounded-cartao bg-white/70 p-3.5 shadow-hairline">
-        <KangoPlaceholder px={52} />
+        <KangoPlaceholder px={52} estado="avatar" />
         <p className="flex-1 text-[13.5px] leading-[1.5] text-tinta-fraca">
           &ldquo;Errar no diagnóstico é de graça, serviu pra eu saber o que te cobrar.&rdquo;
         </p>
