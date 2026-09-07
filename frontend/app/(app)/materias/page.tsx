@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Plus, GraduationCap } from "lucide-react";
+import { Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
@@ -173,7 +173,7 @@ export default function MateriasPage() {
 
       {!loading && !error && professors.length === 0 && (
         <EmptyState
-          icon={GraduationCap}
+          kango="esperando"
           title="Comece pela matéria que mais te preocupa"
           description="Crie um professor, suba o material dele, e ele passa a estudar com você."
           action={
