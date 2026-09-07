@@ -189,7 +189,7 @@ npm run dev
 
 ## 🗺️ Andamento e Roadmap
 
-### ✅ Já no ar (produção: Vercel + Railway)
+### ✅ Já no ar (produção: Vercel + Supabase Edge Functions + Google Cloud Run)
 
 - **RAG completo** — upload de PDF/texto, chunking, embeddings locais (zero custo), busca vetorial
 - **Professores por matéria** — criar, editar e apagar (tela Ajustes)
@@ -201,7 +201,7 @@ npm run dev
 - **Biblioteca global** de materiais
 - **Progressão** — XP, níveis e sequência diária (contada no fuso do usuário)
 - **Auth Supabase**, navegação mobile, temas claro/escuro (WCAG AA), deploy contínuo
-- **Login social funcionando de ponta a ponta** (Google/Apple) + perfil criado automaticamente no signup (`profiles` + trigger)
+- **Cadastro por e-mail/senha** + perfil criado automaticamente no signup (`profiles` + trigger) — login social (Google/Apple) ainda **não está ativo** em produção (retorna `Unsupported provider`; falta configurar os providers no Supabase + credenciais OAuth no Google Cloud Console)
 - **Recuperação de senha funcionando de ponta a ponta** (o link de e-mail voltou a autenticar de verdade)
 
 ### 🚨 Urgente — Rebranding Kango (Fase A)
@@ -245,21 +245,27 @@ npm run dev
 
 ## 🎯 Foco — Próximos meses
 
-Ordem de prioridade combinada, do que destrava o próximo até o que só faz sentido no fim:
+Decidido em 2026-09-07. Backend já migrado (Edge Functions + Cloud Run, Railway fora do caminho) — o roadmap agora é sobre produto, não mais sobre arquitetura. Detalhe granular de cada item vive nas Fases A–D acima; esta lista é a ordem de prioridade combinada.
 
-- [ ] **1. Migrar o backend para Supabase Edge Functions** *(código das 6 fases pronto e deployado — o que falta antes do corte final está em [`docs/migracao-supabase.md`](docs/migracao-supabase.md))*
-  - [x] Conta: `/auth/callback` (login social) + recuperação de senha + `profiles`/trigger de signup
-  - [x] Fases 1 a 6 — `conquistas`, `progresso`, `professores`, `calendario`, `admin`, `financeiro`, `score`, `modulos`, `atividades`, `documentos`
-  - [x] Secrets da Edge Function (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `ADMIN_USER_IDS`)
-  - [ ] Migration dos embeddings (384→768 dims, Gemini) + reindexar o material — tentada e **revertida em 22/08**: quebrou quiz, plano de estudos e upload em produção porque o Railway ainda gera a busca localmente em 384 dims. Fazer só depois do próximo passo (Railway fora do caminho de requisição real), não antes
-  - [ ] Testar caminho feliz de cada fase com usuário real logado (só JWT sem sessão até agora)
-  - [ ] Trocar `NEXT_PUBLIC_API_URL` no Vercel, validar em produção por alguns dias e só então desligar o Railway
-- [ ] **2. Atualizar o site** já rodando na arquitetura nova
-- [ ] **3. App mobile (Android + iOS)** — casca nativa via **Capacitor** em `mobile/`, carregando o site em produção dentro de um WebView (não é um build separado — deploy no site já reflete no app). Base técnica criada: `mobile/capacitor.config.ts`, ponte de plugins nativos em `frontend/components/CapacitorNative.tsx` (status bar + lembrete diário local, roda só dentro do app). Falta: gerar os projetos nativos e testar no Mac (`npx cap add ios/android` + `npx cap sync`), ícone/splash final (hoje é placeholder do favicon)
-  - **Tablets não são um 4º front separado** — mesmo app/site, só depende do layout responsivo aguentar telas maiores (a verificar num tablet real quando o app nativo estiver rodando)
-- [ ] **4. Gestão de usuários** no app mobile
-- [ ] **5. Otimizar custo e IA** (modelo de embeddings, prompt caching, escolha de modelo por tarefa)
-- [ ] **6. Publicar nas lojas** — App Store e Google Play *(formalização: conta Apple Developer, decisão sobre IAP vs. cobrança externa hoje via Pix — a Apple exige IAP para conteúdo digital vendido dentro do app —, política de privacidade, ficha da loja)*
+- [ ] **1. Deixar o app 100% funcionando e com as artes em dia**
+  - [x] PDF, geração de trilha e quiz rodando via Edge Functions + Cloud Run, sem o teto de 2s CPU do Railway
+  - [x] Cadastro por e-mail/senha de ponta a ponta
+  - [ ] Testar caminho feliz de cada rota com usuário real logado em produção
+  - [ ] Identidade visual final (logo, mascote) e ícone/splash do app mobile (hoje é placeholder do favicon em `mobile/resources/`)
+- [ ] **2. Experiência do usuário e criação de contas**
+  - [ ] Ativar login social (Google/Apple) — hoje retorna `Unsupported provider`, falta configurar os providers no Supabase + credenciais OAuth
+  - [ ] Revisar o fluxo de criação de conta ponta a ponta (o que acontece na primeira sessão de um usuário novo)
+- [ ] **3. Custos e assinaturas**
+  - [x] Custo real de IA (Haiku/Sonnet) chegando certo no `/admin/financeiro` — corrigido fallback silencioso pro Gemini (modelo antigo desativado pelo Google) e a geração de trilha (Sonnet) que não era logada
+  - [ ] Loja de energia/moedas para destravar chat além do limite do plano — pago com dinheiro real (aceita repassar % pra Apple/Stripe); web/Android via Pix/Stripe direto, iOS depende de IAP (ver item 5)
+- [ ] **4. Chat e Resumo** *(features novas, hoje não existem no backend)*
+  - [ ] Chat com o professor (tier mais caro do plano)
+  - [ ] Resumo/plano de estudos como upgrade intermediário (já existe uma versão simples em `score.ts::POST /score/:id/plano` — avaliar se vira essa feature ou se é distinta)
+- [ ] **5. Lançamento do app nas lojas** — App Store e Google Play
+  - [x] Base técnica do app nativo (Capacitor em `mobile/`, ver Fase B/C acima)
+  - [ ] Gerar os projetos nativos e testar no Mac (`npx cap add ios/android` + `npx cap sync`)
+  - [ ] Conta Apple Developer, política de privacidade, ficha da loja — decisão de IAP já tomada (aceita o corte da Apple), falta formalizar a conta e a integração StoreKit
+  - **Tablets não são um 6º front separado** — mesmo app/site, só depende do layout responsivo aguentar telas maiores (verificar num tablet real quando o app nativo estiver rodando)
 
 ---
 
