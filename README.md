@@ -237,9 +237,20 @@ npm run dev
 
 ### 🔜 Fase D — Engajamento e retenção
 
+Referência declarada pelo usuário (2026-09-07): a "vibe Duolingo" — não é
+imitar a tela, é a mesma lógica de trazer o aluno de volta todo dia.
+
 - [ ] Streak com base em horários
 - [ ] Recompensa de meta batida (badges + animações)
-- [ ] Notificações push, widget e e-mail
+- [ ] Notificações push lembrando de fazer a lição (base técnica local já existe:
+      `@capacitor/local-notifications` em `CapacitorNative.tsx`, hoje só lembrete
+      diário fixo — falta o gatilho "ainda não estudou hoje")
+- [ ] Sons de interação: apertar botão, acertar, errar
+- [ ] Widgets de tela inicial com o streak *(depende de código nativo por
+      fora do WebView do Capacitor — WidgetKit no iOS, App Widgets no
+      Android; não é algo que o wrapper atual cobre sozinho)*
+- [ ] Social (fica pra depois de tudo acima): ver progresso de amigos,
+      compartilhar progresso, ligas/rankings
 
 ---
 
