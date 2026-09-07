@@ -20,7 +20,7 @@ import { normalizarProfundo } from "../../_shared/notacao.ts";
 // não aqui — mesmo motivo do PDF em documentos.ts: Edge Functions têm teto de
 // 2s de CPU / tempo de parede por requisição, e essa chamada já quebrou em
 // produção (POST .../modulos/gerar devolvendo 500 genérico depois de ~36s).
-async function gerarModulosNoCloudRun(professorId: string): Promise<unknown[]> {
+async function gerarModulosNoCloudRun(professorId: string, userId: string): Promise<unknown[]> {
   const url = Deno.env.get("PDF_PROCESSOR_URL");
   const secret = Deno.env.get("PDF_PROCESSOR_SECRET");
   if (!url || !secret) throw new Error("PDF_PROCESSOR_URL/PDF_PROCESSOR_SECRET não configurados no ambiente");
@@ -28,7 +28,10 @@ async function gerarModulosNoCloudRun(professorId: string): Promise<unknown[]> {
   const res = await fetch(`${url}/gerar-modulos`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-api-key": secret },
-    body: JSON.stringify({ professor_id: professorId }),
+    // user_id só serve pro Cloud Run registrar o custo do Sonnet em
+    // token_logs (painel /admin/financeiro) — a rota já validou a posse do
+    // professor logo abaixo, isso aqui não é checagem de autorização.
+    body: JSON.stringify({ professor_id: professorId, user_id: userId }),
   });
 
   const data = await res.json().catch(() => ({}));
@@ -110,7 +113,7 @@ export function register(router: Router): void {
     if (erroExistentes) throw new HttpError(500, erroExistentes.message);
     const existentes = existingRows ?? [];
 
-    const result = await gerarModulosNoCloudRun(professorId);
+    const result = await gerarModulosNoCloudRun(professorId, userId);
     // Nome e tópicos do capítulo aparecem na trilha e no título do quiz — a
     // notação solta era visível ali antes de qualquer questão ser gerada.
     // deno-lint-ignore no-explicit-any

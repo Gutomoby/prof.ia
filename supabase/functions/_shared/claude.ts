@@ -19,6 +19,14 @@ import { db } from "./db.ts";
 export const MODEL_HAIKU = "claude-haiku-4-5-20251001";
 export const MODEL_GEMINI = "gemini-2.0-flash";
 
+// Backslash que não inicia um escape JSON válido — caso típico: LaTeX que o
+// próprio prompt pede via NOTACAO_MATEMATICA ("\mu", "\ell", "\int"...).
+// Mesmo problema (e mesma correção) de score.ts::_INVALID_JSON_ESCAPE, só
+// que aqui no JSON inteiro do quiz, não numa lista de strings — sem isso, a
+// Gemini falhava o parse em toda matéria com notação matemática e cada quiz
+// caía silenciosamente pro fallback Haiku, ~10x mais caro por token.
+const _INVALID_JSON_ESCAPE = /\\(?!["\\/bfnrtu])/g;
+
 function modelKey(model: string): "haiku" | "sonnet" | "gemini" {
   const m = model.toLowerCase();
   if (m.includes("haiku")) return "haiku";
@@ -296,13 +304,15 @@ async function generateJsonGemini(
   if (text.endsWith("```")) text = text.slice(0, -3);
   text = text.trim();
 
-  try {
-    const result = JSON.parse(text);
-    if (result && typeof result === "object" && "questions" in result) {
-      return result as { questions: unknown[] };
+  for (const candidato of [text, text.replace(_INVALID_JSON_ESCAPE, "\\\\")]) {
+    try {
+      const result = JSON.parse(candidato);
+      if (result && typeof result === "object" && "questions" in result) {
+        return result as { questions: unknown[] };
+      }
+    } catch {
+      // tenta o próximo candidato (ou cai no throw abaixo, no último)
     }
-  } catch {
-    // cai no throw abaixo
   }
   throw new Error("Gemini não retornou o quiz no formato JSON esperado.");
 }

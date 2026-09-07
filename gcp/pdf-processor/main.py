@@ -330,7 +330,52 @@ def _coerce_modules(valor):
     return valor if isinstance(valor, list) else []
 
 
-def generate_modules(system_prompt: str, user_prompt: str) -> list:
+# Mesma tabela de _shared/claude.ts::_PRICING (USD por 1M tokens).
+_PRICING = {"sonnet": (3.00, 15.00)}
+
+
+def estimate_cost(model_key: str, tokens_in: int, tokens_out: int) -> float:
+    preco = _PRICING.get(model_key)
+    if not preco:
+        return 0.0
+    preco_in, preco_out = preco
+    return (tokens_in * preco_in + tokens_out * preco_out) / 1_000_000
+
+
+def log_token_usage(
+    sb,
+    user_id: str | None,
+    professor_id: str,
+    operation: str,
+    tokens_in: int,
+    tokens_out: int,
+    cost_usd: float,
+) -> None:
+    """Porta de _shared/claude.ts::logTokenUsage — best-effort, nunca derruba
+    a operação principal por causa do log (mesmo comportamento do original)."""
+    if not user_id:
+        # Chamador antigo/de teste sem user_id: sem log em vez de inserir
+        # violando o NOT NULL de token_logs.user_id.
+        return
+    try:
+        sb.table("token_logs").insert(
+            {
+                "user_id": user_id,
+                "professor_id": professor_id,
+                "model": "sonnet",
+                "operation": operation,
+                "tokens_in": tokens_in,
+                "tokens_out": tokens_out,
+                "cost_usd": cost_usd,
+            }
+        ).execute()
+    except Exception:  # noqa: BLE001
+        logging.exception("falha ao registrar token_log (nao fatal)")
+
+
+def generate_modules(
+    sb, system_prompt: str, user_prompt: str, user_id: str | None, professor_id: str
+) -> list:
     """Porta de _shared/claude.ts::generateModules — tool-forcing pra JSON estruturado."""
     resp = httpx.post(
         "https://api.anthropic.com/v1/messages",
@@ -355,6 +400,15 @@ def generate_modules(system_prompt: str, user_prompt: str) -> list:
         # parâmetro inválido), não o texto genérico "400 Bad Request".
         raise RuntimeError(f"Anthropic API {resp.status_code}: {resp.text}")
     data = resp.json()
+
+    uso = data.get("usage") or {}
+    tokens_in = uso.get("input_tokens", 0)
+    tokens_out = uso.get("output_tokens", 0)
+    log_token_usage(
+        sb, user_id, professor_id, "module", tokens_in, tokens_out,
+        estimate_cost("sonnet", tokens_in, tokens_out),
+    )
+
     for bloco in data.get("content", []):
         if bloco.get("type") == "tool_use" and bloco.get("name") == "return_modules":
             return _coerce_modules(bloco.get("input", {}).get("modules", []))
@@ -368,6 +422,10 @@ def gerar_modulos():
 
     payload = request.get_json(force=True, silent=True) or {}
     professor_id = payload.get("professor_id")
+    # Só pra registrar o custo do Sonnet em token_logs (painel
+    # /admin/financeiro) — o chamador (modulos.ts) já validou a posse do
+    # professor antes de chegar aqui, isso não é checagem de autorização.
+    user_id = payload.get("user_id")
     if not professor_id:
         return jsonify({"error": "payload_invalido"}), 400
 
@@ -452,7 +510,7 @@ def gerar_modulos():
     )
 
     try:
-        modules = generate_modules(system_prompt, user_prompt)
+        modules = generate_modules(sb, system_prompt, user_prompt, user_id, professor_id)
     except Exception as exc:  # noqa: BLE001
         logging.exception("falha_claude (professor_id=%s)", professor_id)
         return jsonify({"error": f"falha_claude: {exc}"}), 500
