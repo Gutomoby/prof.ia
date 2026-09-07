@@ -12,7 +12,7 @@
   depois (outra aba) recebe o dado em cache na hora e revalida por trás —
   a troca de aba passa a parecer instantânea depois da primeira visita.
 */
-import useSWR from "swr";
+import useSWR, { mutate } from "swr";
 import { api } from "./api";
 
 export function useProfessors() {
@@ -20,6 +20,15 @@ export function useProfessors() {
     api.listProfessors().then((res) => res.items)
   );
   return { professors: data ?? [], error, loading: isLoading, mutate };
+}
+
+// Criar/apagar professor não passa por useProfessors (roda em telas próprias,
+// tipo professor/novo e o diálogo de apagar) — sem isso, o cache de outras
+// abas (Estudar, Matérias, Calendário) só se atualizaria na próxima
+// revalidação natural do SWR, deixando a lista visivelmente desatualizada
+// por alguns segundos até trocar de aba de novo.
+export function invalidateProfessors() {
+  return mutate("professores");
 }
 
 export function useProgress() {

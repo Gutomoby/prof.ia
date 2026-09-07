@@ -8,6 +8,7 @@ import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { MetricText } from "@/components/ui/metric-text";
 import { Sheet } from "@/components/ui/sheet";
+import { invalidateProfessors } from "@/lib/shared-data";
 import { cn } from "@/lib/utils";
 
 /*
@@ -64,6 +65,7 @@ export function DeleteProfessor({
     setDeleting(true);
     try {
       await api.deleteProfessor(professorId);
+      invalidateProfessors();
       router.push("/dashboard");
       router.refresh(); // sidebar e home são server components
     } catch (err) {

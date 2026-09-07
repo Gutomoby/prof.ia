@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSetHeaderAction } from "@/components/layout/HeaderActionContext";
 import { DeleteProfessor } from "@/components/professor/DeleteProfessor";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
+import { invalidateProfessors } from "@/lib/shared-data";
 import { cn } from "@/lib/utils";
 import type { Professor } from "@/lib/types";
 
@@ -117,8 +118,11 @@ export default function AjustesPage({ params }: { params: { id: string } }) {
       });
       setProfessor(atualizado);
       setSaved(true);
-      // O nome aparece no cabeçalho, na sidebar e na home — todos vindos de
-      // server components, então precisam ser refeitos.
+      // O nome aparece no cabeçalho, na sidebar e na home. Sidebar/home vêm
+      // de server components (router.refresh cobre); a lista cacheada por
+      // useProfessors (Estudar/Matérias/Calendário) é client-side e não se
+      // atualiza sozinha sem isso.
+      invalidateProfessors();
       router.refresh();
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : "Falha ao salvar as alterações.");

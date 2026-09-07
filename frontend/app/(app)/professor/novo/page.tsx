@@ -11,6 +11,7 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { PainelAuxiliar, PainelLinha, PainelPrincipal } from "@/components/layout/Painel";
 import { Kango } from "@/components/ui/kango";
+import { invalidateProfessors } from "@/lib/shared-data";
 import { cn } from "@/lib/utils";
 
 /*
@@ -71,6 +72,7 @@ export default function NovoProfessorPage() {
         teaching_style: teachingStyle || null,
         exam_dates: examDates || null,
       });
+      invalidateProfessors();
       router.push(`/professor/${professor.id}/configurar`);
       router.refresh();
     } catch (err) {
