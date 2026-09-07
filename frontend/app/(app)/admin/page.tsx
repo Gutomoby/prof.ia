@@ -1,17 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowRight, Zap } from "lucide-react";
+import { ChevronRight, CreditCard, Wallet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
+import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  LineChart,
-  Line,
   AreaChart,
   Area,
   XAxis,
@@ -118,6 +117,29 @@ export default function AdminPage() {
     <div className="mx-auto max-w-[1200px]">
       <PageHeader title="Painel de Admin" />
 
+      {/* Financeiro e Assinaturas existem como telas próprias, mas nada aqui
+          levava até elas — dava pra chegar só digitando a URL de cor. */}
+      <div className="mb-[22px]">
+        <InsetList>
+          <InsetRow
+            href="/admin/financeiro"
+            icon={<Wallet />}
+            iconTone="acerto"
+            title="Financeiro"
+            subtitle="Receita, margem e custo por usuário"
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+          <InsetRow
+            href="/admin/assinaturas"
+            icon={<CreditCard />}
+            iconTone="indigo"
+            title="Assinaturas"
+            subtitle="Planos ativos por usuário"
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+        </InsetList>
+      </div>
+
       {/* Resumo geral */}
       <div className="mb-[22px] grid gap-4 md:grid-cols-3">
         <GlassCard nivel="cartao" radius="grupo" className="p-4">
@@ -170,7 +192,8 @@ export default function AdminPage() {
         </GlassCard>
       )}
 
-      {/* Custo por modelo */}
+      {/* Custo por modelo — eixos separados: operações é contagem (dezenas),
+          custo é dólares (centavos). Na mesma escala o custo sumia do gráfico. */}
       {modelData.length > 0 && (
         <GlassCard nivel="cartao" radius="grupo" className="mb-[22px] p-4">
           <p className="mb-4 text-corpo font-bold text-tinta">Operações por Modelo</p>
@@ -178,37 +201,41 @@ export default function AdminPage() {
             <BarChart data={modelData}>
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
               <XAxis dataKey="model" stroke="hsl(var(--tinta-fraca))" />
-              <YAxis stroke="hsl(var(--tinta-fraca))" />
-              <Tooltip />
+              <YAxis yAxisId="operacoes" stroke="hsl(var(--tinta-fraca))" />
+              <YAxis
+                yAxisId="custo"
+                orientation="right"
+                stroke="hsl(var(--tinta-fraca))"
+                tickFormatter={(v) => `$${Number(v).toFixed(2)}`}
+              />
+              <Tooltip formatter={(v: number, nome) => (nome === "custo" ? `$${v.toFixed(4)}` : v)} />
               <Legend />
-              <Bar dataKey="operacoes" fill="hsl(var(--indigo))" />
-              <Bar dataKey="custo" fill="hsl(var(--acerto))" />
+              <Bar yAxisId="operacoes" dataKey="operacoes" fill="hsl(var(--indigo))" />
+              <Bar yAxisId="custo" dataKey="custo" fill="hsl(var(--acerto))" />
             </BarChart>
           </ResponsiveContainer>
         </GlassCard>
       )}
 
-      {/* Gemini é o modelo padrão para quizzes */}
-      {metrics && (
+      {/* Detalhe por modelo — dinâmico a partir dos dados reais, em vez de um
+          texto fixo sobre qual modelo é o padrão (o Gemini já foi o padrão de
+          quiz, mas o gemini-2.0-flash foi desativado pelo Google em 01/06/2026
+          e o fallback Haiku assumiu 100% silenciosamente — removido em 2026-09-07). */}
+      {modelData.length > 0 && (
         <GlassCard nivel="cartao" radius="grupo" className="p-4">
-          <div className="flex items-start gap-3">
-            <Zap className="h-5 w-5 flex-none text-indigo" />
-            <div className="flex-1">
-              <p className="text-corpo font-bold text-tinta">Gemini 2.0 Flash — modelo padrão</p>
-              <p className="mt-1 text-nota text-tinta-fraca">
-                100% dos quizzes usam Gemini, com fallback automático a Haiku.
-              </p>
-              {metrics.operations_by_model.gemini && metrics.operations_by_model.gemini > 0 ? (
-                <p className="mt-2 text-nota text-acerto">
-                  Custo médio por quiz:{" "}
-                  <MetricText weight="bold">
-                    ${(metrics.cost_by_model.gemini / metrics.operations_by_model.gemini).toFixed(4)}
-                  </MetricText>
-                </p>
-              ) : (
-                <p className="mt-2 text-nota text-tinta-fraca">Aguardando primeiro quiz com Gemini...</p>
-              )}
-            </div>
+          <p className="mb-3 text-corpo font-bold text-tinta">Detalhe por Modelo</p>
+          <div className="flex flex-col gap-3">
+            {modelData.map((m) => (
+              <div key={m.model} className="flex items-center justify-between">
+                <div>
+                  <p className="text-nota font-bold text-tinta">{m.model}</p>
+                  <p className="text-nota text-tinta-fraca">{m.operacoes} operações</p>
+                </div>
+                <MetricText weight="bold">
+                  ${m.operacoes > 0 ? (m.custo / m.operacoes).toFixed(4) : "0.0000"}/op
+                </MetricText>
+              </div>
+            ))}
           </div>
         </GlassCard>
       )}
