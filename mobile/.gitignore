@@ -1,0 +1,15 @@
+node_modules/
+
+# Os projetos nativos (ios/, android/) SÃO versionados de propósito — é
+# convenção do Capacitor, já que `cap add` não reproduz mudanças nativas
+# customizadas. Só o que cada IDE gera localmente fica de fora:
+ios/App/Pods/
+ios/App/App/public/
+ios/App/build/
+**/xcuserdata/
+android/app/build/
+android/build/
+android/.gradle/
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+android/local.properties

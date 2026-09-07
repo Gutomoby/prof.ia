@@ -255,10 +255,11 @@ Ordem de prioridade combinada, do que destrava o próximo até o que só faz sen
   - [ ] Testar caminho feliz de cada fase com usuário real logado (só JWT sem sessão até agora)
   - [ ] Trocar `NEXT_PUBLIC_API_URL` no Vercel, validar em produção por alguns dias e só então desligar o Railway
 - [ ] **2. Atualizar o site** já rodando na arquitetura nova
-- [ ] **3. App mobile (Android + iOS)** — construir até **criar conta** funcionar de ponta a ponta primeiro; gestão de usuários fica para depois
+- [ ] **3. App mobile (Android + iOS)** — casca nativa via **Capacitor** em `mobile/`, carregando o site em produção dentro de um WebView (não é um build separado — deploy no site já reflete no app). Base técnica criada: `mobile/capacitor.config.ts`, ponte de plugins nativos em `frontend/components/CapacitorNative.tsx` (status bar + lembrete diário local, roda só dentro do app). Falta: gerar os projetos nativos e testar no Mac (`npx cap add ios/android` + `npx cap sync`), ícone/splash final (hoje é placeholder do favicon)
+  - **Tablets não são um 4º front separado** — mesmo app/site, só depende do layout responsivo aguentar telas maiores (a verificar num tablet real quando o app nativo estiver rodando)
 - [ ] **4. Gestão de usuários** no app mobile
 - [ ] **5. Otimizar custo e IA** (modelo de embeddings, prompt caching, escolha de modelo por tarefa)
-- [ ] **6. Publicar nas lojas** — App Store e Google Play
+- [ ] **6. Publicar nas lojas** — App Store e Google Play *(formalização: conta Apple Developer, decisão sobre IAP vs. cobrança externa hoje via Pix — a Apple exige IAP para conteúdo digital vendido dentro do app —, política de privacidade, ficha da loja)*
 
 ---
 

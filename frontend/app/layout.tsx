@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { CapacitorNative } from "@/components/CapacitorNative";
 import "./globals.css";
 // KaTeX: as fórmulas que a IA escreve são renderizadas em components/ui/
 // math-text.tsx. O CSS é global porque a marcação sai do KaTeX em qualquer
@@ -30,6 +31,10 @@ export const viewport = {
   // dela. Sem isso, tudo que é `position: fixed` (a barra de abas, o painel de
   // resposta da lição) fica pairando no meio do conteúdo quando o campo abre.
   interactiveWidget: "resizes-content",
+  // Sem efeito no navegador comum — dentro do app nativo (mobile/), é o que
+  // faz env(safe-area-inset-*) resolver pra um valor de verdade em vez de
+  // sempre 0, então o conteúdo não fica embaixo do notch/ilha dinâmica.
+  viewportFit: "cover",
 } as const;
 
 // Layout raiz: envolve TODAS as rotas (públicas e autenticadas).
@@ -45,6 +50,7 @@ export default function RootLayout({
       {/* antialiased é obrigatório, não estético: é o -webkit-font-smoothing
           que dá a finura do texto da Apple. Sem ele a SF engorda. */}
       <body className="altura-tela bg-papel font-sans antialiased">
+        <CapacitorNative />
         {children}
       </body>
     </html>
