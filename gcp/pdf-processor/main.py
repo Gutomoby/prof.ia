@@ -14,6 +14,7 @@ misturaria espaços vetoriais incompatíveis com os chunks já indexados.
 """
 
 import json
+import logging
 import os
 
 import fitz  # PyMuPDF
@@ -21,6 +22,12 @@ import httpx
 import tiktoken
 from flask import Flask, jsonify, request
 from supabase import create_client
+
+# Cloud Run captura stdout/stderr automaticamente como log da revisão — sem
+# isso, um erro só aparecia como "status 500" no log de requisição, sem o
+# motivo (já aconteceu: precisei reproduzir local pra descobrir o que tinha
+# falhado, quando bastava olhar o log se ele existisse).
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 app = Flask(__name__)
 
@@ -184,11 +191,13 @@ def processar():
     try:
         file_bytes = sb.storage.from_(STORAGE_BUCKET).download(storage_path)
     except Exception as exc:  # noqa: BLE001 — reportado ao chamador, não é fatal pro processo
+        logging.exception("falha_download (document_id=%s)", document_id)
         return jsonify({"error": f"falha_download: {exc}"}), 500
 
     try:
         texto = extract_text(file_bytes)
     except Exception as exc:  # noqa: BLE001
+        logging.exception("falha_extracao (document_id=%s)", document_id)
         return jsonify({"error": f"falha_extracao: {exc}"}), 500
 
     # Código "sem_texto" reconhecido explicitamente pela rota chamadora
@@ -222,6 +231,9 @@ def processar():
             ).execute()
             indexados += len(lote)
     except Exception as exc:  # noqa: BLE001
+        logging.exception(
+            "falha_indexacao (document_id=%s, chunks_ja_indexados=%d)", document_id, indexados
+        )
         return jsonify({"error": f"falha_indexacao: {exc}"}), 500
 
     try:
@@ -370,6 +382,7 @@ def gerar_modulos():
             .execute()
         )
     except Exception as exc:  # noqa: BLE001
+        logging.exception("falha_professor (professor_id=%s)", professor_id)
         return jsonify({"error": f"falha_professor: {exc}"}), 500
     if not prof_resp.data:
         return jsonify({"error": "professor_nao_encontrado"}), 404
@@ -378,6 +391,7 @@ def gerar_modulos():
     try:
         digest = material_digest(sb, professor_id)
     except Exception as exc:  # noqa: BLE001
+        logging.exception("falha_digest (professor_id=%s)", professor_id)
         return jsonify({"error": f"falha_digest: {exc}"}), 500
     if not digest:
         # Sinal reconhecido pela rota chamadora (modulos.ts) pra manter a
@@ -393,6 +407,7 @@ def gerar_modulos():
             .execute()
         )
     except Exception as exc:  # noqa: BLE001
+        logging.exception("falha_modulos_existentes (professor_id=%s)", professor_id)
         return jsonify({"error": f"falha_modulos_existentes: {exc}"}), 500
     existentes = existentes_resp.data or []
 
@@ -439,6 +454,7 @@ def gerar_modulos():
     try:
         modules = generate_modules(system_prompt, user_prompt)
     except Exception as exc:  # noqa: BLE001
+        logging.exception("falha_claude (professor_id=%s)", professor_id)
         return jsonify({"error": f"falha_claude: {exc}"}), 500
 
     return jsonify({"modules": modules}), 200
