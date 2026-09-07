@@ -4,11 +4,16 @@ import { cn } from "@/lib/utils";
 type Estado = "acenando" | "confuso" | "folheando o material" | "avatar" | undefined;
 type Tom = "indigo" | "neutro";
 
-// Mapeamento de estado para nome do arquivo (sem extensão)
+// Mapeamento de estado para nome do arquivo (sem extensão).
+//
+// "acenando" (waving) ainda não tem pose própria no lote novo (2026-09-07) —
+// usa "com-livro" como substituto temporário até alguém gerar a pose real de
+// aceno. "folheando o material" foi remapeado pra "lendo", que já é
+// exatamente essa cena (sentado lendo) no estilo novo, então não é stopgap.
 const ESTADO_MAPA: Record<Exclude<Estado, undefined>, string> = {
-  acenando: "acenando",
+  acenando: "com-livro",
   confuso: "confuso",
-  "folheando o material": "folheando",
+  "folheando o material": "lendo",
   avatar: "avatar",
 };
 
