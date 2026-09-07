@@ -1,20 +1,58 @@
 /*
-  Rota de Assinaturas — painel admin, v1 sem checkout/webhook.
+  Rota de Assinaturas.
 
-  GET   /admin/assinaturas            lista usuários + plano atual (se houver)
-  PATCH /admin/assinaturas/:userId    admin atribui/edita o plano de um usuário
+  GET   /admin/assinaturas            admin: lista usuários + plano atual
+  PATCH /admin/assinaturas/:userId    admin: atribui/edita o plano na mão
+                                       (continua existindo pra ajuste manual/
+                                       suporte, mesmo com checkout automático)
+  POST  /assinatura/checkout          usuário logado: pede o link de pagamento
+                                       (Stripe Checkout, trial de 7 dias nativo)
 
-  Cobrança acontece FORA do app nesta v1 (Pix/Mercado Pago direto) — o admin
-  só registra aqui o que já foi cobrado. Sem tabela de pagamento, sem
-  webhook, sem enforcement de plano (isso é só visibilidade + atribuição
-  manual). Ver docs/migracao-supabase.md se essa rota crescer depois.
+  O webhook que confirma o pagamento mora numa Edge Function separada —
+  supabase/functions/stripe-webhook/ — porque a Stripe não manda um JWT do
+  Supabase, e esta function aqui (api) exige um (verify_jwt: true).
+
+  Isto ainda NÃO trava o uso do app sem assinatura ativa — só cria o fluxo de
+  pagamento e mantém `subscriptions` atualizada sozinha. O gate de acesso
+  fica pra depois, de propósito (decisão do usuário em 2026-09-07).
 */
 
+import Stripe from "npm:stripe@17";
 import type { Router } from "../../_shared/router.ts";
-import { requireAdmin } from "../../_shared/auth.ts";
+import { currentUserId, requireAdmin } from "../../_shared/auth.ts";
 import { db, selectAll } from "../../_shared/db.ts";
 import { HttpError } from "../../_shared/http.ts";
-import { PLAN_IDS, PLAN_PRICES, isPlanId } from "../../_shared/planos.ts";
+import { PLAN_IDS, PLAN_PRICES, isPlanId, type PlanId } from "../../_shared/planos.ts";
+
+function stripeClient(): Stripe {
+  const key = Deno.env.get("STRIPE_SECRET_KEY");
+  if (!key) throw new Error("STRIPE_SECRET_KEY não configurada no ambiente");
+  return new Stripe(key, { apiVersion: "2025-02-24.acacia", httpClient: Stripe.createFetchHttpClient() });
+}
+
+function priceIdDoPlano(plan: PlanId): string {
+  const id = Deno.env.get(`STRIPE_PRICE_${plan.toUpperCase()}`);
+  if (!id) throw new Error(`STRIPE_PRICE_${plan.toUpperCase()} não configurada no ambiente`);
+  return id;
+}
+
+async function customerIdDoUsuario(stripe: Stripe, userId: string, email: string | null): Promise<string> {
+  const { data, error } = await db()
+    .from("subscriptions")
+    .select("stripe_customer_id")
+    .eq("user_id", userId)
+    .limit(1);
+  if (error) throw new HttpError(500, error.message);
+
+  const existente = data?.[0]?.stripe_customer_id as string | null | undefined;
+  if (existente) return existente;
+
+  const customer = await stripe.customers.create({
+    email: email ?? undefined,
+    metadata: { user_id: userId },
+  });
+  return customer.id;
+}
 
 function parseIntParam(valor: string | null, padrao: number, min: number, max: number): number {
   if (valor === null) return padrao;
@@ -135,5 +173,46 @@ export function register(router: Router): void {
     if (error) throw new HttpError(500, error.message);
     if (!data || !data.length) throw new HttpError(500, "Falha ao salvar a assinatura.");
     return data[0];
+  });
+
+  router.post("/assinatura/checkout", async (ctx) => {
+    const userId = await currentUserId(ctx.req);
+    const payload = await ctx.body<{ plan?: unknown }>();
+    if (!isPlanId(payload.plan)) {
+      throw new HttpError(400, `Campo "plan" precisa ser um de: ${PLAN_IDS.join(", ")}.`);
+    }
+    const plan = payload.plan;
+
+    const { data: perfilRows, error: erroPerfil } = await db()
+      .from("profiles")
+      .select("email")
+      .eq("id", userId)
+      .limit(1);
+    if (erroPerfil) throw new HttpError(500, erroPerfil.message);
+    const email = (perfilRows?.[0]?.email as string | null) ?? null;
+
+    const stripe = stripeClient();
+    const customerId = await customerIdDoUsuario(stripe, userId, email);
+    const siteUrl = Deno.env.get("SITE_URL") ?? "https://www.kangoguru.com.br";
+
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        mode: "subscription",
+        customer: customerId,
+        line_items: [{ price: priceIdDoPlano(plan), quantity: 1 }],
+        subscription_data: {
+          trial_period_days: 7,
+          metadata: { user_id: userId, plan },
+        },
+        success_url: `${siteUrl}/assinatura?sucesso=1`,
+        cancel_url: `${siteUrl}/assinatura?cancelado=1`,
+      });
+    } catch (e) {
+      throw new HttpError(502, `Stripe: ${e instanceof Error ? e.message : String(e)}`);
+    }
+
+    if (!session.url) throw new HttpError(502, "Stripe não retornou a URL de checkout.");
+    return { url: session.url };
   });
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Download, KeyRound, Loader2, LogOut, ShieldCheck, Target } from "lucide-react";
+import { ChevronRight, CreditCard, Download, KeyRound, Loader2, LogOut, ShieldCheck, Target } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -184,6 +184,17 @@ export default function ConfiguracoesPage() {
             <p className="truncate text-nota text-tinta-fraca">{email ?? "—"}</p>
           </div>
         </GlassCard>
+
+        <InsetList>
+          <InsetRow
+            href="/assinatura"
+            icon={<CreditCard />}
+            iconTone="indigo"
+            title="Assinatura"
+            subtitle="Planos e trial de 7 dias"
+            trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+          />
+        </InsetList>
 
         <div>
           <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">Estudo</p>

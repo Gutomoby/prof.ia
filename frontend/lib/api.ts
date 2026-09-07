@@ -427,6 +427,15 @@ export function setAssinatura(
   });
 }
 
+// Checkout do Stripe (trial de 7 dias) — devolve a URL pra onde redirecionar
+// o usuário; quem chama é responsável por fazer window.location.href = url.
+export function criarCheckout(plan: PlanId) {
+  return request<{ url: string }>("/assinatura/checkout", {
+    method: "POST",
+    body: JSON.stringify({ plan }),
+  });
+}
+
 export const api = {
   request,
   listProfessors,
@@ -457,5 +466,6 @@ export const api = {
   listConquistas,
   listAssinaturas,
   setAssinatura,
+  criarCheckout,
   souAdmin,
 };
