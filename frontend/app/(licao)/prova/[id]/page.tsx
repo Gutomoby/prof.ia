@@ -204,6 +204,7 @@ export default function ProvaPage({ params }: { params: { id: string } }) {
           scorePct={result.score_pct}
           questions={result.questions}
           xpGanho={result.xp_ganho}
+          topicosDominados={result.topicos_dominados}
           footer={
             <div className="mt-2 flex flex-col gap-3 md:flex-row-reverse md:items-center">
               <Capsule block onClick={gerar} className="md:flex-1">
