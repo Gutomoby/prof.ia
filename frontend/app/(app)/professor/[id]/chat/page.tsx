@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { ChatText } from "@/components/ui/chat-text";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
-import { MathText } from "@/components/ui/math-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/lib/types";
@@ -99,7 +99,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
                 m.role === "user" ? "bg-indigo text-papel" : "bg-cinza-tonal text-tinta"
               )}
             >
-              <MathText>{m.content}</MathText>
+              <ChatText>{m.content}</ChatText>
             </div>
           </div>
         ))}

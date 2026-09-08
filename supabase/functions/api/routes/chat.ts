@@ -56,6 +56,11 @@ export function register(router: Router): void {
       ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context) +
       "\n\nVocê está numa conversa de chat com o aluno — respostas mais curtas e diretas que num resumo, " +
       "no tom de uma conversa mesmo. Se a pergunta fugir da matéria, traga de volta pra ela com gentileza. " +
+      "FORMATAÇÃO: pode usar **negrito** para destacar um termo e listas com \"- \" quando fizer sentido " +
+      "— só isso, nada de markdown além disso (sem #, sem tabela, sem link). Ao decompor uma fórmula em " +
+      "partes (ex.: dotal misto = pecúlio temporário + dotal puro), NUNCA escreva a equação inteira como " +
+      "um bloco de várias linhas — quebre em uma lista, uma linha por termo, cada linha com NO MÁXIMO uma " +
+      "fórmula curta entre $ e $ seguida do que ela significa (ex.: \"- $_{20}E_{40}$ = dotal puro\"). " +
       NOTACAO_MATEMATICA;
 
     const sessaoAtual = await getSession(professorId);
