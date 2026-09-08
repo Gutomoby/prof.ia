@@ -1,11 +1,16 @@
 /*
-  Rota de Atividades — porta de routers/atividades.py.
+  Rota de Atividades — porta de routers/atividades.py, com "prova" adicionada
+  depois (routers/atividades.py original só tinha "quiz" implementado; o
+  campo activity_type já aceitava "prova"/"simulado"/"reforco" no schema, sem
+  lógica nenhuma por trás).
 
-  Por enquanto só o tipo "quiz" está implementado de ponta a ponta (geração +
-  correção) — mesmo estado do Python original.
+  Quiz corrige questão por questão (POST /atividades/conferir, na hora). Prova
+  é a matéria inteira de uma vez, sem /conferir nenhum — o cliente não chama
+  esse endpoint no modo prova, e a correção só acontece no /submeter, no
+  final, igual uma prova de verdade.
 
-  POST /atividades/gerar        pede à IA para gerar um quiz novo
-  POST /atividades/conferir     corrige UMA questão, sem fechar a atividade
+  POST /atividades/gerar        pede à IA para gerar um quiz ou prova novo
+  POST /atividades/conferir     corrige UMA questão do quiz, sem fechar a atividade
   POST /atividades/submeter     recebe as respostas, calcula score e salva
   GET  /atividades              lista atividades de um professor (histórico)
   GET  /atividades/:id          detalhe corrigido de uma tentativa (revisitar)
@@ -42,7 +47,9 @@ const _DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
     "sem entender. Sem pegadinhas de enunciado ambíguo — difícil pelo conteúdo.",
 };
 
-async function getModule(moduleId: string, professorId: string): Promise<{ id: string; name: string; description: string | null; topics: string[] }> {
+type ModuleRow = { id: string; name: string; description: string | null; topics: string[] };
+
+async function getModule(moduleId: string, professorId: string): Promise<ModuleRow> {
   const { data, error } = await db()
     .from("modules")
     .select("id, name, description, topics")
@@ -51,7 +58,41 @@ async function getModule(moduleId: string, professorId: string): Promise<{ id: s
     .limit(1);
   if (error) throw new HttpError(500, error.message);
   if (!data || !data.length) throw new HttpError(404, "Módulo não encontrado");
-  return data[0] as { id: string; name: string; description: string | null; topics: string[] };
+  return data[0] as ModuleRow;
+}
+
+async function getModules(professorId: string): Promise<ModuleRow[]> {
+  const { data, error } = await db()
+    .from("modules")
+    .select("id, name, description, topics")
+    .eq("professor_id", professorId)
+    .order("position");
+  if (error) throw new HttpError(500, error.message);
+  return (data ?? []) as ModuleRow[];
+}
+
+// Prova busca material de TODOS os capítulos, não de um só — uma busca com a
+// query dos tópicos todos juntos dilui a semântica e tende a só achar os
+// capítulos mais "genéricos". Uma busca por capítulo, com poucos chunks cada,
+// garante amostra de cada um; dedup porque capítulos vizinhos podem puxar o
+// mesmo chunk.
+async function searchChunksDeTodosModulos(
+  professorId: string,
+  modules: ModuleRow[],
+): Promise<{ id: string; document_id: string; content: string; similarity: number }[]> {
+  const porModulo = await Promise.all(
+    modules.map((m) => {
+      const topicos = m.topics ?? [];
+      const query = topicos.length ? `${m.name}: ${topicos.join(", ")}` : m.name;
+      return searchChunks(professorId, query, 3);
+    }),
+  );
+  const vistos = new Set<string>();
+  return porModulo.flat().filter((c) => {
+    if (vistos.has(c.id)) return false;
+    vistos.add(c.id);
+    return true;
+  });
 }
 
 export function register(router: Router): void {
@@ -65,9 +106,10 @@ export function register(router: Router): void {
       difficulty?: unknown;
     }>();
 
-    if (payload.activity_type !== "quiz") {
-      throw new HttpError(400, "Só o tipo 'quiz' está implementado por enquanto.");
+    if (payload.activity_type !== "quiz" && payload.activity_type !== "prova") {
+      throw new HttpError(400, "activity_type precisa ser 'quiz' ou 'prova'.");
     }
+    const activityType = payload.activity_type;
     const professorId = payload.professor_id as string;
     const professor = await getOwnedProfessor(professorId, userId, "id, discipline, system_prompt");
     const difficulty = (payload.difficulty as string) || "medio";
@@ -75,35 +117,48 @@ export function register(router: Router): void {
       throw new HttpError(400, "difficulty precisa ser facil, medio ou dificil.");
     }
 
-    const moduleId = payload.module_id as string | undefined;
+    // Prova ignora topic/module_id do payload — é sempre a trilha inteira.
+    const moduleId = activityType === "quiz" ? (payload.module_id as string | undefined) : undefined;
     const module = moduleId ? await getModule(moduleId, professorId) : null;
 
-    let query: string;
+    let chunks: { id: string; document_id: string; content: string; similarity: number }[];
     let scopeDesc: string;
     let nQuestoes: string;
     let topicLabel: string | null;
 
-    if (module) {
+    if (activityType === "prova") {
+      const modules = await getModules(professorId);
+      if (!modules.length) {
+        throw new HttpError(400, "A trilha precisa estar montada para gerar uma prova.");
+      }
+      chunks = await searchChunksDeTodosModulos(professorId, modules);
+      scopeDesc =
+        `cobrindo TODA a matéria de uma vez, distribuindo as questões de forma equilibrada entre ` +
+        `os capítulos: ${modules.map((m) => m.name).join(", ")}. Não se concentre só num capítulo.`;
+      nQuestoes = "12 a 15";
+      topicLabel = "Prova geral";
+    } else if (module) {
       // Quiz do módulo inteiro: busca material pelos tópicos do capítulo.
       const topics = module.topics ?? [];
-      query = topics.length ? `${module.name}: ${topics.join(", ")}` : module.name;
+      const query = topics.length ? `${module.name}: ${topics.join(", ")}` : module.name;
+      chunks = await searchChunks(professorId, query, 10);
       scopeDesc = `cobrindo o módulo inteiro "${module.name}"` + (topics.length ? ` (tópicos: ${topics.join(", ")})` : "");
       nQuestoes = "8 a 10";
       topicLabel = module.name;
     } else {
       const topic = payload.topic as string | undefined;
-      query = topic || (professor.discipline as string);
+      const query = topic || (professor.discipline as string);
+      chunks = await searchChunks(professorId, query, 8);
       scopeDesc = topic ? `sobre o tópico "${topic}"` : "sobre um tópico relevante do material acima";
       nQuestoes = "5 a 8";
       topicLabel = topic ?? null;
     }
 
-    const chunks = await searchChunks(professorId, query, module ? 10 : 8);
     const context = chunks.map((c) => c.content).join("\n\n---\n\n") || "(nenhum material enviado ainda)";
     const systemPrompt = ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context);
 
     const userPrompt =
-      `Gere um quiz de múltipla escolha com ${nQuestoes} questões ${scopeDesc}. ` +
+      `Gere um ${activityType === "prova" ? "prova" : "quiz"} de múltipla escolha com ${nQuestoes} questões ${scopeDesc}. ` +
       `${_DIFFICULTY_INSTRUCTIONS[difficulty]} ` +
       "Cada questão precisa ter exatamente 4 alternativas, apenas uma correta. " +
       "Baseie as questões prioritariamente no material de contexto do system prompt; " +
@@ -128,7 +183,7 @@ export function register(router: Router): void {
       .from("activity_results")
       .insert({
         professor_id: professorId,
-        activity_type: "quiz",
+        activity_type: activityType,
         topic: topicLabel,
         questions,
         module_id: moduleId ?? null,

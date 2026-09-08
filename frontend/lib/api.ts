@@ -223,6 +223,15 @@ export function generateAtividade(payload: {
   });
 }
 
+// Prova: a trilha inteira de uma vez, sem module_id/topic — o escopo é
+// sempre "toda a matéria" (ver atividades.ts::searchChunksDeTodosModulos).
+export function generateProva(payload: { professor_id: string; difficulty?: Difficulty | null }) {
+  return request<GeneratedActivity>("/atividades/gerar", {
+    method: "POST",
+    body: JSON.stringify({ ...payload, activity_type: "prova" }),
+  });
+}
+
 // Corrige UMA questão, para a lição responder na hora. Não fecha a atividade:
 // score, XP e sequência continuam saindo de submitAtividade, no fim.
 export function conferirQuestao(payload: {
@@ -487,6 +496,7 @@ export const api = {
   uploadText,
   deleteDocument,
   generateAtividade,
+  generateProva,
   conferirQuestao,
   submitAtividade,
   listAtividades,

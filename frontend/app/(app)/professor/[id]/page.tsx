@@ -8,6 +8,7 @@ import {
   FileText,
   FileUp,
   FileWarning,
+  GraduationCap,
   Play,
   TrendingDown,
   TrendingUp,
@@ -398,6 +399,14 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
                   iconTone="indigo"
                   title="Chat"
                   subtitle="Pergunte qualquer coisa sobre o material"
+                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                />
+                <InsetRow
+                  href={`/prova/${professorId}`}
+                  icon={<GraduationCap />}
+                  iconTone="indigo"
+                  title="Prova geral"
+                  subtitle="A matéria inteira de uma vez, correção só no final"
                   trailing={<ChevronRight className="h-[18px] w-[18px]" />}
                 />
               </InsetList>
