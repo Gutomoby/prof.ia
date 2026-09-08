@@ -380,6 +380,29 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
           </div>
         )}
           </div>
+
+          {trilha.length > 0 && (
+            <div className="mt-[22px]">
+              <InsetList>
+                <InsetRow
+                  href={`/professor/${professorId}/resumo`}
+                  icon={<FileText />}
+                  iconTone="indigo"
+                  title="Resumos"
+                  subtitle="Um resumo por capítulo da trilha"
+                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                />
+                <InsetRow
+                  href={`/professor/${professorId}/chat`}
+                  icon={<Zap />}
+                  iconTone="indigo"
+                  title="Chat"
+                  subtitle="Pergunte qualquer coisa sobre o material"
+                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                />
+              </InsetList>
+            </div>
+          )}
         </PainelPrincipal>
 
         <PainelAuxiliar>

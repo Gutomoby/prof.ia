@@ -83,8 +83,9 @@ export const NOTACAO_MATEMATICA =
 // --- Anthropic ---------------------------------------------------------------
 
 type AnthropicToolUse = { type: "tool_use"; name: string; input: Record<string, unknown> };
+type AnthropicText = { type: "text"; text: string };
 type AnthropicResponse = {
-  content: (AnthropicToolUse | { type: string })[];
+  content: (AnthropicToolUse | AnthropicText | { type: string })[];
   usage: { input_tokens: number; output_tokens: number };
 };
 
@@ -93,8 +94,8 @@ async function anthropicMessages(body: {
   max_tokens: number;
   system: string;
   messages: { role: string; content: string }[];
-  tools: unknown[];
-  tool_choice: { type: "tool"; name: string };
+  tools?: unknown[];
+  tool_choice?: { type: "tool"; name: string };
 }): Promise<AnthropicResponse> {
   const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
   if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada no ambiente");
@@ -202,6 +203,85 @@ export async function generateStudyPlan(
   const input = toolInput(response, "return_study_plan");
   if (!input) throw new Error("Claude não retornou o plano no formato esperado.");
   return input;
+}
+
+const _SUMMARY_TOOL = {
+  name: "return_summary",
+  description: "Retorna o resumo estruturado do módulo.",
+  input_schema: {
+    type: "object",
+    properties: {
+      titulo: { type: "string", description: "Título curto do resumo (pode repetir o nome do módulo)." },
+      pontos_principais: {
+        type: "array",
+        items: { type: "string" },
+        description: "3 a 6 pontos-chave, cada um 1-2 frases — o que não pode faltar na cabeça do aluno.",
+      },
+      conteudo: {
+        type: "string",
+        description:
+          "Corpo do resumo em prosa, 2-4 parágrafos, cobrindo os conceitos do módulo com exemplos quando fizer sentido.",
+      },
+    },
+    required: ["titulo", "pontos_principais", "conteudo"],
+  },
+};
+
+export type Summary = { titulo: string; pontos_principais: string[]; conteudo: string };
+
+/** Pede ao Claude um resumo estruturado do módulo, via tool-forcing. */
+export async function generateSummary(
+  systemPrompt: string,
+  userPrompt: string,
+  userId?: string,
+  professorId?: string,
+): Promise<Summary> {
+  const response = await anthropicMessages({
+    model: MODEL_HAIKU,
+    max_tokens: 3072,
+    system: systemPrompt,
+    messages: [{ role: "user", content: userPrompt }],
+    tools: [_SUMMARY_TOOL],
+    tool_choice: { type: "tool", name: "return_summary" },
+  });
+
+  if (userId && professorId) {
+    const tokensIn = response.usage.input_tokens;
+    const tokensOut = response.usage.output_tokens;
+    const cost = estimateCost(MODEL_HAIKU, tokensIn, tokensOut);
+    await logTokenUsage(userId, professorId, "haiku", "resumo", tokensIn, tokensOut, cost);
+  }
+
+  const input = toolInput(response, "return_summary");
+  if (!input) throw new Error("Claude não retornou o resumo no formato esperado.");
+  return input as Summary;
+}
+
+/**
+ * Uma resposta de chat com o professor — sem tool-forcing, texto livre.
+ * `history` já inclui a mensagem nova do usuário como último item.
+ */
+export async function generateChatReply(
+  systemPrompt: string,
+  history: { role: "user" | "assistant"; content: string }[],
+  userId: string,
+  professorId: string,
+): Promise<string> {
+  const response = await anthropicMessages({
+    model: MODEL_HAIKU,
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: history,
+  });
+
+  const tokensIn = response.usage.input_tokens;
+  const tokensOut = response.usage.output_tokens;
+  const cost = estimateCost(MODEL_HAIKU, tokensIn, tokensOut);
+  await logTokenUsage(userId, professorId, "haiku", "chat", tokensIn, tokensOut, cost);
+
+  const bloco = response.content.find((b): b is AnthropicText => b.type === "text");
+  if (!bloco) throw new Error("Claude não retornou texto na resposta do chat.");
+  return bloco.text;
 }
 
 async function generateJsonClaude(

@@ -165,6 +165,33 @@ export interface StudyPlan {
 }
 
 // ---------------------------------------------------------------------------
+// Resumo por módulo — GET/POST /professores/:id/modulos/:moduleId/resumo
+// ---------------------------------------------------------------------------
+
+export interface ModuleSummaryContent {
+  titulo: string;
+  pontos_principais: string[];
+  conteudo: string;
+}
+
+export interface ModuleSummary {
+  id: string;
+  topic: string | null;
+  created_at: string;
+  content: ModuleSummaryContent;
+}
+
+// ---------------------------------------------------------------------------
+// Chat com o professor — GET/POST /professores/:id/chat
+// ---------------------------------------------------------------------------
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+// ---------------------------------------------------------------------------
 // Progressão global (XP, nível, sequência) — GET /progresso
 // ---------------------------------------------------------------------------
 

@@ -18,6 +18,8 @@ import { register as registerModulos } from "./routes/modulos.ts";
 import { register as registerScore } from "./routes/score.ts";
 import { register as registerAtividades } from "./routes/atividades.ts";
 import { register as registerDocumentos } from "./routes/documentos.ts";
+import { register as registerResumos } from "./routes/resumos.ts";
+import { register as registerChat } from "./routes/chat.ts";
 
 const router = new Router();
 registerAssinaturas(router);
@@ -31,5 +33,7 @@ registerModulos(router);
 registerScore(router);
 registerAtividades(router);
 registerDocumentos(router);
+registerResumos(router);
+registerChat(router);
 
 Deno.serve((req) => router.handle(req, "api"));

@@ -20,6 +20,8 @@ import type {
   Module,
   ScoreSummary,
   StudyPlan,
+  ModuleSummary,
+  ChatMessage,
   UserProgress,
   CalendarResponse,
   CalendarEvent,
@@ -312,6 +314,43 @@ export async function generateStudyPlan(professorId: string) {
 }
 
 // ---------------------------------------------------------------------------
+// Resumo por módulo
+// ---------------------------------------------------------------------------
+
+export async function getModuleSummary(
+  professorId: string,
+  moduleId: string
+): Promise<ModuleSummary | null> {
+  try {
+    return await request<ModuleSummary>(`/professores/${professorId}/modulos/${moduleId}/resumo`);
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+export function generateModuleSummary(professorId: string, moduleId: string) {
+  return request<ModuleSummary>(`/professores/${professorId}/modulos/${moduleId}/resumo/gerar`, {
+    method: "POST",
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Chat com o professor
+// ---------------------------------------------------------------------------
+
+export function getChatHistory(professorId: string) {
+  return request<{ items: ChatMessage[] }>(`/professores/${professorId}/chat`);
+}
+
+export function sendChatMessage(professorId: string, message: string) {
+  return request<{ items: ChatMessage[] }>(`/professores/${professorId}/chat`, {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Progressão global (XP, nível, sequência)
 // ---------------------------------------------------------------------------
 
@@ -468,4 +507,8 @@ export const api = {
   setAssinatura,
   criarCheckout,
   souAdmin,
+  getModuleSummary,
+  generateModuleSummary,
+  getChatHistory,
+  sendChatMessage,
 };
