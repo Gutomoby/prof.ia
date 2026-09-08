@@ -255,14 +255,22 @@ export function Licao({
         </div>
       )}
 
-      {/* Espaço para o painel fixo não cobrir a última alternativa. */}
-      <div className={cn("flex-1", respondida ? "min-h-[260px]" : "min-h-6")} />
+      {/* Espaço para o painel fixo (nos dois estados) não cobrir a última
+          alternativa. */}
+      <div className={cn("flex-1", respondida ? "min-h-[260px]" : "min-h-[110px]")} />
 
       {/*
         O painel de resposta é preso ao rodapé da janela e sobe por cima do
         conteúdo — é o que o handoff faz, e é o que faz sentido: a resposta tem
         que aparecer sem o aluno procurar. No fluxo do documento, questão longa
         empurrava o veredito para fora da tela.
+
+        "Responder" tinha o mesmo problema antes de ganhar o mesmo tratamento:
+        vivia solto no fluxo normal da página (só `mt-6`), então numa questão
+        com enunciado e 4 alternativas compridas o botão saía da viewport no
+        celular sem nenhuma pista de rolar — parecia que o botão "não
+        carregava". Fixo no rodapé como o "Continuar", ele nunca depende de
+        scroll, e ganha o mesmo destaque visual (cartão flutuante com sombra).
       */}
       {respondida ? (
         // O contêiner posiciona; o filho anima. Se a animação morasse no mesmo
@@ -342,28 +350,30 @@ export function Licao({
           </div>
         </div>
       ) : (
-        <div className="mt-6 flex items-center gap-4">
-          <Capsule
-            block
-            className="md:w-fit md:flex-none md:px-7"
-            disabled={escolha === null}
-            loading={conferindo}
-            onClick={conferir}
-          >
-            {conferindo ? "Conferindo..." : "Responder"}
-            <span
-              aria-hidden
-              className="hidden rounded-[8px] bg-white/20 px-2 py-0.5 text-[12px] font-bold md:inline"
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3.5">
+          <div className="pointer-events-auto flex w-full max-w-[536px] items-center gap-4 rounded-[30px] bg-papel p-3.5 backdrop-blur-[24px] shadow-vidro-flutuante">
+            <Capsule
+              block
+              className="md:w-fit md:flex-none md:px-7"
+              disabled={escolha === null}
+              loading={conferindo}
+              onClick={conferir}
             >
-              ↵
-            </span>
-          </Capsule>
-          {/* A dica só existe onde há teclado, e só porque as teclas
-              funcionam de verdade — ver o efeito de atalhos acima. */}
-          <p className="hidden text-corpo text-tinta-fraca md:block">
-            ou aperte <TeclaHint>1</TeclaHint> <TeclaHint>2</TeclaHint> <TeclaHint>3</TeclaHint>{" "}
-            <TeclaHint>4</TeclaHint> para escolher
-          </p>
+              {conferindo ? "Conferindo..." : "Responder"}
+              <span
+                aria-hidden
+                className="hidden rounded-[8px] bg-white/20 px-2 py-0.5 text-[12px] font-bold md:inline"
+              >
+                ↵
+              </span>
+            </Capsule>
+            {/* A dica só existe onde há teclado, e só porque as teclas
+                funcionam de verdade — ver o efeito de atalhos acima. */}
+            <p className="hidden text-corpo text-tinta-fraca md:block">
+              ou aperte <TeclaHint>1</TeclaHint> <TeclaHint>2</TeclaHint> <TeclaHint>3</TeclaHint>{" "}
+              <TeclaHint>4</TeclaHint> para escolher
+            </p>
+          </div>
         </div>
       )}
     </div>
