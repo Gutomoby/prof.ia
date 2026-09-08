@@ -48,19 +48,71 @@ interface UsuarioItem {
   operacoes: number;
 }
 
+interface AtividadeItem {
+  resource_id: string;
+  operation: string;
+  professor_id: string;
+  professor_name: string | null;
+  discipline: string | null;
+  custo_total: number;
+  tokens_total: number;
+  n_chamadas: number;
+  primeira_chamada: string;
+  ultima_chamada: string;
+}
+
+const ROTULO_OPERACAO: Record<string, string> = {
+  quiz: "Quiz",
+  prova: "Prova",
+  resumo: "Resumo",
+  chat: "Chat",
+  module: "Módulos",
+  plan: "Plano de estudos",
+  other: "Outro",
+};
+
 export default function FinanceiroPage() {
   const [resumo, setResumo] = useState<Resumo | null>(null);
   const [kpis, setKpis] = useState<KPIs | null>(null);
   const [usuarios, setUsuarios] = useState<UsuarioItem[]>([]);
   const [custos, setCustos] = useState<CustoItem[]>([]);
+  const [atividades, setAtividades] = useState<AtividadeItem[]>([]);
+  const [atividadesLoading, setAtividadesLoading] = useState(false);
+  const [atividadesErro, setAtividadesErro] = useState<string | null>(null);
+  const [filtroOperacao, setFiltroOperacao] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "kpis">("resumo");
+  const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "atividades" | "kpis">("resumo");
   const [dias, setDias] = useState(30);
 
   useEffect(() => {
     load();
   }, [dias]);
+
+  // Drill-down por atividade individual: fica fora do load() principal
+  // porque o filtro de operação (quiz/prova/resumo/chat) só afeta esta
+  // aba — refazer resumo/kpis/usuários/custos a cada troca de filtro
+  // seria trabalho à toa.
+  useEffect(() => {
+    if (aba !== "atividades") return;
+    let cancelado = false;
+    setAtividadesLoading(true);
+    setAtividadesErro(null);
+    const params = new URLSearchParams({ dias: String(dias), limit: "100" });
+    if (filtroOperacao) params.set("operacao", filtroOperacao);
+    api
+      .request<{ items: AtividadeItem[] }>(`/admin/financeiro/atividades?${params.toString()}`)
+      .then((res) => !cancelado && setAtividades(res.items || []))
+      .catch(
+        (err) =>
+          !cancelado &&
+          setAtividadesErro(err instanceof ApiError ? err.message : "Erro ao carregar atividades")
+      )
+      .finally(() => !cancelado && setAtividadesLoading(false));
+    return () => {
+      cancelado = true;
+    };
+  }, [aba, dias, filtroOperacao]);
 
   async function load() {
     setLoading(true);
@@ -185,6 +237,7 @@ export default function FinanceiroPage() {
           { value: "resumo", label: "Resumo" },
           { value: "usuarios", label: "Usuários" },
           { value: "custos", label: "Custos" },
+          { value: "atividades", label: "Atividades" },
           { value: "kpis", label: "KPIs" },
         ]}
       />
@@ -282,6 +335,85 @@ export default function FinanceiroPage() {
                   <Bar dataKey="custo" fill="hsl(var(--indigo))" />
                 </BarChart>
               </ResponsiveContainer>
+            )}
+          </GlassCard>
+        )}
+
+        {aba === "atividades" && (
+          <GlassCard nivel="cartao" radius="grupo" className="p-4">
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-corpo font-bold text-tinta">Custo por atividade ({dias}d)</p>
+                <p className="text-nota text-tinta-fraca">
+                  Um quiz, uma prova, um resumo — ou uma sessão inteira de chat, somando todas as
+                  mensagens dela.
+                </p>
+              </div>
+              <Segmented
+                value={filtroOperacao || "todas"}
+                onValueChange={(v) => setFiltroOperacao(v === "todas" ? "" : v)}
+                options={[
+                  { value: "todas", label: "Todas" },
+                  { value: "quiz", label: "Quiz" },
+                  { value: "prova", label: "Prova" },
+                  { value: "resumo", label: "Resumo" },
+                  { value: "chat", label: "Chat" },
+                ]}
+              />
+            </div>
+
+            {atividadesLoading ? (
+              <Skeleton className="h-[200px] rounded-grupo" />
+            ) : atividadesErro ? (
+              <InlineAlert>{atividadesErro}</InlineAlert>
+            ) : atividades.length === 0 ? (
+              <p className="text-nota text-tinta-fraca">
+                Nenhuma atividade com custo registrado no período (logs de antes de 08/09/2026 não
+                têm o vínculo necessário pra aparecer aqui).
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-corpo">
+                  <thead>
+                    <tr className="border-b border-borda">
+                      <th className="px-3 py-2 text-left text-nota font-semibold text-tinta-fraca">Tipo</th>
+                      <th className="px-3 py-2 text-left text-nota font-semibold text-tinta-fraca">Matéria</th>
+                      <th className="px-3 py-2 text-right text-nota font-semibold text-tinta-fraca">Custo</th>
+                      <th className="px-3 py-2 text-right text-nota font-semibold text-tinta-fraca">Tokens</th>
+                      <th className="px-3 py-2 text-right text-nota font-semibold text-tinta-fraca">Chamadas</th>
+                      <th className="px-3 py-2 text-right text-nota font-semibold text-tinta-fraca">Última</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {atividades.map((item) => (
+                      <tr key={item.resource_id} className="border-b border-borda/50 hover:bg-indigo/5">
+                        <td className="px-3 py-3 text-tinta">
+                          {ROTULO_OPERACAO[item.operation] ?? item.operation}
+                        </td>
+                        <td className="px-3 py-3 text-tinta-fraca">
+                          {item.professor_name ?? item.professor_id.slice(0, 8) + "..."}
+                          {item.discipline && <span className="text-nota"> · {item.discipline}</span>}
+                        </td>
+                        <td className="px-3 py-3 text-right font-semibold text-tinta">
+                          ${item.custo_total.toFixed(4)}
+                        </td>
+                        <td className="px-3 py-3 text-right text-tinta">
+                          {item.tokens_total.toLocaleString()}
+                        </td>
+                        <td className="px-3 py-3 text-right text-tinta">
+                          {item.n_chamadas}
+                          {item.operation === "chat" && item.n_chamadas > 1 && (
+                            <span className="text-nota text-tinta-fraca"> msgs</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 text-right text-nota text-tinta-fraca">
+                          {new Date(item.ultima_chamada).toLocaleDateString("pt-BR")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </GlassCard>
         )}

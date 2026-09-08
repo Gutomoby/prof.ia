@@ -316,4 +316,103 @@ export function register(router: Router): void {
       planos,
     };
   });
+
+  // Drill-down por atividade individual — diferente de /custos (agrupado por
+  // operação/modelo/dia), aqui cada linha é UM quiz, UMA prova, UM resumo ou
+  // UMA sessão de chat (a sessão soma as várias mensagens que a compõem,
+  // porque compartilham o mesmo resource_id). Só enxerga logs a partir de
+  // 2026-09-08 (token_logs_resource_drilldown.sql) — logs antigos não têm
+  // resource_id e ficam de fora.
+  router.get("/admin/financeiro/atividades", async (ctx) => {
+    await requireAdmin(ctx.req);
+    const dias = parseIntParam(ctx.query.get("dias"), 30, 1, 365);
+    const limit = parseIntParam(ctx.query.get("limit"), 50, 1, 500);
+    const operacao = ctx.query.get("operacao");
+    const resourceId = ctx.query.get("resource_id");
+
+    try {
+      const dataLimite = new Date(Date.now() - dias * 86400_000).toISOString();
+      const linhas = await selectAll<{
+        resource_id: string;
+        operation: string;
+        professor_id: string;
+        cost_usd: number;
+        tokens_in: number;
+        tokens_out: number;
+        created_at: string;
+      }>((de, ate) => {
+        let q = db()
+          .from("token_logs")
+          .select("resource_id, operation, professor_id, cost_usd, tokens_in, tokens_out, created_at")
+          .gte("created_at", dataLimite)
+          .not("resource_id", "is", null);
+        if (operacao) q = q.eq("operation", operacao);
+        if (resourceId) q = q.eq("resource_id", resourceId);
+        return q.range(de, ate);
+      });
+
+      const porRecurso = new Map<
+        string,
+        {
+          resource_id: string;
+          operation: string;
+          professor_id: string;
+          custo_total: number;
+          tokens_total: number;
+          n_chamadas: number;
+          primeira_chamada: string;
+          ultima_chamada: string;
+        }
+      >();
+      for (const row of linhas) {
+        const atual = porRecurso.get(row.resource_id) ?? {
+          resource_id: row.resource_id,
+          operation: row.operation,
+          professor_id: row.professor_id,
+          custo_total: 0,
+          tokens_total: 0,
+          n_chamadas: 0,
+          primeira_chamada: row.created_at,
+          ultima_chamada: row.created_at,
+        };
+        atual.custo_total += Number(row.cost_usd ?? 0);
+        atual.tokens_total += (row.tokens_in ?? 0) + (row.tokens_out ?? 0);
+        atual.n_chamadas += 1;
+        if (row.created_at < atual.primeira_chamada) atual.primeira_chamada = row.created_at;
+        if (row.created_at > atual.ultima_chamada) atual.ultima_chamada = row.created_at;
+        porRecurso.set(row.resource_id, atual);
+      }
+
+      // Nome/matéria do professor pra dar contexto, sem o cliente precisar
+      // de outra ida ao banco por linha.
+      const professorIds = [...new Set([...porRecurso.values()].map((r) => r.professor_id))];
+      const { data: professoresRows, error: erroProf } = professorIds.length
+        ? await db().from("professors").select("id, name, discipline").in("id", professorIds)
+        : { data: [] as { id: string; name: string; discipline: string }[], error: null };
+      if (erroProf) throw new Error(erroProf.message);
+      const nomesProfessor = new Map((professoresRows ?? []).map((p) => [p.id as string, p]));
+
+      const items = [...porRecurso.values()]
+        .sort((a, b) => b.custo_total - a.custo_total)
+        .slice(0, limit)
+        .map((item) => {
+          const professor = nomesProfessor.get(item.professor_id);
+          return {
+            ...item,
+            custo_total: arredondar(item.custo_total),
+            professor_name: professor?.name ?? null,
+            discipline: professor?.discipline ?? null,
+          };
+        });
+
+      return {
+        items,
+        total: porRecurso.size,
+        total_custo: arredondar([...porRecurso.values()].reduce((s, r) => s + r.custo_total, 0)),
+        periodo_dias: dias,
+      };
+    } catch (e) {
+      return { error: mensagemErro(e), items: [], total: 0, total_custo: 0, periodo_dias: dias };
+    }
+  });
 }

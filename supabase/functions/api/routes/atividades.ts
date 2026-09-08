@@ -157,6 +157,10 @@ export function register(router: Router): void {
     const context = chunks.map((c) => c.content).join("\n\n---\n\n") || "(nenhum material enviado ainda)";
     const systemPrompt = ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context);
 
+    // Gerado ANTES de inserir: precisa existir na hora de logar o custo em
+    // token_logs.resource_id, e a atividade só ganha id depois de responder.
+    const activityId = crypto.randomUUID();
+
     const userPrompt =
       `Gere um ${activityType === "prova" ? "prova" : "quiz"} de múltipla escolha com ${nQuestoes} questões ${scopeDesc}. ` +
       `${_DIFFICULTY_INSTRUCTIONS[difficulty]} ` +
@@ -171,7 +175,7 @@ export function register(router: Router): void {
       "nunca aleatórios. " +
       "Use a tool return_quiz para responder.";
 
-    const result = await generateJson(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId);
+    const result = await generateJson(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId, activityType, activityId);
     const questionsRaw = result.questions ?? [];
     if (!questionsRaw.length) throw new HttpError(502, "Claude não retornou nenhuma questão.");
 
@@ -182,6 +186,7 @@ export function register(router: Router): void {
     const { data: inserted, error } = await db()
       .from("activity_results")
       .insert({
+        id: activityId,
         professor_id: professorId,
         activity_type: activityType,
         topic: topicLabel,

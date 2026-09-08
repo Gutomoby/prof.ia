@@ -47,6 +47,7 @@ async function logTokenUsage(
   tokensIn: number,
   tokensOut: number,
   costUsd: number,
+  resourceId?: string,
 ): Promise<void> {
   try {
     const { error } = await db().from("token_logs").insert({
@@ -57,6 +58,7 @@ async function logTokenUsage(
       tokens_in: tokensIn,
       tokens_out: tokensOut,
       cost_usd: costUsd,
+      resource_id: resourceId ?? null,
       created_at: new Date().toISOString(),
     });
     if (error) console.error("Aviso: falha ao registrar token_log:", error.message);
@@ -235,6 +237,7 @@ export async function generateSummary(
   userPrompt: string,
   userId?: string,
   professorId?: string,
+  resourceId?: string,
 ): Promise<Summary> {
   const response = await anthropicMessages({
     model: MODEL_HAIKU,
@@ -249,7 +252,7 @@ export async function generateSummary(
     const tokensIn = response.usage.input_tokens;
     const tokensOut = response.usage.output_tokens;
     const cost = estimateCost(MODEL_HAIKU, tokensIn, tokensOut);
-    await logTokenUsage(userId, professorId, "haiku", "resumo", tokensIn, tokensOut, cost);
+    await logTokenUsage(userId, professorId, "haiku", "resumo", tokensIn, tokensOut, cost, resourceId);
   }
 
   const input = toolInput(response, "return_summary");
@@ -266,6 +269,7 @@ export async function generateChatReply(
   history: { role: "user" | "assistant"; content: string }[],
   userId: string,
   professorId: string,
+  resourceId?: string,
 ): Promise<string> {
   const response = await anthropicMessages({
     model: MODEL_HAIKU,
@@ -277,7 +281,7 @@ export async function generateChatReply(
   const tokensIn = response.usage.input_tokens;
   const tokensOut = response.usage.output_tokens;
   const cost = estimateCost(MODEL_HAIKU, tokensIn, tokensOut);
-  await logTokenUsage(userId, professorId, "haiku", "chat", tokensIn, tokensOut, cost);
+  await logTokenUsage(userId, professorId, "haiku", "chat", tokensIn, tokensOut, cost, resourceId);
 
   const bloco = response.content.find((b): b is AnthropicText => b.type === "text");
   if (!bloco) throw new Error("Claude não retornou texto na resposta do chat.");
@@ -290,6 +294,8 @@ async function generateJsonClaude(
   model: string,
   userId?: string,
   professorId?: string,
+  operation: string = "quiz",
+  resourceId?: string,
 ): Promise<{ questions: unknown[] }> {
   const response = await anthropicMessages({
     model,
@@ -306,7 +312,7 @@ async function generateJsonClaude(
     const tokensIn = response.usage.input_tokens;
     const tokensOut = response.usage.output_tokens;
     const cost = estimateCost(model, tokensIn, tokensOut);
-    await logTokenUsage(userId, professorId, modelKey(model), "quiz", tokensIn, tokensOut, cost);
+    await logTokenUsage(userId, professorId, modelKey(model), operation, tokensIn, tokensOut, cost, resourceId);
   }
 
   const input = toolInput(response, "return_quiz");
@@ -315,7 +321,7 @@ async function generateJsonClaude(
 }
 
 /**
- * Pede ao Claude (Haiku) um quiz em JSON estruturado, via tool-forcing.
+ * Pede ao Claude (Haiku) um quiz ou prova em JSON estruturado, via tool-forcing.
  *
  * Já existiu uma tentativa de gerar via Gemini primeiro — ver o histórico do
  * arquivo se precisar entender o porquê de ter sido removida.
@@ -329,6 +335,11 @@ export async function generateJson(
   _model: string = MODEL_HAIKU,
   userId?: string,
   professorId?: string,
+  // "quiz" ou "prova" — antes disto existir, toda geração (inclusive prova)
+  // era logada como "quiz" em token_logs, então dava pra separar o custo de
+  // uma coisa da outra nos relatórios financeiros.
+  operation: string = "quiz",
+  resourceId?: string,
 ): Promise<{ questions: unknown[] }> {
-  return await generateJsonClaude(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId);
+  return await generateJsonClaude(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId, operation, resourceId);
 }

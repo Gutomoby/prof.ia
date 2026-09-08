@@ -63,14 +63,27 @@ export function register(router: Router): void {
       "fórmula curta entre $ e $ seguida do que ela significa (ex.: \"- $_{20}E_{40}$ = dotal puro\"). " +
       NOTACAO_MATEMATICA;
 
-    const sessaoAtual = await getSession(professorId);
-    const historicoAnterior = sessaoAtual?.messages ?? [];
+    // A sessão precisa existir ANTES da chamada ao modelo — token_logs.resource_id
+    // aponta pra ela, e uma sessão nova só ganha id ao ser inserida. Criar vazia
+    // aqui (em vez de só depois de ter a resposta) também simplifica: dali em
+    // diante é sempre update, nunca mais precisa decidir insert-ou-update.
+    let sessaoAtual = await getSession(professorId);
+    if (!sessaoAtual) {
+      const { data, error } = await db()
+        .from("chat_sessions")
+        .insert({ professor_id: professorId, messages: [] })
+        .select("id, messages");
+      if (error) throw new HttpError(500, error.message);
+      sessaoAtual = { id: data![0].id as string, messages: [] };
+    }
+
+    const historicoAnterior = sessaoAtual.messages;
     const historicoParaModelo = [
       ...historicoAnterior.slice(-MAX_HISTORICO).map((m) => ({ role: m.role, content: m.content })),
       { role: "user" as const, content: mensagem },
     ];
 
-    const resposta = await generateChatReply(systemPrompt, historicoParaModelo, userId, professorId);
+    const resposta = await generateChatReply(systemPrompt, historicoParaModelo, userId, professorId, sessaoAtual.id);
 
     const novasMensagens: ChatMessage[] = [
       ...historicoAnterior,
@@ -78,18 +91,11 @@ export function register(router: Router): void {
       { role: "assistant", content: resposta, created_at: new Date().toISOString() },
     ];
 
-    if (sessaoAtual) {
-      const { error } = await db()
-        .from("chat_sessions")
-        .update({ messages: novasMensagens, updated_at: new Date().toISOString() })
-        .eq("id", sessaoAtual.id);
-      if (error) throw new HttpError(500, error.message);
-    } else {
-      const { error } = await db()
-        .from("chat_sessions")
-        .insert({ professor_id: professorId, messages: novasMensagens });
-      if (error) throw new HttpError(500, error.message);
-    }
+    const { error } = await db()
+      .from("chat_sessions")
+      .update({ messages: novasMensagens, updated_at: new Date().toISOString() })
+      .eq("id", sessaoAtual.id);
+    if (error) throw new HttpError(500, error.message);
 
     return { items: normalizarProfundo(novasMensagens) };
   });

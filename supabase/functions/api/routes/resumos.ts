@@ -95,6 +95,10 @@ export function register(router: Router): void {
     const context = chunks.map((c) => c.content).join("\n\n---\n\n") || "(nenhum material enviado ainda)";
     const systemPrompt = ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context);
 
+    // Gerado ANTES de inserir, mesmo motivo de atividades.ts::activityId —
+    // precisa existir na hora de logar o custo em token_logs.resource_id.
+    const summaryId = crypto.randomUUID();
+
     const userPrompt =
       `Escreva um resumo de estudo do módulo "${modulo.name}"` +
       (topicos.length ? ` (tópicos: ${topicos.join(", ")})` : "") +
@@ -103,12 +107,13 @@ export function register(router: Router): void {
       `${NOTACAO_MATEMATICA} ` +
       "Use a tool return_summary para responder.";
 
-    const summary = await generateSummary(systemPrompt, userPrompt, userId, professorId);
+    const summary = await generateSummary(systemPrompt, userPrompt, userId, professorId, summaryId);
     const conteudo = normalizarProfundo(normalizeSummary(summary));
 
     const { data: inserted, error } = await db()
       .from("summaries")
       .insert({
+        id: summaryId,
         professor_id: professorId,
         module_id: modulo.id,
         topic: modulo.name,
