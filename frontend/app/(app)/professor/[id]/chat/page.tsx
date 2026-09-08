@@ -76,7 +76,7 @@ export default function ChatPage({ params }: { params: { id: string } }) {
     <div className="mx-auto flex max-w-[640px] flex-col">
       {erro && <InlineAlert className="mb-3">{erro}</InlineAlert>}
 
-      <div className="flex min-h-[50vh] flex-1 flex-col gap-3 pb-[120px]">
+      <div className="flex min-h-[50vh] flex-1 flex-col gap-3 pb-[180px]">
         {messages.length === 0 && (
           <div className="flex flex-col items-center gap-3 py-10 text-center">
             <KangoPlaceholder px={72} estado="lendo" />
@@ -120,7 +120,11 @@ export default function ChatPage({ params }: { params: { id: string } }) {
         <div ref={fimRef} />
       </div>
 
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-3.5">
+      {/* z-40 e o bottom deslocado: a barra de abas do celular (MobileNav) é
+          fixed/z-30 e ocupa os últimos ~76px da tela — com z-20/bottom-0
+          essa caixa de texto ficava escondida atrás dela (só sumia no
+          desktop, onde a barra de abas não existe). */}
+      <div className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-3 bottom-[calc(max(12px,env(safe-area-inset-bottom))+76px)] md:bottom-3.5">
         <div className="pointer-events-auto flex w-full max-w-[640px] items-end gap-2 rounded-[26px] bg-papel p-2 shadow-vidro-flutuante backdrop-blur-[24px]">
           <textarea
             value={texto}
