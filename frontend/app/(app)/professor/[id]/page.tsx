@@ -382,36 +382,44 @@ export default function ProfessorHubPage({ params }: { params: { id: string } })
         )}
           </div>
 
-          {trilha.length > 0 && (
-            <div className="mt-[22px]">
-              <InsetList>
-                <InsetRow
-                  href={`/professor/${professorId}/resumo`}
-                  icon={<FileText />}
-                  iconTone="indigo"
-                  title="Resumos"
-                  subtitle="Um resumo por capítulo da trilha"
-                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
-                />
-                <InsetRow
-                  href={`/professor/${professorId}/chat`}
-                  icon={<Zap />}
-                  iconTone="indigo"
-                  title="Chat"
-                  subtitle="Pergunte qualquer coisa sobre o material"
-                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
-                />
-                <InsetRow
-                  href={`/prova/${professorId}`}
-                  icon={<GraduationCap />}
-                  iconTone="indigo"
-                  title="Prova geral"
-                  subtitle="A matéria inteira de uma vez, correção só no final"
-                  trailing={<ChevronRight className="h-[18px] w-[18px]" />}
-                />
-              </InsetList>
-            </div>
-          )}
+          {/* Chat não depende da trilha — é RAG sobre TODO o material, sem
+              precisar de módulo nenhum. Resumo e Prova, sim: um exige
+              escolher um capítulo, o outro exige capítulos pra distribuir as
+              questões (o backend responde 400 sem trilha). Antes os três
+              ficavam atrás do mesmo `trilha.length > 0`, e o Chat sumia à toa
+              pra quem já tinha material mas ainda não tinha gerado a trilha. */}
+          <div className="mt-[22px]">
+            <InsetList>
+              <InsetRow
+                href={`/professor/${professorId}/chat`}
+                icon={<Zap />}
+                iconTone="indigo"
+                title="Chat"
+                subtitle="Pergunte qualquer coisa sobre o material"
+                trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+              />
+              {trilha.length > 0 && (
+                <>
+                  <InsetRow
+                    href={`/professor/${professorId}/resumo`}
+                    icon={<FileText />}
+                    iconTone="indigo"
+                    title="Resumos"
+                    subtitle="Um resumo por capítulo da trilha"
+                    trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                  />
+                  <InsetRow
+                    href={`/prova/${professorId}`}
+                    icon={<GraduationCap />}
+                    iconTone="indigo"
+                    title="Prova geral"
+                    subtitle="A matéria inteira de uma vez, correção só no final"
+                    trailing={<ChevronRight className="h-[18px] w-[18px]" />}
+                  />
+                </>
+              )}
+            </InsetList>
+          </div>
         </PainelPrincipal>
 
         <PainelAuxiliar>
