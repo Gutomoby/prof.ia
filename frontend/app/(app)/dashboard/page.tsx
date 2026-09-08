@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, FileText, Flame, GraduationCap, Play, Plus, Type, Upload } from "lucide-react";
+import { ChevronRight, FileText, Flame, GraduationCap, ListChecks, Play, Plus, Type, Upload, Zap } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -53,6 +53,60 @@ import type {
 */
 
 const QUESTOES_POR_LICAO = "5 a 8";
+
+// Card de ferramenta (Chat/Resumo/Prova) — mesmo material vidro-cartao do
+// card de "próximo passo" (não o pill mais discreto do botão "Matérias" nem
+// a linha fina do InsetList), porque estas são as 3 formas do Kango de
+// ensinar além do quiz, não uma navegação secundária: merecem o mesmo peso
+// visual da trilha, não um rodapé de link.
+function FerramentaCard({
+  href,
+  icon,
+  label,
+  disabled,
+  disabledHint,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  label: string;
+  disabled?: boolean;
+  disabledHint?: string;
+}) {
+  const conteudo = (
+    <>
+      <span className="flex h-11 w-11 flex-none items-center justify-center rounded-capsula bg-indigo/12 text-indigo">
+        {icon}
+      </span>
+      <span className="text-nota font-semibold text-tinta">{label}</span>
+    </>
+  );
+
+  if (disabled) {
+    return (
+      <div
+        className="flex flex-col items-center gap-2 rounded-grupo vidro-cartao px-2 py-4 text-center opacity-50"
+        title={disabledHint}
+        aria-disabled
+      >
+        {conteudo}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "flex flex-col items-center gap-2 rounded-grupo px-2 py-4 text-center",
+        "vidro-cartao shadow-vidro transition-all duration-180 ease-out",
+        "hover:-translate-y-0.5 hover:shadow-cartao-hover",
+        "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
+      )}
+    >
+      {conteudo}
+    </Link>
+  );
+}
 
 function ChipMateria({
   professor,
@@ -543,6 +597,42 @@ export default function EstudarPage() {
             trailing={<ChevronRight className="h-[18px] w-[18px]" />}
           />
         </InsetList>
+      )}
+
+      {/* Chat, Resumos e Prova geral — fora do Segmented de propósito: ficar
+          atrás de uma aba (como Revisão) exige um toque a mais pra descobrir
+          que existem, e são as 3 formas do Kango de ensinar além do quiz.
+          Sempre visíveis aqui, independente de qual aba (Trilha/Revisão/
+          Material) está selecionada. Resumo e Prova pedem trilha montada; sem
+          ela ficam com o mesmo cartão, só apagados, em vez de sumir e depois
+          reaparecer do nada quando a trilha existir. */}
+      {material.length > 0 && (
+        <div>
+          <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">
+            Ferramentas do Kango
+          </p>
+          <div className="grid grid-cols-3 gap-2.5">
+            <FerramentaCard
+              href={`/professor/${selecionada.id}/chat`}
+              icon={<Zap className="h-5 w-5" />}
+              label="Chat"
+            />
+            <FerramentaCard
+              href={`/professor/${selecionada.id}/resumo`}
+              icon={<FileText className="h-5 w-5" />}
+              label="Resumos"
+              disabled={!(modules[selecionada.id]?.length > 0)}
+              disabledHint="Monte a trilha primeiro, na aba Quiz"
+            />
+            <FerramentaCard
+              href={`/prova/${selecionada.id}`}
+              icon={<ListChecks className="h-5 w-5" />}
+              label="Prova"
+              disabled={!(modules[selecionada.id]?.length > 0)}
+              disabledHint="Monte a trilha primeiro, na aba Quiz"
+            />
+          </div>
+        </div>
       )}
 
       {/* Meta do dia e a fala do Kango, lado a lado. */}
