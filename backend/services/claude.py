@@ -144,7 +144,9 @@ _MODULES_TOOL = {
                         "topics": {
                             "type": "array",
                             "items": {"type": "string"},
-                            "description": "3-8 tópicos específicos cobertos pelo módulo.",
+                            "description": "5-12 tópicos específicos e segregados cobertos pelo módulo.",
+                            "minItems": 5,
+                            "maxItems": 12,
                         },
                     },
                     "required": ["name", "description", "topics"],

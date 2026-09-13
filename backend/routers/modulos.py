@@ -222,13 +222,22 @@ def gerar_modules(professor_id: UUID, user_id: UserId):
             f"MÓDULOS EXISTENTES:\n{ja_cobertos}\n"
         )
     else:
-        instrucao = "Organize o material abaixo em 3 a 8 módulos.\n"
+        instrucao = (
+            "Organize o material abaixo em 5 a 15 módulos, segregando bem os "
+            "conceitos. Cada conceito-chave deve ter seu próprio módulo quando "
+            "possível, em vez de agrupar muitos num só. Prefira mais módulos "
+            "menores e focados a poucos módulos grandes e genéricos.\n"
+        )
 
     user_prompt = (
         f"{instrucao}\n"
         "Para cada módulo devolvido dê um título curto (como capítulo de "
-        "livro), uma descrição de 1-2 frases e a lista de tópicos cobertos — "
-        "cada tópico específico o suficiente para virar questão de quiz. "
+        "livro), uma descrição de 1-2 frases e a lista de 5-12 tópicos específicos e segregados — "
+        "cada tópico deve ser um conceito distinto, detalhe específico ou aplicação que pode virar "
+        "uma ou mais questões de quiz. Tópicos devem ser concretos e bem definidos, não genéricos.\n"
+        "Exemplos de boa segregação: 'Probabilidade de morte no ano x', 'Força de mortalidade $\\mu_x$', "
+        "'Relação entre probabilidade e força', 'Calculando com distribuição uniforme' (em vez de "
+        "apenas 'Conceitos de mortalidade' que seria genérico).\n"
         f"{NOTACAO_MATEMATICA} "
         "Use a tool return_modules para responder.\n\n"
         f"MATERIAL:\n{digest}"
