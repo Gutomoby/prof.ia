@@ -43,7 +43,7 @@ export default function CriarContaPage() {
       email,
       password,
       options: {
-        emailRedirectTo: `${window.location.origin}/login`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/boas-vindas`,
         data: { full_name: nome.trim() || undefined },
       },
     });
