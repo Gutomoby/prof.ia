@@ -8,8 +8,9 @@ import { createClient } from "@/lib/supabase";
 import { AuthShell, AuthCard } from "@/components/auth/AuthShell";
 import { FieldGroup, Field, ToggleSenha, Divisor } from "@/components/auth/AuthField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { Capsule } from "@/components/ui/capsule";
+import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { MetricText } from "@/components/ui/metric-text";
+import { Kango } from "@/components/ui/kango";
 
 /*
   Telas 02 (celular) e 48 (desktop).
@@ -101,22 +102,27 @@ export default function CriarContaPage() {
     <AuthShell
       fundo="criar"
       topRight={
-        <>
-          Já tem conta?{" "}
-          <Link href="/login" className="font-semibold text-indigo hover:underline">
-            Entrar
-          </Link>
-        </>
+        <Link href="/login" className={capsuleVariants("tonal", false, "h-9 px-4 text-[14px]")}>
+          Entrar
+        </Link>
       }
     >
       <AuthCard largura={460}>
-        <Link
-          href="/login"
-          className="flex flex-none items-center gap-1.5 rounded-chip pt-[60px] text-linha font-medium text-indigo focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte md:pt-0 md:text-[16px]"
-        >
-          <ChevronLeft className="h-[19px] w-[19px] md:h-[18px] md:w-[18px]" />
-          Voltar
-        </Link>
+        <div className="flex flex-none items-center justify-between pt-[60px] md:pt-0">
+          <Link
+            href="/login"
+            className="flex items-center gap-1.5 rounded-chip text-linha font-medium text-indigo focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte md:text-[16px]"
+          >
+            <ChevronLeft className="h-[19px] w-[19px] md:h-[18px] md:w-[18px]" />
+            Voltar
+          </Link>
+          {/* Marca no celular — desktop já tem o "K" + wordmark no canto via
+              AuthShell. Sem isso a tela era a única do fluxo sem nenhum
+              Kango, o que destoava do resto. */}
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-capsula shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_8px_18px_rgba(67,56,202,.16)] md:hidden">
+            <Kango estado="comemora" px={40} />
+          </span>
+        </div>
 
         <div className="flex-none pt-[18px] md:pt-0">
           <h1 className="text-titulo-grande md:text-titulo-estado">Criar conta</h1>

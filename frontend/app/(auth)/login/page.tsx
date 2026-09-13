@@ -8,8 +8,9 @@ import { createClient } from "@/lib/supabase";
 import { AuthShell, AuthCard } from "@/components/auth/AuthShell";
 import { FieldGroup, Field, ToggleSenha, Divisor } from "@/components/auth/AuthField";
 import { SocialButtons } from "@/components/auth/SocialButtons";
-import { Capsule } from "@/components/ui/capsule";
+import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { Kango } from "@/components/ui/kango";
+import { cn } from "@/lib/utils";
 
 /*
   Telas 01 (Entrar), 03 (senha errada) no celular e 46/47 no desktop.
@@ -65,27 +66,33 @@ export default function LoginPage() {
     <AuthShell
       fundo={senhaErrada ? "erro" : "entrar"}
       topRight={
-        <>
-          Não tem conta?{" "}
-          <Link href="/criar-conta" className="font-semibold text-indigo hover:underline">
-            Criar agora
-          </Link>
-        </>
+        <Link href="/criar-conta" className={capsuleVariants("tonal", false, "h-9 px-4 text-[14px]")}>
+          Criar conta grátis
+        </Link>
       }
     >
       <AuthCard largura={460}>
-        {/* Marca — herói no celular, ausente no desktop (vai no canto). */}
+        {/* Marca — herói no celular, ausente no desktop (vai no canto). Halo
+            atrás do Kango dá presença de verdade em vez do ícone pequeno de
+            antes; some no estado de erro pra não competir com o vermelho. */}
         <div className="flex flex-none flex-col items-center pt-24 md:hidden">
-          <Kango
-            px={104}
-            estado={senhaErrada ? "confuso" : "acenando"}
-            tom={senhaErrada ? "neutro" : "indigo"}
-            className={
-              senhaErrada
-                ? "shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_12px_30px_rgba(20,20,30,.12)]"
-                : "shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_12px_30px_rgba(67,56,202,.16)]"
-            }
-          />
+          <div
+            className={cn(
+              "flex h-[168px] w-[168px] items-center justify-center rounded-capsula",
+              !senhaErrada && "bg-[radial-gradient(circle_at_50%_38%,hsl(226_57%_38%/.14),transparent_72%)]"
+            )}
+          >
+            <Kango
+              px={152}
+              estado={senhaErrada ? "confuso" : "acenando"}
+              tom={senhaErrada ? "neutro" : "indigo"}
+              className={
+                senhaErrada
+                  ? "shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_12px_30px_rgba(20,20,30,.12)]"
+                  : "shadow-[inset_0_0_0_1px_rgba(255,255,255,.9),0_16px_34px_rgba(67,56,202,.16)]"
+              }
+            />
+          </div>
           <p className="mt-[18px] text-[40px] font-bold leading-[44px] tracking-[0.37px] text-indigo">Kango</p>
           {!senhaErrada && (
             <p className="mt-2 max-w-[290px] text-center text-[16px] leading-[1.45] text-tinta-fraca">
@@ -179,20 +186,19 @@ export default function LoginPage() {
         )}
 
         <div className="min-h-4 flex-1 md:hidden" />
-        <p className="flex-none pb-[34px] text-center text-[14px] text-tinta-fraca md:hidden">
-          {senhaErrada ? (
-            <>
+        <div className="flex flex-none flex-col gap-3 pb-[34px] md:hidden">
+          {senhaErrada && (
+            <p className="text-center text-[14px] text-tinta-fraca">
               Tentou {tentativas} {tentativas === 1 ? "vez" : "vezes"}. Depois de 5, o acesso trava por 15 minutos.
-            </>
-          ) : (
-            <>
-              Primeira vez aqui?{" "}
-              <Link href="/criar-conta" className="font-semibold text-indigo">
-                Criar conta
-              </Link>
-            </>
+            </p>
           )}
-        </p>
+          {/* Antes era um linkzinho de texto ("Primeira vez aqui? Criar
+              conta") — fácil de não notar. Agora é uma cápsula de verdade,
+              mesmo peso visual do resto das ações da tela. */}
+          <Link href="/criar-conta" className={capsuleVariants("tonal", true)}>
+            Criar conta
+          </Link>
+        </div>
       </AuthCard>
     </AuthShell>
   );
