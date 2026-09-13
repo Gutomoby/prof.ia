@@ -16,6 +16,7 @@ misturaria espaços vetoriais incompatíveis com os chunks já indexados.
 import json
 import logging
 import os
+import re
 
 import fitz  # PyMuPDF
 import httpx
@@ -313,6 +314,17 @@ def material_digest(sb, professor_id: str) -> str | None:
     return "\n".join(partes)
 
 
+# Backslash que não inicia um escape JSON válido — caso típico: LaTeX que o
+# próprio prompt pede via NOTACAO_MATEMATICA ("\mu", "\ell", "\int"...).
+# Mesma causa e mesma correção de score.ts::coerceStrList e
+# resumos.ts::coerceStrList (lado Deno, corrigido no commit 14908f7) — este
+# era o único lugar que ainda faltava: sem o retry, o parse quebrava em toda
+# matéria com notação matemática (ex.: atuária) e a função devolvia [] em
+# silêncio, então "Atualizar trilha" sempre respondia "nada novo" mesmo com
+# material novo de verdade.
+_INVALID_JSON_ESCAPE = re.compile(r'\\(?!["\\/bfnrtu])')
+
+
 def _coerce_modules(valor):
     """Claude às vezes serializa o campo `modules` (array grande, com LaTeX)
     como uma STRING JSON em vez de um array de verdade dentro do próprio
@@ -321,10 +333,17 @@ def _coerce_modules(valor):
     Cobre os dois formatos vistos: string de `[...]` e string de todo o
     objeto `{"modules": [...]}`."""
     if isinstance(valor, str):
-        try:
-            valor = json.loads(valor)
-        except (json.JSONDecodeError, TypeError):
+        parsed = None
+        for candidato in (valor, _INVALID_JSON_ESCAPE.sub(lambda m: "\\\\", valor)):
+            try:
+                parsed = json.loads(candidato)
+                break
+            except (json.JSONDecodeError, TypeError):
+                continue
+        if parsed is None:
+            logging.warning("modules veio como string e nao foi possivel parsear: %r", valor[:200])
             return []
+        valor = parsed
     if isinstance(valor, dict):
         valor = valor.get("modules", [])
     return valor if isinstance(valor, list) else []
@@ -486,14 +505,23 @@ def gerar_modulos():
         instrucao = (
             "O aluno JÁ TEM uma trilha montada, listada abaixo em MÓDULOS "
             "EXISTENTES. Ela não pode ser refeita nem repetida.\n\n"
-            "Compare o MATERIAL com os MÓDULOS EXISTENTES e devolva APENAS "
-            "módulos NOVOS, cobrindo assuntos do material que nenhum módulo "
-            "existente já cobre. Um assunto conta como coberto mesmo que o "
-            "título esteja escrito de outro jeito — compare o conteúdo, não a "
-            "redação.\n"
-            "Se todo o material já estiver coberto, devolva uma lista vazia. "
-            "É um resultado válido e esperado: significa que a trilha já dá "
-            "conta do material.\n\n"
+            "Compare o MATERIAL com os MÓDULOS EXISTENTES por PROFUNDIDADE, "
+            "não por rótulo: dois textos sobre o mesmo assunto geral (ex. "
+            "'seguro para duas vidas') não são o mesmo conteúdo se um deles "
+            "traz fórmulas, derivações, casos especiais ou métodos que o "
+            "outro não tem. Abaixo de cada módulo existente você só vê o "
+            "TÍTULO e os TÓPICOS resumidos, não o material original que "
+            "gerou aquele módulo — um material novo que aprofunda um tema "
+            "com conteúdo técnico que não aparece nesses tópicos resumidos "
+            "conta como NOVO, mesmo com título parecido.\n"
+            "Na dúvida, prefira devolver um módulo novo (pode ser uma "
+            "continuação do mesmo tema, tipo 'Parte 2' ou um subtópico mais "
+            "específico) a descartar conteúdo: perder um capítulo que o "
+            "aluno pagou pra ter é pior do que a trilha ficar com dois "
+            "módulos próximos.\n"
+            "Só devolva lista vazia se o material for mesmo uma repetição do "
+            "que os tópicos abaixo já resumem — sem fórmula, técnica ou caso "
+            "novo.\n\n"
             f"MÓDULOS EXISTENTES:\n{ja_cobertos}\n"
         )
     else:
