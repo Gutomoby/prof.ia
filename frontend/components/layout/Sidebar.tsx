@@ -250,8 +250,8 @@ export function Sidebar() {
         className={cn(
           // Raio 18: não está na escala do guia (26/22/20/16/14/12), mas é o
           // valor da tela 52. Telas mandam.
-          "mx-1 flex items-center gap-3 rounded-[18px] bg-white/72 px-3 py-2.5 shadow-hairline",
-          "transition-colors duration-140 ease-out hover:bg-white",
+          "mx-1 flex items-center gap-3 rounded-[18px] bg-papel/72 px-3 py-2.5 shadow-hairline",
+          "transition-colors duration-140 ease-out hover:bg-papel",
           "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
         )}
       >

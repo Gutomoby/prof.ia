@@ -56,15 +56,19 @@ export function KangoPlaceholder({
   if (arte) {
     return (
       <span aria-hidden className={cn("relative flex-none", className)} style={{ width: px, height: px }}>
-        {/* mix-blend-multiply: os PNGs têm fundo branco sólido (não
-            transparente) — sem isso, sobra um quadrado branco visível toda
-            vez que o card por baixo não é branco (ex.: o rosa do "errou"). */}
+        {/* mix-blend-multiply só cancela o fundo branco do PNG se o que está
+            atrás for claro — multiplicar por um fundo escuro (tema escuro,
+            ou qualquer card não-branco) enegrece o desenho inteiro. Por isso
+            este forro claro fixo (não é --papel: precisa ficar claro nos
+            dois temas), do mesmo tamanho do PNG, entra atrás do blend, em
+            vez de depender da cor do card ou do tema por trás. */}
+        <span className="absolute inset-0 bg-[#fbfbf7]" />
         <Image
           src={arte}
           alt=""
           fill
           sizes={`${px}px`}
-          className="object-contain mix-blend-multiply"
+          className="relative object-contain mix-blend-multiply"
         />
       </span>
     );
