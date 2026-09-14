@@ -2,7 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, CreditCard, Download, KeyRound, Loader2, LogOut, ShieldCheck, Target } from "lucide-react";
+import {
+  ChevronRight,
+  CreditCard,
+  Download,
+  KeyRound,
+  Loader2,
+  LogOut,
+  ShieldCheck,
+  SunMoon,
+  Target,
+} from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { createClient } from "@/lib/supabase";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -12,10 +22,24 @@ import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
 import { MetricText } from "@/components/ui/metric-text";
+import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useQuizGuard } from "@/components/layout/QuizGuardContext";
+import { useTheme, type Theme } from "@/components/ThemeProvider";
 import { useProgress } from "@/lib/shared-data";
 import { DIFFICULTY_LABELS } from "@/lib/types";
+
+const OPCOES_TEMA: { value: Theme; label: string }[] = [
+  { value: "system", label: "Sistema" },
+  { value: "light", label: "Claro" },
+  { value: "dark", label: "Escuro" },
+];
+
+const TEMA_SUBTITULO: Record<Theme, string> = {
+  system: "Segue o tema do seu celular ou computador",
+  light: "Sempre claro",
+  dark: "Sempre escuro",
+};
 
 /*
   Tela 35 · Configurações.
@@ -27,10 +51,6 @@ import { DIFFICULTY_LABELS } from "@/lib/types";
     em lugar nenhum — nem coluna, nem rota, nem serviço de push. A permissão do
     navegador é pedida no primeiro acesso (tela 09), mas permissão não agenda
     nada, e um interruptor aqui prometeria a lembrança que não vem.
-  - Aparência (Sistema / Claro / Escuro): além de não haver onde guardar, o
-    modo escuro não foi DESENHADO. As 81 telas são claras e os tokens Kango não
-    respondem a prefers-color-scheme (ver "Pendências de design" no plano). Um
-    seletor de tema aqui prometeria uma tela que não existe.
   - Apagar minha conta: apagar usuário no Supabase exige service_role, que não
     existe no navegador. Apagar só as matérias já existe na tela 26 e é outra
     coisa — não vale oferecer uma no lugar da outra.
@@ -45,6 +65,11 @@ import { DIFFICULTY_LABELS } from "@/lib/types";
   é a meta em XP (daily_goal_xp / PATCH /progresso/meta). A meta em lições é
   constante hoje (META_DIARIA_LICOES). Então o controle edita o que existe, e a
   tela diz qual dos dois números ele mexe.
+
+  Aparência (Sistema / Claro / Escuro): fora do handoff original, mas o tema
+  escuro existe agora (ThemeProvider, data-theme no <html>, localStorage) —
+  ver globals.css. O segmented control aqui é a única forma de trocar; não
+  existe botão equivalente dentro do app logado além deste.
 */
 
 const OPCOES_XP = [30, 50, 80, 120];
@@ -61,6 +86,7 @@ function paraCSV(linhas: (string | number | null)[][]) {
 export default function ConfiguracoesPage() {
   const router = useRouter();
   const { unsaved } = useQuizGuard();
+  const { theme, setTheme } = useTheme();
 
   const [email, setEmail] = useState<string | null>(null);
   const { progress, loading, mutate: mutateProgress } = useProgress();
@@ -254,6 +280,27 @@ export default function ConfiguracoesPage() {
               <InlineAlert>{erroMeta}</InlineAlert>
             </div>
           )}
+        </div>
+
+        <div>
+          <p className="mb-2 px-rotulo-secao text-rotulo uppercase text-tinta-fraca">Aparência</p>
+          <InsetList>
+            <InsetRow
+              icon={<SunMoon />}
+              iconTone="indigo"
+              altura="dupla"
+              title="Tema"
+              subtitle={TEMA_SUBTITULO[theme]}
+            />
+            <div className="px-4 pb-3.5 pt-1">
+              <Segmented
+                aria-label="Tema do app"
+                value={theme}
+                onValueChange={setTheme}
+                options={OPCOES_TEMA}
+              />
+            </div>
+          </InsetList>
         </div>
 
         <div>

@@ -2,12 +2,21 @@ import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Brand } from "@/components/layout/Brand";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Landing page (rota /). Server Component — sem JS no client além do que o
 // Next manda automaticamente. Em produção fica leve e funciona sem auth.
 export default function LandingPage() {
   return (
     <main className="min-h-screen bg-background">
+      {/* HEADER COM THEME TOGGLE */}
+      <header className="border-b">
+        <div className="container mx-auto flex items-center justify-between px-4 py-4">
+          <div className="flex-1" />
+          <ThemeToggle />
+        </div>
+      </header>
+
       {/* HERO */}
       <section className="container mx-auto flex flex-col items-center px-4 py-24 text-center md:py-32">
         <h1 className="text-4xl md:text-6xl">
