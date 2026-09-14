@@ -3,10 +3,12 @@ import colors from "tailwindcss/colors";
 
 // Configuração do Tailwind compatível com shadcn/ui (variáveis CSS via HSL)
 const config: Config = {
-  // "class", e nada no app põe a classe: as variantes dark: que sobraram em
-  // componentes shadcn ficam inertes. Era "media", e com isso metade do app
-  // escurecia sozinha num design que só tem telas claras.
-  darkMode: "class",
+  // Seletor customizado, não a classe ".dark": o tema escuro do Kango é
+  // controlado por data-theme="dark" no <html> (ThemeProvider), não por uma
+  // classe. Isso faz os poucos "dark:" que já existiam no código (ex.:
+  // lib/professor-color.ts) responderem ao mesmo estado do resto do app, em
+  // vez de ficarem inertes esperando uma classe que nunca é posta.
+  darkMode: ["selector", '[data-theme="dark"]'],
   content: [
     "./app/**/*.{ts,tsx}",
     "./components/**/*.{ts,tsx}",

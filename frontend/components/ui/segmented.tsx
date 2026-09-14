@@ -61,9 +61,10 @@ export function Segmented<T extends string>({
               desktop ? "rounded-[8px] py-2 text-[15px]" : "rounded-[7px] py-1.5 text-nota",
               ativa
                 ? "bg-papel font-semibold text-tinta shadow-segmentada"
-                : // Inativa é 510 em tinta fraca. O hover pinta o trilho de
-                  // branco a 60% — mesma regra da aba inativa no desktop.
-                  "font-medium text-tinta-fraca hover:bg-white/60"
+                : // Inativa é 510 em tinta fraca. O hover pinta o trilho com
+                  // --papel a 60% — mesma regra da aba inativa no desktop, e
+                  // acompanha o tema (branco no claro, marinho no escuro).
+                  "font-medium text-tinta-fraca hover:bg-papel/60"
             )}
           >
             {option.label}

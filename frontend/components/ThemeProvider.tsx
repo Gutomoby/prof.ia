@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 
-type Theme = "light" | "dark" | "system";
+export type Theme = "light" | "dark" | "system";
 
 interface ThemeContextType {
   theme: Theme;
@@ -13,14 +13,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("system");
-  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem("kango-theme") as Theme | null;
     const initialTheme = stored || "system";
     setThemeState(initialTheme);
     applyTheme(initialTheme);
-    setIsMounted(true);
   }, []);
 
   const setTheme = (newTheme: Theme) => {

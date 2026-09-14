@@ -17,8 +17,9 @@
     branco sobre âmbar/laranja reprova em qualquer degrau vibrante.
 
   O tema escuro deriva da mesma paleta sobre o azul-marinho profundo da
-  folha de personagem do Kango, e segue a preferência do sistema
-  (darkMode: "media" no tailwind.config.ts).
+  folha de personagem do Kango. Segue a preferência do sistema por padrão e
+  aceita override explícito via data-theme="dark"/"light" no <html>
+  (ThemeProvider, botão em Configurações > Aparência).
 */
 /*
   ─────────────────────────────────────────────────────────────────────────
@@ -34,9 +35,13 @@
   inteiro é tonal — estado é o acento a 8/10/12/14%, nunca uma cor sólida
   nova.
 
-  Sem variante escura: as 81 telas do handoff são todas claras e o modo
-  escuro não foi desenhado ("Pendências de design"). Estes tokens portanto
-  não respondem a prefers-color-scheme — quem usa Kango renderiza claro.
+  Variante escura: as 81 telas do handoff foram desenhadas só claras
+  ("Pendências de design" original), mas o produto agora oferece tema
+  escuro de fato (botão em Configurações > Aparência), então estes tokens
+  também têm degrau escuro abaixo. Os valores foram derivados por
+  aproximação tonal a partir da paleta clara — não vieram de um handoff
+  de design revisado — então se algum contraste incomodar numa tela
+  específica, o ajuste é aqui.
   ─────────────────────────────────────────────────────────────────────────
 */
 @layer base {
@@ -103,6 +108,10 @@
       --papel: 226 40% 8%;
       --tinta: 60 20% 95%;
       --tinta-fraca: 218 12% 60%;
+      --indigo: 226 85% 68%;
+      --acerto: 152 55% 48%;
+      --erro: 0 75% 63%;
+      --cinza-tonal: 226 25% 20%;
       --borda: 226 30% 25%;
       --borda-forte: 226 30% 35%;
 
@@ -135,6 +144,10 @@
     --papel: 226 40% 8%;
     --tinta: 60 20% 95%;
     --tinta-fraca: 218 12% 60%;
+    --indigo: 226 85% 68%;
+    --acerto: 152 55% 48%;
+    --erro: 0 75% 63%;
+    --cinza-tonal: 226 25% 20%;
     --borda: 226 30% 25%;
     --borda-forte: 226 30% 35%;
 
@@ -236,6 +249,36 @@
     background: rgba(255, 255, 255, 0.58);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
+  }
+
+  /* Mesmo material no escuro, mas a base vira o tom de --card escuro
+     (rgb 25 31 52) em vez de branco — senão o vidro flutua claro sobre
+     fundo escuro. Mesmas opacidades por função, valor só muda a cor base. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .vidro-cartao {
+      background: rgba(25, 31, 52, 0.86);
+    }
+    :root:not([data-theme="light"]) .vidro-hud {
+      background: rgba(25, 31, 52, 0.8);
+    }
+    :root:not([data-theme="light"]) .vidro-abas {
+      background: rgba(25, 31, 52, 0.74);
+    }
+    :root:not([data-theme="light"]) .vidro-sidebar {
+      background: rgba(25, 31, 52, 0.58);
+    }
+  }
+  :root[data-theme="dark"] .vidro-cartao {
+    background: rgba(25, 31, 52, 0.86);
+  }
+  :root[data-theme="dark"] .vidro-hud {
+    background: rgba(25, 31, 52, 0.8);
+  }
+  :root[data-theme="dark"] .vidro-abas {
+    background: rgba(25, 31, 52, 0.74);
+  }
+  :root[data-theme="dark"] .vidro-sidebar {
+    background: rgba(25, 31, 52, 0.58);
   }
 
   /* Papéis de parede das telas de conta. Cada fluxo tem o seu degradê, medido
