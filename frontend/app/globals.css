@@ -65,6 +65,13 @@
     /* Não está na tabela do README: é o tracejado do nó bloqueado da trilha,
        um degrau mais escuro que --borda para o traço não sumir no papel. */
     --borda-forte: 60 9% 82%;
+    /* Os dois últimos estágios do degradê .papel-de-parede (casca do app,
+       lição e onboarding) — meio-tom frio e fim mais frio ainda. Cor fixa
+       de propósito no claro (é o "papel de parede" desenhado), mas precisa
+       de par escuro: sem ele o degradê termina em quase-branco em cima de
+       --papel escuro, um brilho claro vazando no rodapé da tela. */
+    --papel-parede-meio: 60 14% 96%;
+    --papel-parede-fim: 226 22% 97%;
 
     /* SF Pro e SF Mono vêm do sistema — nenhuma fonte para baixar. Fora da
        Apple, system-ui mantém a métrica próxima. */
@@ -119,6 +126,8 @@
       --cinza-tonal: 226 35% 5%;
       --borda: 226 30% 25%;
       --borda-forte: 226 30% 35%;
+      --papel-parede-meio: 226 35% 11%;
+      --papel-parede-fim: 226 30% 13%;
 
       --background: 226 40% 10%;
       --foreground: 60 20% 95%;
@@ -155,6 +164,8 @@
     --cinza-tonal: 226 35% 5%;
     --borda: 226 30% 25%;
     --borda-forte: 226 30% 35%;
+    --papel-parede-meio: 226 35% 11%;
+    --papel-parede-fim: 226 30% 13%;
 
     --background: 226 40% 10%;
     --foreground: 60 20% 95%;
@@ -359,7 +370,7 @@
       radial-gradient(620px circle at -60px -80px, hsl(var(--indigo) / 0.16), transparent 70%),
       radial-gradient(560px circle at calc(100% + 80px) 140px, hsl(174 77% 26% / 0.12), transparent 70%),
       radial-gradient(600px circle at calc(100% - 60px) calc(100% + 60px), hsl(32 90% 44% / 0.1), transparent 70%),
-      linear-gradient(175deg, hsl(var(--papel)) 0%, hsl(60 14% 96%) 60%, hsl(226 22% 97%) 100%);
+      linear-gradient(175deg, hsl(var(--papel)) 0%, hsl(var(--papel-parede-meio)) 60%, hsl(var(--papel-parede-fim)) 100%);
   }
 }
 
