@@ -129,7 +129,13 @@ def extract_text(file_bytes: bytes) -> str:
         pages_text = [page.get_text("text") for page in doc]
     finally:
         doc.close()
-    return "\n\n".join(t for t in pages_text if t.strip())
+    texto = "\n\n".join(t for t in pages_text if t.strip())
+    # Postgres recusa o byte nulo em coluna de texto (22P05, "unsupported
+    # Unicode escape sequence") - alguns PDFs (fontes corrompidas, extração
+    # de certos scanners) embutem \x00 no texto extraído. Achado em produção:
+    # falha_indexacao derrubava o upload inteiro (compensação apagava
+    # documento e storage) por causa de um único caractere invisível.
+    return texto.replace("\x00", "")
 
 
 def chunk_text(text: str) -> list[str]:

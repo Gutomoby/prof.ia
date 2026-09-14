@@ -15,6 +15,12 @@ const ORIGENS_FIXAS = [
   "https://profia-rose.vercel.app",
   "https://www.kangoguru.com",
   "https://kangoguru.com",
+  // Domínio real em produção é .com.br — as duas entradas acima (.com) nunca
+  // bateram com nenhuma origem de verdade (bug encontrado em produção em
+  // 2026-09-14: CORS bloqueava toda chamada vinda do domínio novo). Mantidas
+  // por precaução, caso o .com esteja reservado/redirecionando também.
+  "https://www.kangoguru.com.br",
+  "https://kangoguru.com.br",
 ];
 
 function origensPermitidas(): string[] {
