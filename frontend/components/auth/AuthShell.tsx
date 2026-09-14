@@ -69,7 +69,12 @@ export function AuthShell({
   children: React.ReactNode;
 }) {
   return (
-    <main className={cn("altura-tela relative overflow-hidden text-tinta", FUNDO_CLASSE[fundo])}>
+    <main
+      className={cn(
+        "altura-tela relative overflow-hidden text-tinta tema-claro-fixo",
+        FUNDO_CLASSE[fundo]
+      )}
+    >
       {HALOS[fundo].map(([pos, bg], i) => (
         <div key={i} aria-hidden className={cn("absolute rounded-capsula", pos)} style={{ background: bg }} />
       ))}

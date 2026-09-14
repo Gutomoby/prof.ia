@@ -152,15 +152,15 @@
     --indigo: 226 85% 68%;
     --acerto: 152 55% 48%;
     --erro: 0 75% 63%;
-    --cinza-tonal: 226 25% 20%;
+    --cinza-tonal: 226 35% 5%;
     --borda: 226 30% 25%;
     --borda-forte: 226 30% 35%;
 
     --background: 226 40% 10%;
     --foreground: 60 20% 95%;
-    --card: 226 35% 15%;
+    --card: 226 30% 22%;
     --card-foreground: 60 20% 95%;
-    --popover: 226 35% 15%;
+    --popover: 226 30% 22%;
     --popover-foreground: 60 20% 95%;
     --primary: 226 100% 55%;
     --primary-foreground: 226 40% 8%;
@@ -182,6 +182,47 @@
   /* Forçar modo light com data-theme="light" */
   :root[data-theme="light"] {
     /* Valores padrão já definidos acima */
+  }
+
+  /* Telas de conta (login, criar conta, recuperar senha, erro de auth):
+     usam um degradê CLARO fixo (.fundo-conta-*, mais abaixo) com halos
+     calibrados pra vidro sobre branco — não têm versão escura desenhada
+     ainda. Sem isto, o tema escuro pinta o TEXTO de claro (text-tinta vira
+     quase branco) em cima do mesmo degradê claro de sempre: texto branco
+     em fundo branco, ilegível. Esta classe re-trava os tokens no claro só
+     dentro da própria tela de conta, senão do resto do app. */
+  .tema-claro-fixo {
+    --papel: 60 20% 98%;
+    --tinta: 220 13% 9%;
+    --tinta-fraca: 218 9% 40%;
+    --indigo: 226 57% 38%;
+    --acerto: 152 60% 26%;
+    --erro: 0 72% 40%;
+    --cinza-tonal: 60 10% 94%;
+    --borda: 60 9% 88%;
+    --borda-forte: 60 9% 82%;
+
+    --background: 210 40% 98%;
+    --foreground: 215 25% 27%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 95%;
+    --secondary-foreground: 215 25% 27%;
+    --muted: 210 40% 95%;
+    --muted-foreground: 215 19% 35%;
+    --accent: 214 32% 93%;
+    --accent-foreground: 215 25% 27%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 163 94% 24%;
+    --success-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 215 16% 52%;
+    --ring: 221 83% 53%;
   }
 }
 
