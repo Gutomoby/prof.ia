@@ -1,7 +1,7 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-type Estado = "acenando" | "confuso" | "folheando o material" | "avatar" | undefined;
+type Estado = "acenando" | "confuso" | "comemora" | "folheando o material" | "avatar" | undefined;
 type Tom = "indigo" | "neutro";
 
 // Mapeamento de estado para nome do arquivo (sem extensão).
@@ -13,6 +13,7 @@ type Tom = "indigo" | "neutro";
 const ESTADO_MAPA: Record<Exclude<Estado, undefined>, string> = {
   acenando: "com-livro",
   confuso: "confuso",
+  comemora: "comemora",
   "folheando o material": "lendo",
   avatar: "avatar",
 };

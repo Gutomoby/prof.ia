@@ -3,11 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 /*
-  Troca o `code` do PKCE por sessão e grava o cookie. Serve duas origens:
-  login social (SocialButtons.tsx, signInWithOAuth) e recuperação de senha
-  (recuperar-senha/page.tsx, resetPasswordForEmail) — as duas mandam o
-  usuário de volta com o mesmo tipo de `code` na URL, e o exchange é
-  idêntico independente do que iniciou o fluxo.
+  Troca o `code` do PKCE por sessão e grava o cookie. Serve três origens:
+  login social (SocialButtons.tsx, signInWithOAuth), recuperação de senha
+  (recuperar-senha/page.tsx, resetPasswordForEmail) e confirmação de cadastro
+  (criar-conta/page.tsx, signUp) — as três mandam o usuário de volta com o
+  mesmo tipo de `code` na URL, e o exchange é idêntico independente do que
+  iniciou o fluxo.
 
   Sem isto, o `code` fica na URL sem nada chamar exchangeCodeForSession — o
   middleware não vê usuário logado e manda de volta pro /login (ou, no caso
