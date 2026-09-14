@@ -129,7 +129,7 @@ function ChipMateria({
         "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
         ativo
           ? "bg-indigo/10 font-semibold text-tinta"
-          : "vidro-abas font-medium text-tinta-fraca hover:bg-white/90"
+          : "vidro-abas font-medium text-tinta-fraca hover:bg-papel/90"
       )}
     >
       <span aria-hidden className={cn("h-[7px] w-[7px] flex-none rounded-capsula", cor.bg)} />
@@ -365,7 +365,7 @@ export default function EstudarPage() {
           <Link
             href="/materias"
             aria-label="Minhas matérias"
-            className="flex h-[38px] items-center gap-1.5 rounded-capsula bg-white px-3 text-nota font-semibold text-indigo shadow-capsula-secundaria"
+            className="flex h-[38px] items-center gap-1.5 rounded-capsula bg-papel px-3 text-nota font-semibold text-indigo shadow-capsula-secundaria"
           >
             <GraduationCap className="h-[15px] w-[15px]" />
             Matérias
@@ -408,7 +408,7 @@ export default function EstudarPage() {
           href="/professor/novo"
           className={cn(
             "flex h-8 flex-none items-center gap-1.5 rounded-capsula px-3 text-nota font-medium",
-            "vidro-abas text-indigo transition-colors duration-140 ease-out hover:bg-white/90",
+            "vidro-abas text-indigo transition-colors duration-140 ease-out hover:bg-papel/90",
             "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte"
           )}
         >

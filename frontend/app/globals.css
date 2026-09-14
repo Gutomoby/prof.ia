@@ -111,15 +111,20 @@
       --indigo: 226 85% 68%;
       --acerto: 152 55% 48%;
       --erro: 0 75% 63%;
-      --cinza-tonal: 226 25% 20%;
+      /* Mais escuro que --papel de propósito: no Segmented (segmented.tsx)
+         a aba ativa é bg-papel sobre o trilho bg-cinza-tonal, e a ativa
+         precisa "subir" — mais clara que o trilho — igual no claro (papel
+         98% sobre cinza-tonal 94%). Se cinza-tonal ficasse mais claro que
+         papel aqui, a aba ativa pareceria um buraco em vez de elevada. */
+      --cinza-tonal: 226 35% 5%;
       --borda: 226 30% 25%;
       --borda-forte: 226 30% 35%;
 
       --background: 226 40% 10%;
       --foreground: 60 20% 95%;
-      --card: 226 35% 15%;
+      --card: 226 30% 22%;
       --card-foreground: 60 20% 95%;
-      --popover: 226 35% 15%;
+      --popover: 226 30% 22%;
       --popover-foreground: 60 20% 95%;
       --primary: 226 100% 55%;
       --primary-foreground: 226 40% 8%;
@@ -252,33 +257,36 @@
   }
 
   /* Mesmo material no escuro, mas a base vira o tom de --card escuro
-     (rgb 25 31 52) em vez de branco — senão o vidro flutua claro sobre
-     fundo escuro. Mesmas opacidades por função, valor só muda a cor base. */
+     (rgb 39 47 73) em vez de branco — senão o vidro flutua claro sobre
+     fundo escuro. O tom precisa ficar nitidamente mais claro que
+     --background (rgb ~15 20 36), senão o card se perde no fundo — foi
+     o que aconteceu na primeira versão (rgb 25 31 52, próximo demais do
+     fundo). Mesmas opacidades por função, valor só muda a cor base. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .vidro-cartao {
-      background: rgba(25, 31, 52, 0.86);
+      background: rgba(39, 47, 73, 0.86);
     }
     :root:not([data-theme="light"]) .vidro-hud {
-      background: rgba(25, 31, 52, 0.8);
+      background: rgba(39, 47, 73, 0.8);
     }
     :root:not([data-theme="light"]) .vidro-abas {
-      background: rgba(25, 31, 52, 0.74);
+      background: rgba(39, 47, 73, 0.74);
     }
     :root:not([data-theme="light"]) .vidro-sidebar {
-      background: rgba(25, 31, 52, 0.58);
+      background: rgba(39, 47, 73, 0.58);
     }
   }
   :root[data-theme="dark"] .vidro-cartao {
-    background: rgba(25, 31, 52, 0.86);
+    background: rgba(39, 47, 73, 0.86);
   }
   :root[data-theme="dark"] .vidro-hud {
-    background: rgba(25, 31, 52, 0.8);
+    background: rgba(39, 47, 73, 0.8);
   }
   :root[data-theme="dark"] .vidro-abas {
-    background: rgba(25, 31, 52, 0.74);
+    background: rgba(39, 47, 73, 0.74);
   }
   :root[data-theme="dark"] .vidro-sidebar {
-    background: rgba(25, 31, 52, 0.58);
+    background: rgba(39, 47, 73, 0.58);
   }
 
   /* Papéis de parede das telas de conta. Cada fluxo tem o seu degradê, medido
