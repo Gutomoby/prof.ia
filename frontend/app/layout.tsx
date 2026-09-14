@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CapacitorNative } from "@/components/CapacitorNative";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./globals.css";
 // KaTeX: as fórmulas que a IA escreve são renderizadas em components/ui/
 // math-text.tsx. O CSS é global porque a marcação sai do KaTeX em qualquer
@@ -50,8 +51,10 @@ export default function RootLayout({
       {/* antialiased é obrigatório, não estético: é o -webkit-font-smoothing
           que dá a finura do texto da Apple. Sem ele a SF engorda. */}
       <body className="altura-tela bg-papel font-sans antialiased">
-        <CapacitorNative />
-        {children}
+        <ThemeProvider>
+          <CapacitorNative />
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );
