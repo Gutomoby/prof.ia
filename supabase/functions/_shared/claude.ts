@@ -19,6 +19,7 @@
 */
 
 import { db } from "./db.ts";
+import { alertarCreditoAnthropicBaixo, eErroDeCreditoAnthropic } from "./alertas.ts";
 
 export const MODEL_HAIKU = "claude-haiku-4-5-20251001";
 
@@ -112,7 +113,14 @@ async function anthropicMessages(body: {
     body: JSON.stringify(body),
   });
   if (!res.ok) {
-    throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
+    const corpo = await res.text();
+    if (eErroDeCreditoAnthropic(corpo)) {
+      // Espera terminar de propósito: sem isso a function pode ser encerrada
+      // antes do fetch pro Resend completar (não há waitUntil aqui). A
+      // função em si nunca lança — só loga e desiste em caso de falha.
+      await alertarCreditoAnthropicBaixo(corpo);
+    }
+    throw new Error(`Anthropic API ${res.status}: ${corpo}`);
   }
   return await res.json();
 }
