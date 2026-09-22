@@ -105,6 +105,9 @@ export function register(router: Router): void {
       ". Baseie-se no material de contexto do system prompt. O resumo deve ajudar o aluno a revisar rapidamente " +
       "antes de um quiz ou prova, sem substituir o material original. " +
       `${NOTACAO_MATEMATICA} ` +
+      "Ao decompor uma fórmula em partes, NUNCA escreva a equação inteira como um bloco de várias linhas sem $ " +
+      "— quebre em uma lista, uma linha por termo, cada linha com NO MÁXIMO uma fórmula curta entre $ e $ seguida " +
+      "do que ela significa. " +
       "Use a tool return_summary para responder.";
 
     const summary = await generateSummary(systemPrompt, userPrompt, userId, professorId, summaryId);

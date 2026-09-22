@@ -1,93 +1,26 @@
 "use client";
 
 import * as React from "react";
-import katex from "katex";
 import { cn } from "@/lib/utils";
+import { Trecho, tokenizarLinha } from "@/components/ui/markdown-lite";
 
 /*
   Texto do Chat — MathText + um pouco de Markdown.
 
-  O resto do app (quiz, resumo, prova) usa MathText puro: texto curto,
-  tool-forced, sem markdown nenhum. O Chat é diferente — é geração livre, sem
-  tool-forcing (ver _shared/claude.ts::generateChatReply), e o modelo cai no
-  hábito natural de qualquer chat: **negrito**, listas com "- item". Sem
-  processar isso, "**UDD**" e "- $x$ = y" apareciam literais na bolha, cheios
-  de asterisco e traço.
+  O resto do app (quiz, prova) usa MathText puro: texto curto, tool-forced,
+  sem markdown nenhum. O Chat é diferente — é geração livre, sem tool-forcing
+  (ver _shared/claude.ts::generateChatReply), e o modelo cai no hábito
+  natural de qualquer chat: **negrito**, listas com "- item". Sem processar
+  isso, "**UDD**" e "- $x$ = y" apareciam literais na bolha, cheios de
+  asterisco e traço.
 
   Ainda assim NÃO é um Markdown completo — só bold e lista, os dois padrões
-  que realmente apareceram em produção. Cabeçalho, link, tabela continuam
-  saindo como texto puro de propósito: não vale o risco de um ## viés virar
-  título gigante dentro de uma bolha de chat.
+  que realmente apareceram em produção. Cabeçalho, lista numerada, link
+  continuam saindo como texto puro de propósito: não vale o risco de um ##
+  virar título gigante dentro de uma bolha de chat. O Resumo (ver
+  resumo-text.tsx) é o documento estruturado de verdade — lá cabeçalho e
+  lista numerada fazem sentido; aqui, não.
 */
-
-const BOLD = /\*\*((?:(?!\*\*).)+)\*\*/g;
-// Mesma regra de math-text.tsx, mas sem excluir \n — aqui já operamos por
-// LINHA (a mensagem é quebrada em linhas antes), então uma fórmula nunca
-// atravessa a regex; a exclusão de \n em math-text.tsx existia só pra não
-// deixar um "$" solto de dinheiro engolir o resto do parágrafo.
-const FORMULA = /(?<!\\)\$((?:[^$\\]|\\.)+?)(?<!\\)\$/g;
-
-type Token = { tipo: "texto" | "negrito" | "math"; valor: string };
-
-function desescapar(texto: string): string {
-  return texto.replace(/\\\$/g, "$");
-}
-
-/** Acha bold e fórmula na linha, na ordem em que aparecem, sem sobrepor. */
-function tokenizarLinha(linha: string): Token[] {
-  type Achado = { inicio: number; fim: number; tipo: "negrito" | "math"; valor: string };
-  const achados: Achado[] = [];
-  for (const m of linha.matchAll(BOLD)) {
-    achados.push({ inicio: m.index ?? 0, fim: (m.index ?? 0) + m[0].length, tipo: "negrito", valor: m[1] });
-  }
-  for (const m of linha.matchAll(FORMULA)) {
-    achados.push({ inicio: m.index ?? 0, fim: (m.index ?? 0) + m[0].length, tipo: "math", valor: m[1] });
-  }
-  achados.sort((a, b) => a.inicio - b.inicio);
-
-  const semSobreposicao: Achado[] = [];
-  let cursor = 0;
-  for (const a of achados) {
-    if (a.inicio < cursor) continue;
-    semSobreposicao.push(a);
-    cursor = a.fim;
-  }
-
-  const tokens: Token[] = [];
-  let ultimo = 0;
-  for (const a of semSobreposicao) {
-    if (a.inicio > ultimo) tokens.push({ tipo: "texto", valor: desescapar(linha.slice(ultimo, a.inicio)) });
-    tokens.push({ tipo: a.tipo, valor: a.valor });
-    ultimo = a.fim;
-  }
-  if (ultimo < linha.length) tokens.push({ tipo: "texto", valor: desescapar(linha.slice(ultimo)) });
-  return tokens;
-}
-
-function Trecho({ tokens }: { tokens: Token[] }) {
-  return (
-    <>
-      {tokens.map((t, i) => {
-        if (t.tipo === "texto") return <React.Fragment key={i}>{t.valor}</React.Fragment>;
-        if (t.tipo === "negrito") return <strong key={i}>{desescapar(t.valor)}</strong>;
-        return (
-          <span
-            key={i}
-            // eslint-disable-next-line react/no-danger
-            dangerouslySetInnerHTML={{
-              __html: katex.renderToString(t.valor, {
-                throwOnError: false,
-                displayMode: false,
-                output: "html",
-                strict: false,
-              }),
-            }}
-          />
-        );
-      })}
-    </>
-  );
-}
 
 const LINHA_LISTA = /^\s*[-*]\s+(.*)$/;
 
