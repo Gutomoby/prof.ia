@@ -155,13 +155,33 @@ const _QUIZ_TOOL = {
               minItems: 4,
               maxItems: 4,
             },
+            // Vem ANTES de resposta_correta de propósito — a tool call é gerada
+            // em ordem, campo por campo, sem volta. Se o cálculo (e o dobro-check
+            // que CÁLCULOS pede) só acontecesse depois, dentro de "explicacao", o
+            // modelo podia descobrir o erro tarde demais e não ter como corrigir
+            // o índice já escrito (visto em produção: resposta_correta apontando
+            // pra uma alternativa, e "explicacao" recalculando, admitindo o erro
+            // e concluindo outra resposta — o aluno via as duas coisas contraditórias).
+            raciocinio: {
+              type: "string",
+              description:
+                "Rascunho interno, NUNCA mostrado ao aluno. Se a questão envolver cálculo, resolva aqui " +
+                "passo a passo e confira contra as alternativas ANTES de decidir resposta_correta — é aqui " +
+                "que o dobro-check acontece, não em 'explicacao'. Uma vez escrita, resposta_correta é final.",
+            },
             resposta_correta: {
               type: "integer",
               description: "Índice (0-3) da alternativa correta em `alternativas`.",
             },
-            explicacao: { type: "string", description: "Explicação didática da resposta correta." },
+            explicacao: {
+              type: "string",
+              description:
+                "Explicação didática FINAL da resposta correta, em tom de professor pro aluno — texto limpo, " +
+                "sem rascunho, sem \"espera\", \"recalculando\" ou menção a erro de geração anterior. Só a " +
+                "explicação de por que resposta_correta está certa.",
+            },
           },
-          required: ["topico", "enunciado", "alternativas", "resposta_correta", "explicacao"],
+          required: ["topico", "enunciado", "alternativas", "raciocinio", "resposta_correta", "explicacao"],
         },
       },
     },
