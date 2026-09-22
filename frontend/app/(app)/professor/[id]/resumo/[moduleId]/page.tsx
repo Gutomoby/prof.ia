@@ -7,7 +7,8 @@ import { Capsule } from "@/components/ui/capsule";
 import { EmptyState } from "@/components/ui/empty-state";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { KangoPlaceholder } from "@/components/ui/kango-placeholder";
-import { MathText } from "@/components/ui/math-text";
+import { Trecho, tokenizarLinha } from "@/components/ui/markdown-lite";
+import { ResumoText } from "@/components/ui/resumo-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { ModuleSummary } from "@/lib/types";
 
@@ -92,16 +93,18 @@ export default function ResumoDetalhePage({ params }: { params: { id: string; mo
             {summary.content.pontos_principais.map((ponto, i) => (
               <li key={i} className="flex gap-2.5 text-corpo text-tinta">
                 <span aria-hidden className="mt-[7px] h-1.5 w-1.5 flex-none rounded-capsula bg-indigo" />
-                <MathText>{ponto}</MathText>
+                <span>
+                  <Trecho tokens={tokenizarLinha(ponto)} />
+                </span>
               </li>
             ))}
           </ul>
 
           <div className="mt-4 h-px bg-borda" />
 
-          <MathText as="div" className="mt-4 whitespace-pre-line text-pretty text-corpo leading-[1.6] text-tinta">
+          <ResumoText className="mt-4 text-pretty text-corpo leading-[1.6] text-tinta">
             {summary.content.conteudo}
-          </MathText>
+          </ResumoText>
         </div>
       </div>
 

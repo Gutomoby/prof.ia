@@ -230,7 +230,10 @@ const _SUMMARY_TOOL = {
       conteudo: {
         type: "string",
         description:
-          "Corpo do resumo em prosa, 2-4 parágrafos, cobrindo os conceitos do módulo com exemplos quando fizer sentido.",
+          "Corpo do resumo cobrindo os conceitos do módulo com exemplos quando fizer sentido. Pode (e deve, " +
+          "quando o conteúdo tiver mais de um subtema) usar Markdown leve para organizar: ## para título de " +
+          "seção, listas com \"- \" ou \"1. \", **negrito** para termo-chave, e uma linha só com --- para " +
+          "separar blocos bem distintos. Nada além disso (sem link, sem tabela).",
       },
     },
     required: ["titulo", "pontos_principais", "conteudo"],
