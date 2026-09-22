@@ -32,6 +32,14 @@ function stripAnswers(questions: any[]): any[] {
   return questions.map(({ resposta_correta: _rc, explicacao: _exp, ...resto }) => resto);
 }
 
+// "raciocinio" é rascunho interno do modelo (ver _QUIZ_TOOL em claude.ts) — só
+// serve pra ele decidir resposta_correta antes de escrevê-la; não tem por que
+// sobreviver depois disso, então sai aqui, antes de a questão tocar o banco.
+// deno-lint-ignore no-explicit-any
+function semRaciocinio(questions: any[]): any[] {
+  return questions.map(({ raciocinio: _r, ...resto }) => resto);
+}
+
 // A dificuldade muda o ESTILO das questões, não a matéria — o material de
 // base é o mesmo; o que varia é o quanto a questão exige de raciocínio.
 const _DIFFICULTY_INSTRUCTIONS: Record<string, string> = {
@@ -172,10 +180,10 @@ export function register(router: Router): void {
       "Baseie as questões prioritariamente no material de contexto do system prompt; " +
       "se ele não cobrir o tópico, use conhecimento geral da matéria. " +
       `${NOTACAO_MATEMATICA} ` +
-      "CÁLCULOS: Se a questão envolver cálculos matemáticos, SEMPRE verifique duas vezes: " +
-      "(1) execute o cálculo passo a passo, (2) confira se a resposta correta está nas alternativas. " +
-      "Evite arredondar prematuramente — mantenha precisão máxima até a resposta final. " +
-      "Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada, " +
+      "CÁLCULOS: Se a questão envolver cálculos matemáticos, resolva passo a passo dentro do campo " +
+      "raciocinio e confira contra as alternativas ANTES de escrever resposta_correta — depois de escrita " +
+      "ela não pode mais mudar. Evite arredondar prematuramente — mantenha precisão máxima até a resposta " +
+      "final. Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada, " +
       "interpretação de dado), nunca aleatórios. " +
       "Use a tool return_quiz para responder.";
 
@@ -185,7 +193,8 @@ export function register(router: Router): void {
 
     // A instrução NOTACAO_MATEMATICA pede LaTeX entre cifrões, mas o modelo
     // não cumpre de forma confiável — ver _shared/notacao.ts.
-    const questions = normalizarProfundo(questionsRaw);
+    // deno-lint-ignore no-explicit-any
+    const questions = semRaciocinio(normalizarProfundo(questionsRaw) as any[]);
 
     const { data: inserted, error } = await db()
       .from("activity_results")
