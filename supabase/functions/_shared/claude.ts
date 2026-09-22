@@ -242,11 +242,15 @@ const _SUMMARY_TOOL = {
     type: "object",
     properties: {
       titulo: { type: "string", description: "Título curto do resumo (pode repetir o nome do módulo)." },
-      pontos_principais: {
-        type: "array",
-        items: { type: "string" },
-        description: "3 a 6 pontos-chave, cada um 1-2 frases — o que não pode faltar na cabeça do aluno.",
-      },
+      // Vem ANTES de pontos_principais de propósito: a tool call é gerada campo
+      // a campo, em ordem, e com max_tokens apertado (3072) um módulo com
+      // muito subtema estourava o limite bem no meio da geração — visto em
+      // produção, tokens_out batendo exatamente no teto e conteudo saindo
+      // vazio ("" em vez do corpo do resumo), com o aluno só vendo a lista de
+      // pontos-chave e nada abaixo dela. Subimos o limite (ver max_tokens
+      // abaixo), mas se algum módulo ainda for grande o bastante pra estourar
+      // de novo, é melhor perder os pontos-chave (redundantes com o corpo) do
+      // que perder o corpo inteiro.
       conteudo: {
         type: "string",
         description:
@@ -255,8 +259,13 @@ const _SUMMARY_TOOL = {
           "seção, listas com \"- \" ou \"1. \", **negrito** para termo-chave, e uma linha só com --- para " +
           "separar blocos bem distintos. Nada além disso (sem link, sem tabela).",
       },
+      pontos_principais: {
+        type: "array",
+        items: { type: "string" },
+        description: "3 a 6 pontos-chave, cada um 1-2 frases — o que não pode faltar na cabeça do aluno.",
+      },
     },
-    required: ["titulo", "pontos_principais", "conteudo"],
+    required: ["titulo", "conteudo", "pontos_principais"],
   },
 };
 
@@ -272,7 +281,10 @@ export async function generateSummary(
 ): Promise<Summary> {
   const response = await anthropicMessages({
     model: MODEL_HAIKU,
-    max_tokens: 3072,
+    // 3072 era curto demais pra módulo com muito subtema — ver comentário
+    // em _SUMMARY_TOOL.conteudo. 8192 é o mesmo teto já usado pra quiz
+    // (generateJsonClaude), sem custo relevante a mais (Haiku output é barato).
+    max_tokens: 8192,
     system: systemPrompt,
     messages: [{ role: "user", content: userPrompt }],
     tools: [_SUMMARY_TOOL],
