@@ -171,10 +171,31 @@ const _MOEDA = /(?<!\\)\b(R|US|U\$S)\$(?=\s*\d)/g;
 // operador, nunca de mais letras.
 const _DOLAR_SOLTO = /(?<!\\)\$(?=\d+\s+[a-zà-ÿ]{2,})/g;
 
+// Corrige uma corrupção sistemática do JSON da tool call: quando o modelo
+// escreve um comando LaTeX de uma letra ($\beta$, $\bar{A}$, $\text{Cov}$,
+// $\times$, $\rho$...) mas esquece de duplicar a barra na hora de gerar o
+// JSON bruto, o parser interno da Anthropic lê "\b"/"\t"/"\f"/"\r" como os
+// escapes de controle do próprio JSON (backspace/tab/form-feed/carriage
+// return) — e engole a letra junto: "\beta" virou "⌫eta", "\text" virou
+// "⇥ext", "\rho" virou "␍ho" (achado ao investigar resumo com fórmula
+// quebrada — beta, texto e rho sumiam sistematicamente). Nenhum desses
+// caracteres de controle tem uso legítimo no conteúdo do app, então
+// reconstituir a barra é seguro. `\n` fica de fora de propósito — quebra de
+// linha real é estrutural (separa parágrafo/lista/cabeçalho) e é MUITO mais
+// comum que um raro "\nu" perdido; desfazê-la quebraria a tela inteira.
+function repararEscapeQuebrado(texto: string): string {
+  return texto
+    .replace(/\x08/g, "\\b")
+    .replace(/\x09/g, "\\t")
+    .replace(/\x0c/g, "\\f")
+    .replace(/\x0d/g, "\\r");
+}
+
 export function normalizar(texto: string | null | undefined): string {
   if (!texto || texto.trim() === "$") return texto ?? "";
 
-  let t = texto.replace(_MOEDA, "$1\\$");
+  let t = repararEscapeQuebrado(texto);
+  t = t.replace(_MOEDA, "$1\\$");
   t = t.replace(_DOLAR_SOLTO, "\\$");
 
   const passe = (trecho: string): string => {
