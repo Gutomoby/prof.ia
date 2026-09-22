@@ -98,7 +98,7 @@ export function register(router: Router): void {
   router.post("/professores/:id/modulos/gerar", async (ctx) => {
     const userId = await currentUserId(ctx.req);
     const professorId = ctx.params.id;
-    await getOwnedProfessor(professorId, userId, "id");
+    const professor = await getOwnedProfessor(professorId, userId, "id, modules_generated_at");
 
     // A trilha CRESCE: módulos existentes ficam de pé (o histórico de quiz
     // aponta pra eles) e a IA só acrescenta o que ainda não está coberto —
@@ -113,11 +113,35 @@ export function register(router: Router): void {
     if (erroExistentes) throw new HttpError(500, erroExistentes.message);
     const existentes = existingRows ?? [];
 
+    // Pula a chamada ao Sonnet (cara — o material inteiro do professor vai
+    // no prompt, ~89 mil tokens em média) quando não há documento novo desde
+    // a última geração. Sem isso, todo clique em "atualizar trilha" sem
+    // material novo pagava a conta inteira só pra Sonnet devolver lista
+    // vazia — achado ao investigar o custo de IA do app (74% do total vinha
+    // daqui, com o volume de chamadas sugerindo bastante desse desperdício).
+    const geradoEm = professor.modules_generated_at as string | null;
+    if (existentes.length && geradoEm) {
+      const { data: docsRecentes, error: erroDocs } = await db()
+        .from("documents")
+        .select("id")
+        .eq("professor_id", professorId)
+        .gt("created_at", geradoEm)
+        .limit(1);
+      if (erroDocs) throw new HttpError(500, erroDocs.message);
+      if (!docsRecentes || !docsRecentes.length) {
+        return await listarModulos(professorId, userId);
+      }
+    }
+
     const result = await gerarModulosNoCloudRun(professorId, userId);
     // Nome e tópicos do capítulo aparecem na trilha e no título do quiz — a
     // notação solta era visível ali antes de qualquer questão ser gerada.
     // deno-lint-ignore no-explicit-any
     const modules = normalizarProfundo(result ?? []) as any[];
+
+    // Material processado até aqui, ache ou não módulo novo — marca pra não
+    // pagar de novo pelo mesmo material na próxima vez que "gerar" for clicado.
+    await db().from("professors").update({ modules_generated_at: new Date().toISOString() }).eq("id", professorId);
 
     if (!modules.length) {
       // Nenhum módulo novo é sucesso, não erro: o material já está todo
