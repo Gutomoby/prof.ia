@@ -39,9 +39,18 @@ ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
 PDF_PROCESSOR_SECRET = os.environ["PDF_PROCESSOR_SECRET"]
 STORAGE_BUCKET = os.environ.get("STORAGE_BUCKET", "materiais")
 
-# Mesmos valores de _shared/claude.ts — trilha (módulos) usa o Sonnet, não o
-# modelo de custo baixo do quiz.
+# Mesmos valores de _shared/claude.ts.
 MODEL_SONNET = "claude-sonnet-5"
+MODEL_HAIKU = "claude-haiku-4-5-20251001"
+
+# Geração de módulos usava Sonnet — trocado pra Haiku (~4x mais barato por
+# token de entrada) depois de medir que 74% do custo de IA do app inteiro
+# vinha só daqui, e quase todo esse custo é ENTRADA (o material do aluno,
+# não a resposta da IA — uma chamada típica manda ~89 mil tokens de material
+# e recebe de volta só ~1 mil). Reverter é só trocar esta linha de volta pra
+# MODEL_SONNET. Se a qualidade da segregação em capítulos cair muito na
+# prática, é o primeiro lugar a olhar.
+MODULES_MODEL = MODEL_HAIKU
 
 # Orçamento de texto enviado ao Claude na organização — mesmo valor e mesma
 # lógica de amostragem de api/routes/modulos.ts::materialDigest (que essa
@@ -358,7 +367,7 @@ def _coerce_modules(valor):
 
 
 # Mesma tabela de _shared/claude.ts::_PRICING (USD por 1M tokens).
-_PRICING = {"sonnet": (3.00, 15.00)}
+_PRICING = {"sonnet": (3.00, 15.00), "haiku": (0.80, 4.00)}
 
 
 def estimate_cost(model_key: str, tokens_in: int, tokens_out: int) -> float:
@@ -373,6 +382,7 @@ def log_token_usage(
     sb,
     user_id: str | None,
     professor_id: str,
+    model_key: str,
     operation: str,
     tokens_in: int,
     tokens_out: int,
@@ -389,7 +399,7 @@ def log_token_usage(
             {
                 "user_id": user_id,
                 "professor_id": professor_id,
-                "model": "sonnet",
+                "model": model_key,
                 "operation": operation,
                 "tokens_in": tokens_in,
                 "tokens_out": tokens_out,
@@ -412,7 +422,7 @@ def generate_modules(
             "content-type": "application/json",
         },
         json={
-            "model": MODEL_SONNET,
+            "model": MODULES_MODEL,
             "max_tokens": 8192,
             "system": system_prompt,
             "messages": [{"role": "user", "content": user_prompt}],
@@ -431,9 +441,10 @@ def generate_modules(
     uso = data.get("usage") or {}
     tokens_in = uso.get("input_tokens", 0)
     tokens_out = uso.get("output_tokens", 0)
+    modelo_key = "haiku" if MODULES_MODEL == MODEL_HAIKU else "sonnet"
     log_token_usage(
-        sb, user_id, professor_id, "module", tokens_in, tokens_out,
-        estimate_cost("sonnet", tokens_in, tokens_out),
+        sb, user_id, professor_id, modelo_key, "module", tokens_in, tokens_out,
+        estimate_cost(modelo_key, tokens_in, tokens_out),
     )
 
     for bloco in data.get("content", []):
