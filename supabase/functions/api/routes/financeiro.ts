@@ -415,4 +415,59 @@ export function register(router: Router): void {
       return { error: mensagemErro(e), items: [], total: 0, total_custo: 0, periodo_dias: dias };
     }
   });
+
+  // A Anthropic não expõe "saldo restante" por API — só dá pra ver no
+  // console.anthropic.com/settings/billing. O admin anota aqui toda vez que
+  // recarrega, e o saldo é ESTIMADO (recargas − custo já registrado em
+  // token_logs, que já cobre 100% das chamadas Anthropic do app). Não é o
+  // saldo exato, mas fica próximo o suficiente pra avisar a tempo.
+  router.get("/admin/financeiro/creditos", async (ctx) => {
+    await requireAdmin(ctx.req);
+
+    const [recargasResult, custosResult, custo30dResult] = await Promise.all([
+      selectAll<{ id: string; amount_usd: number; note: string | null; created_at: string }>((de, ate) =>
+        db().from("credit_recharges").select("id, amount_usd, note, created_at").order("created_at", { ascending: false }).range(de, ate)
+      ),
+      selectAll<{ cost_usd: number }>((de, ate) => db().from("token_logs").select("cost_usd").range(de, ate)),
+      selectAll<{ cost_usd: number }>((de, ate) =>
+        db().from("token_logs").select("cost_usd").gte("created_at", new Date(Date.now() - 30 * 86400_000).toISOString()).range(de, ate)
+      ),
+    ]);
+
+    const totalRecarregado = recargasResult.reduce((s, r) => s + Number(r.amount_usd ?? 0), 0);
+    const totalGasto = custosResult.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
+    const gasto30d = custo30dResult.reduce((s, r) => s + Number(r.cost_usd ?? 0), 0);
+    const saldoEstimado = totalRecarregado - totalGasto;
+
+    return {
+      saldo_estimado_usd: arredondar(saldoEstimado),
+      saldo_estimado_brl: arredondar(saldoEstimado * USD_PARA_BRL),
+      total_recarregado_usd: arredondar(totalRecarregado),
+      total_gasto_usd: arredondar(totalGasto),
+      gasto_30d_usd: arredondar(gasto30d),
+      gasto_30d_brl: arredondar(gasto30d * USD_PARA_BRL),
+      // Estimativa de quantos dias o saldo aguenta no ritmo dos últimos 30 dias.
+      dias_restantes_estimado: gasto30d > 0 ? Math.floor((saldoEstimado / gasto30d) * 30) : null,
+      recargas: recargasResult.map((r) => ({ ...r, amount_usd: Number(r.amount_usd) })),
+    };
+  });
+
+  router.post("/admin/financeiro/creditos", async (ctx) => {
+    await requireAdmin(ctx.req);
+    const payload = await ctx.body<{ amount_usd?: unknown; note?: unknown }>();
+
+    const amountUsd = payload.amount_usd;
+    if (typeof amountUsd !== "number" || !Number.isFinite(amountUsd) || amountUsd <= 0) {
+      throw new HttpError(400, 'Campo "amount_usd" precisa ser um número positivo (em dólares).');
+    }
+    const note = (payload.note as string | null | undefined) ?? null;
+
+    const { data, error } = await db()
+      .from("credit_recharges")
+      .insert({ amount_usd: amountUsd, note })
+      .select();
+    if (error) throw new HttpError(500, error.message);
+    if (!data || !data.length) throw new HttpError(500, "Falha ao registrar a recarga.");
+    return data[0];
+  });
 }
