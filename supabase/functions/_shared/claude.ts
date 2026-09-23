@@ -165,9 +165,12 @@ const _QUIZ_TOOL = {
             raciocinio: {
               type: "string",
               description:
-                "Rascunho interno, NUNCA mostrado ao aluno. Se a questão envolver cálculo, resolva aqui " +
-                "passo a passo e confira contra as alternativas ANTES de decidir resposta_correta — é aqui " +
-                "que o dobro-check acontece, não em 'explicacao'. Uma vez escrita, resposta_correta é final.",
+                "Rascunho interno, NUNCA mostrado ao aluno, CURTO. Questão SEM cálculo (conceito, " +
+                "interpretação, aplicação, análise): uma frase só confirmando qual alternativa é certa " +
+                "e por quê — não repita o enunciado nem as alternativas. Questão COM cálculo: resolva " +
+                "passo a passo, direto ao ponto, sem repetir o enunciado, e confira contra as alternativas " +
+                "ANTES de decidir resposta_correta — é aqui que o dobro-check acontece, não em 'explicacao'. " +
+                "Uma vez escrita, resposta_correta é final.",
             },
             resposta_correta: {
               type: "integer",

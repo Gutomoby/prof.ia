@@ -185,6 +185,8 @@ export function register(router: Router): void {
       "ela não pode mais mudar. Evite arredondar prematuramente — mantenha precisão máxima até a resposta " +
       "final. Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada, " +
       "interpretação de dado), nunca aleatórios. " +
+      "BREVIDADE: raciocinio é rascunho interno, não aparece pro aluno — em questão SEM cálculo, uma frase " +
+      "basta; só gaste espaço com passo a passo em questão que realmente tem conta pra fazer. " +
       "Use a tool return_quiz para responder.";
 
     const result = await generateJson(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId, activityType, activityId);
