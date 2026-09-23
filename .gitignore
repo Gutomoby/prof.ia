@@ -11,8 +11,12 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Claude Code (configurações locais — podem conter tokens de MCP)
-.claude/
+# Claude Code (configurações locais — podem conter tokens de MCP).
+# skills/ fica de fora do ignore de propósito: são só instruções em
+# Markdown, sem segredo nenhum, e precisam estar no repo pra valer em
+# qualquer máquina (notebook + desktop, ver CLAUDE.md).
+.claude/*
+!.claude/skills/
 
 # Logs
 *.log
