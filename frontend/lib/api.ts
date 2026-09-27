@@ -34,14 +34,22 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
-// Quiz/prova rodam numa Edge Function própria ("atividades"), separada da
-// "api": a geração de IA é a parte mais pesada e mais sujeita a timeout, e
-// assim ela pode ser publicada/corrigida sem mexer no resto do backend.
+// O backend em Edge Functions é dividido por domínio, não uma função só: a
+// "api" inteira passou do tamanho que dá pra publicar num deploy, e separar
+// deixa corrigir a parte de IA (a mais pesada e sujeita a timeout) sem mexer
+// no resto. Cada rota vai pra função dona dela; o que não casar segue na "api".
 // Só vale com as Edge Functions — contra o FastAPI local tudo segue em API_URL.
+const FUNCAO_POR_ROTA: [RegExp, string][] = [
+  [/^\/atividades(\/|\?|$)/, "atividades"],
+  [/^\/professores\/[^/]+\/(modulos|chat)(\/|\?|$)/, "ia"],
+  [/^\/(admin|assinatura)(\/|\?|$)/, "admin"],
+];
+
 function urlDe(path: string): string {
   const base = API_URL.replace(/\/+$/, "");
-  if (path.startsWith("/atividades") && base.endsWith("/functions/v1/api")) {
-    return `${base.slice(0, -"/api".length)}/atividades${path}`;
+  if (base.endsWith("/functions/v1/api")) {
+    const funcao = FUNCAO_POR_ROTA.find(([padrao]) => padrao.test(path))?.[1];
+    if (funcao) return `${base.slice(0, -"api".length)}${funcao}${path}`;
   }
   return `${API_URL}${path}`;
 }
