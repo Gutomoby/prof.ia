@@ -8,6 +8,7 @@ import { MetricText } from "@/components/ui/metric-text";
 import { Skeleton } from "@/components/ui/skeleton";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { Capsule } from "@/components/ui/capsule";
+import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { api, ApiError } from "@/lib/api";
 
@@ -48,6 +49,24 @@ interface UsuarioItem {
   operacoes: number;
 }
 
+interface Recarga {
+  id: string;
+  amount_usd: number;
+  note: string | null;
+  created_at: string;
+}
+
+interface Creditos {
+  saldo_estimado_usd: number;
+  saldo_estimado_brl: number;
+  total_recarregado_usd: number;
+  total_gasto_usd: number;
+  gasto_30d_usd: number;
+  gasto_30d_brl: number;
+  dias_restantes_estimado: number | null;
+  recargas: Recarga[];
+}
+
 interface AtividadeItem {
   resource_id: string;
   operation: string;
@@ -82,8 +101,15 @@ export default function FinanceiroPage() {
   const [filtroOperacao, setFiltroOperacao] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "atividades" | "kpis">("resumo");
+  const [aba, setAba] = useState<"resumo" | "usuarios" | "custos" | "atividades" | "creditos" | "kpis">("resumo");
   const [dias, setDias] = useState(30);
+
+  const [creditos, setCreditos] = useState<Creditos | null>(null);
+  const [creditosLoading, setCreditosLoading] = useState(false);
+  const [creditosErro, setCreditosErro] = useState<string | null>(null);
+  const [novaRecargaValor, setNovaRecargaValor] = useState("");
+  const [novaRecargaNota, setNovaRecargaNota] = useState("");
+  const [registrandoRecarga, setRegistrandoRecarga] = useState(false);
 
   useEffect(() => {
     load();
@@ -113,6 +139,44 @@ export default function FinanceiroPage() {
       cancelado = true;
     };
   }, [aba, dias, filtroOperacao]);
+
+  useEffect(() => {
+    if (aba !== "creditos") return;
+    carregarCreditos();
+  }, [aba]);
+
+  async function carregarCreditos() {
+    setCreditosLoading(true);
+    setCreditosErro(null);
+    try {
+      const res = await api.request<Creditos>("/admin/financeiro/creditos");
+      setCreditos(res);
+    } catch (err) {
+      setCreditosErro(err instanceof ApiError ? err.message : "Erro ao carregar créditos");
+    } finally {
+      setCreditosLoading(false);
+    }
+  }
+
+  async function registrarRecarga() {
+    const valor = Number(novaRecargaValor.replace(",", "."));
+    if (!Number.isFinite(valor) || valor <= 0) return;
+
+    setRegistrandoRecarga(true);
+    try {
+      await api.request("/admin/financeiro/creditos", {
+        method: "POST",
+        body: JSON.stringify({ amount_usd: valor, note: novaRecargaNota.trim() || null }),
+      });
+      setNovaRecargaValor("");
+      setNovaRecargaNota("");
+      await carregarCreditos();
+    } catch (err) {
+      setCreditosErro(err instanceof ApiError ? err.message : "Erro ao registrar a recarga");
+    } finally {
+      setRegistrandoRecarga(false);
+    }
+  }
 
   async function load() {
     setLoading(true);
@@ -238,6 +302,7 @@ export default function FinanceiroPage() {
           { value: "usuarios", label: "Usuários" },
           { value: "custos", label: "Custos" },
           { value: "atividades", label: "Atividades" },
+          { value: "creditos", label: "Créditos" },
           { value: "kpis", label: "KPIs" },
         ]}
       />
@@ -416,6 +481,122 @@ export default function FinanceiroPage() {
               </div>
             )}
           </GlassCard>
+        )}
+
+        {aba === "creditos" && (
+          <div className="grid gap-6">
+            <div className="rounded-grupo border border-borda bg-indigo/5 p-3 text-nota text-tinta-fraca">
+              A Anthropic não avisa quanto de crédito ainda resta — isso só aparece no site deles
+              (console.anthropic.com/settings/billing). Este saldo é uma ESTIMATIVA: toda recarga que você
+              anotar aqui, menos tudo que o app já gastou. Confira de vez em quando com o valor real do site
+              deles pra manter os dois alinhados.
+            </div>
+
+            {creditosErro && <InlineAlert>{creditosErro}</InlineAlert>}
+
+            {creditosLoading && !creditos ? (
+              <Skeleton className="h-[160px] rounded-grupo" />
+            ) : creditos ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-3">
+                  <GlassCard nivel="cartao" radius="grupo" className="p-4">
+                    <p className="text-nota text-tinta-fraca">Saldo estimado</p>
+                    <p
+                      className={`mt-2 text-[28px] font-bold ${
+                        creditos.saldo_estimado_usd >= 0 ? "text-acerto" : "text-erro"
+                      }`}
+                    >
+                      <MetricText>${creditos.saldo_estimado_usd.toFixed(2)}</MetricText>
+                    </p>
+                    <p className="mt-1 text-nota text-tinta-fraca">
+                      ≈ R${creditos.saldo_estimado_brl.toFixed(2)}
+                    </p>
+                  </GlassCard>
+
+                  <GlassCard nivel="cartao" radius="grupo" className="p-4">
+                    <p className="text-nota text-tinta-fraca">Gasto nos últimos 30 dias</p>
+                    <p className="mt-2 text-[28px] font-bold text-tinta">
+                      <MetricText>${creditos.gasto_30d_usd.toFixed(2)}</MetricText>
+                    </p>
+                    <p className="mt-1 text-nota text-tinta-fraca">≈ R${creditos.gasto_30d_brl.toFixed(2)}</p>
+                  </GlassCard>
+
+                  <GlassCard nivel="cartao" radius="grupo" className="p-4">
+                    <p className="text-nota text-tinta-fraca">Duração estimada</p>
+                    <p className="mt-2 text-[28px] font-bold text-tinta">
+                      <MetricText>
+                        {creditos.dias_restantes_estimado === null ? "—" : creditos.dias_restantes_estimado}
+                      </MetricText>
+                    </p>
+                    <p className="mt-1 text-nota text-tinta-fraca">
+                      dias, no ritmo de gasto atual
+                    </p>
+                  </GlassCard>
+                </div>
+
+                <GlassCard nivel="cartao" radius="grupo" className="p-4">
+                  <p className="mb-3 text-corpo font-bold text-tinta">Registrar recarga</p>
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div>
+                      <label className="mb-1 block text-nota text-tinta-fraca">Valor (US$)</label>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="50.00"
+                        value={novaRecargaValor}
+                        onChange={(e) => setNovaRecargaValor(e.target.value)}
+                        className="w-32"
+                      />
+                    </div>
+                    <div className="min-w-[200px] flex-1">
+                      <label className="mb-1 block text-nota text-tinta-fraca">Nota (opcional)</label>
+                      <Input
+                        type="text"
+                        placeholder="ex.: recarga mensal"
+                        value={novaRecargaNota}
+                        onChange={(e) => setNovaRecargaNota(e.target.value)}
+                      />
+                    </div>
+                    <Capsule variant="principal" onClick={registrarRecarga} loading={registrandoRecarga}>
+                      Registrar
+                    </Capsule>
+                  </div>
+                </GlassCard>
+
+                <GlassCard nivel="cartao" radius="grupo" className="p-4">
+                  <p className="mb-4 text-corpo font-bold text-tinta">Histórico de recargas</p>
+                  {creditos.recargas.length === 0 ? (
+                    <p className="text-nota text-tinta-fraca">Nenhuma recarga registrada ainda.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-corpo">
+                        <thead>
+                          <tr className="border-b border-borda">
+                            <th className="px-3 py-2 text-left text-nota font-semibold text-tinta-fraca">Data</th>
+                            <th className="px-3 py-2 text-right text-nota font-semibold text-tinta-fraca">Valor</th>
+                            <th className="px-3 py-2 text-left text-nota font-semibold text-tinta-fraca">Nota</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {creditos.recargas.map((r) => (
+                            <tr key={r.id} className="border-b border-borda/50 hover:bg-indigo/5">
+                              <td className="px-3 py-3 text-tinta-fraca">
+                                {new Date(r.created_at).toLocaleDateString("pt-BR")}
+                              </td>
+                              <td className="px-3 py-3 text-right font-semibold text-tinta">
+                                ${r.amount_usd.toFixed(2)}
+                              </td>
+                              <td className="px-3 py-3 text-tinta-fraca">{r.note ?? "—"}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </GlassCard>
+              </>
+            ) : null}
+          </div>
         )}
 
         {aba === "kpis" && kpis && (
