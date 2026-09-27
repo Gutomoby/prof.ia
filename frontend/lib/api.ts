@@ -34,6 +34,18 @@ import type {
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+// Quiz/prova rodam numa Edge Function própria ("atividades"), separada da
+// "api": a geração de IA é a parte mais pesada e mais sujeita a timeout, e
+// assim ela pode ser publicada/corrigida sem mexer no resto do backend.
+// Só vale com as Edge Functions — contra o FastAPI local tudo segue em API_URL.
+function urlDe(path: string): string {
+  const base = API_URL.replace(/\/+$/, "");
+  if (path.startsWith("/atividades") && base.endsWith("/functions/v1/api")) {
+    return `${base.slice(0, -"/api".length)}/atividades${path}`;
+  }
+  return `${API_URL}${path}`;
+}
+
 // Erro lançado quando a API responde com status != 2xx.
 // Carrega o status e a mensagem do backend para exibir na UI.
 export class ApiError extends Error {
@@ -93,7 +105,7 @@ async function request<T>(
   init: RequestInit = {},
   options: ApiOptions = {}
 ): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(urlDe(path), {
     cache: "no-store",
     ...init,
     headers: {

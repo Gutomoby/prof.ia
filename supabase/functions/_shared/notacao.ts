@@ -185,10 +185,10 @@ const _DOLAR_SOLTO = /(?<!\\)\$(?=\d+\s+[a-zà-ÿ]{2,})/g;
 // comum que um raro "\nu" perdido; desfazê-la quebraria a tela inteira.
 function repararEscapeQuebrado(texto: string): string {
   return texto
-    .replace(/\x08/g, "\\b")
-    .replace(/\x09/g, "\\t")
-    .replace(/\x0c/g, "\\f")
-    .replace(/\x0d/g, "\\r");
+    .replaceAll("\b", "\\b")
+    .replaceAll("\t", "\\t")
+    .replaceAll("\f", "\\f")
+    .replaceAll("\r", "\\r");
 }
 
 export function normalizar(texto: string | null | undefined): string {

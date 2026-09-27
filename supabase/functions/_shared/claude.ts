@@ -90,6 +90,7 @@ type AnthropicText = { type: "text"; text: string };
 type AnthropicResponse = {
   content: (AnthropicToolUse | AnthropicText | { type: string })[];
   usage: { input_tokens: number; output_tokens: number };
+  stop_reason?: string;
 };
 
 async function anthropicMessages(body: {
@@ -359,6 +360,10 @@ async function generateJsonClaude(
     const tokensOut = response.usage.output_tokens;
     const cost = estimateCost(model, tokensIn, tokensOut);
     await logTokenUsage(userId, professorId, modelKey(model), operation, tokensIn, tokensOut, cost, resourceId);
+  }
+
+  if (response.stop_reason === "max_tokens") {
+    console.error(`[${operation}] resposta cortada no teto de max_tokens — questões finais podem vir incompletas`);
   }
 
   const input = toolInput(response, "return_quiz");

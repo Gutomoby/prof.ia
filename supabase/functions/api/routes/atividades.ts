@@ -103,6 +103,67 @@ async function searchChunksDeTodosModulos(
   });
 }
 
+type Lote = {
+  chunks: { id: string; document_id: string; content: string; similarity: number }[];
+  n: number;
+  escopo: string;
+  enfase: string | null;
+};
+
+// Lotes que compartilham o mesmo material recebem ênfases diferentes — sem
+// isso, dois lotes paralelos sobre o mesmo capítulo tendem a gerar a mesma
+// questão (um não vê o que o outro escreveu).
+const ENFASES = [
+  "Dê ênfase a questões conceituais (definições e entendimento) e de interpretação (gráficos, tabelas, dados).",
+  "Dê ênfase a questões de cálculo (com números reais e fórmulas) e de aplicação prática (cenários reais).",
+  "Dê ênfase a questões de análise crítica (comparar casos) e de aplicação prática, com pelo menos um cálculo.",
+];
+
+function montarPrompt(activityType: "quiz" | "prova", lote: Lote, difficulty: string): string {
+  return (
+    `Gere ${lote.n} questões de múltipla escolha ${activityType === "prova" ? "de prova " : ""}${lote.escopo}. ` +
+    `${_DIFFICULTY_INSTRUCTIONS[difficulty]} ` +
+    "Cada questão precisa ter exatamente 4 alternativas, apenas uma correta. " +
+    (lote.enfase ??
+      "VARIEDADE: misture questões conceituais, de cálculo (com números reais e fórmulas), de aplicação " +
+        "prática, de interpretação de dados e de análise crítica — não concentre tudo em um tipo.") +
+    " Baseie as questões prioritariamente no material de contexto do system prompt; " +
+    "se ele não cobrir o tópico, use conhecimento geral da matéria. " +
+    `${NOTACAO_MATEMATICA} ` +
+    "CÁLCULOS: Se a questão envolver cálculos matemáticos, resolva passo a passo dentro do campo " +
+    "raciocinio e confira contra as alternativas ANTES de escrever resposta_correta — depois de escrita " +
+    "ela não pode mais mudar. Evite arredondar prematuramente — mantenha precisão máxima até a resposta " +
+    "final. Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada, " +
+    "interpretação de dado), nunca aleatórios. " +
+    "BREVIDADE: raciocinio é rascunho interno, não aparece pro aluno — em questão SEM cálculo, uma frase " +
+    "basta; só gaste espaço com passo a passo em questão que realmente tem conta pra fazer. " +
+    "Use a tool return_quiz para responder."
+  );
+}
+
+// Se a resposta ainda assim for cortada no teto de tokens, a última questão
+// chega pela metade — melhor descartá-la do que mostrar sem gabarito.
+// deno-lint-ignore no-explicit-any
+function questaoCompleta(q: any): boolean {
+  return (
+    typeof q?.enunciado === "string" && q.enunciado.trim() !== "" &&
+    Array.isArray(q.alternativas) && q.alternativas.length === 4 &&
+    Number.isInteger(q.resposta_correta) && q.resposta_correta >= 0 && q.resposta_correta <= 3 &&
+    typeof q.explicacao === "string" && q.explicacao.trim() !== ""
+  );
+}
+
+// deno-lint-ignore no-explicit-any
+function deduplicar(questions: any[]): any[] {
+  const vistos = new Set<string>();
+  return questions.filter((q) => {
+    const chave = String(q.enunciado).trim().toLowerCase();
+    if (vistos.has(chave)) return false;
+    vistos.add(chave);
+    return true;
+  });
+}
+
 export function register(router: Router): void {
   router.post("/atividades/gerar", async (ctx) => {
     const userId = await currentUserId(ctx.req);
@@ -129,9 +190,13 @@ export function register(router: Router): void {
     const moduleId = activityType === "quiz" ? (payload.module_id as string | undefined) : undefined;
     const module = moduleId ? await getModule(moduleId, professorId) : null;
 
-    let chunks: { id: string; document_id: string; content: string; similarity: number }[];
-    let scopeDesc: string;
-    let nQuestoes: string;
+    // Geração em LOTES paralelos de poucas questões, não uma chamada só: com o
+    // campo raciocinio, uma prova de 12-15 questões numa chamada estourava o
+    // teto de 8192 tokens de saída toda vez (visto em produção: tokens_out
+    // exatamente 8192, JSON cortado, 502 depois de ~80s — e a tentativa
+    // cobrada mesmo falhando). Lote pequeno nunca chega perto do teto, e em
+    // paralelo o tempo total é o do lote mais lento, não a soma.
+    let lotes: Lote[];
     let topicLabel: string | null;
 
     if (activityType === "prova") {
@@ -139,64 +204,69 @@ export function register(router: Router): void {
       if (!modules.length) {
         throw new HttpError(400, "A trilha precisa estar montada para gerar uma prova.");
       }
-      chunks = await searchChunksDeTodosModulos(professorId, modules);
-      scopeDesc =
-        `cobrindo TODA a matéria de uma vez, distribuindo as questões de forma equilibrada entre ` +
-        `os capítulos: ${modules.map((m) => m.name).join(", ")}. Não se concentre só num capítulo.`;
-      nQuestoes = "12 a 15";
+      // Cada lote cobre só um terço dos capítulos e recebe só o material
+      // deles — o input não triplica por dividir em três.
+      lotes = await Promise.all(
+        [0, 1, 2].map(async (i) => {
+          const grupo = modules.length >= 3 ? modules.filter((_, idx) => idx % 3 === i) : modules;
+          return {
+            chunks: await searchChunksDeTodosModulos(professorId, grupo),
+            n: 5,
+            escopo:
+              `cobrindo os capítulos ${grupo.map((m) => `"${m.name}"`).join(", ")}, ` +
+              "distribuindo as questões de forma equilibrada entre eles",
+            enfase: ENFASES[i],
+          };
+        }),
+      );
       topicLabel = "Prova geral";
     } else if (module) {
-      // Quiz do módulo inteiro: busca material pelos tópicos do capítulo.
       const topics = module.topics ?? [];
       const query = topics.length ? `${module.name}: ${topics.join(", ")}` : module.name;
-      chunks = await searchChunks(professorId, query, 10);
-      scopeDesc = `cobrindo o módulo inteiro "${module.name}"` + (topics.length ? ` (tópicos: ${topics.join(", ")})` : "");
-      nQuestoes = "8 a 10";
+      const chunks = await searchChunks(professorId, query, 10);
+      const escopo = `cobrindo o módulo "${module.name}"` + (topics.length ? ` (tópicos: ${topics.join(", ")})` : "");
+      lotes = [
+        { chunks, n: 4, escopo, enfase: ENFASES[0] },
+        { chunks, n: 4, escopo, enfase: ENFASES[1] },
+      ];
       topicLabel = module.name;
     } else {
       const topic = payload.topic as string | undefined;
       const query = topic || (professor.discipline as string);
-      chunks = await searchChunks(professorId, query, 8);
-      scopeDesc = topic ? `sobre o tópico "${topic}"` : "sobre um tópico relevante do material acima";
-      nQuestoes = "5 a 8";
+      const chunks = await searchChunks(professorId, query, 8);
+      const escopo = topic ? `sobre o tópico "${topic}"` : "sobre um tópico relevante do material acima";
+      lotes = [{ chunks, n: 6, escopo, enfase: null }];
       topicLabel = topic ?? null;
     }
-
-    const context = chunks.map((c) => c.content).join("\n\n---\n\n") || "(nenhum material enviado ainda)";
-    const systemPrompt = ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context);
 
     // Gerado ANTES de inserir: precisa existir na hora de logar o custo em
     // token_logs.resource_id, e a atividade só ganha id depois de responder.
     const activityId = crypto.randomUUID();
 
-    const userPrompt =
-      `Gere um ${activityType === "prova" ? "prova" : "quiz"} de múltipla escolha com ${nQuestoes} questões ${scopeDesc}. ` +
-      `${_DIFFICULTY_INSTRUCTIONS[difficulty]} ` +
-      "Cada questão precisa ter exatamente 4 alternativas, apenas uma correta. " +
-      "VARIEDADE: Crie questões com estilos distintos: (1) conceituais (definições e entendimento), " +
-      "(2) cálculos (com números reais e fórmulas), (3) aplicação prática (cenários reais), " +
-      "(4) interpretação (gráficos, tabelas, dados), (5) análise crítica (comparar casos). " +
-      "Distribua essas abordagens pelas questões — não concentre tudo em um tipo. " +
-      "Baseie as questões prioritariamente no material de contexto do system prompt; " +
-      "se ele não cobrir o tópico, use conhecimento geral da matéria. " +
-      `${NOTACAO_MATEMATICA} ` +
-      "CÁLCULOS: Se a questão envolver cálculos matemáticos, resolva passo a passo dentro do campo " +
-      "raciocinio e confira contra as alternativas ANTES de escrever resposta_correta — depois de escrita " +
-      "ela não pode mais mudar. Evite arredondar prematuramente — mantenha precisão máxima até a resposta " +
-      "final. Distratores devem ser erros comuns (fórmula errada, operação errada, unidade errada, " +
-      "interpretação de dado), nunca aleatórios. " +
-      "BREVIDADE: raciocinio é rascunho interno, não aparece pro aluno — em questão SEM cálculo, uma frase " +
-      "basta; só gaste espaço com passo a passo em questão que realmente tem conta pra fazer. " +
-      "Use a tool return_quiz para responder.";
+    const resultados = await Promise.allSettled(
+      lotes.map((lote) => {
+        const context = lote.chunks.map((c) => c.content).join("\n\n---\n\n") || "(nenhum material enviado ainda)";
+        const systemPrompt = ((professor.system_prompt as string) ?? "").replace("{chunks_retrieved}", context);
+        const userPrompt = montarPrompt(activityType, lote, difficulty);
+        return generateJson(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId, activityType, activityId);
+      }),
+    );
 
-    const result = await generateJson(systemPrompt, userPrompt, MODEL_HAIKU, userId, professorId, activityType, activityId);
-    const questionsRaw = result.questions ?? [];
-    if (!questionsRaw.length) throw new HttpError(502, "Claude não retornou nenhuma questão.");
+    // Um lote que falhou não derruba a atividade inteira — o aluno recebe o
+    // que os outros geraram. Só é erro se nenhum lote voltar com nada.
+    const questionsRaw: unknown[] = [];
+    for (const r of resultados) {
+      if (r.status === "fulfilled") questionsRaw.push(...(r.value.questions ?? []));
+      else console.error(`[atividades/gerar] lote falhou:`, r.reason);
+    }
 
     // A instrução NOTACAO_MATEMATICA pede LaTeX entre cifrões, mas o modelo
     // não cumpre de forma confiável — ver _shared/notacao.ts.
     // deno-lint-ignore no-explicit-any
-    const questions = semRaciocinio(normalizarProfundo(questionsRaw) as any[]);
+    const questions = deduplicar(semRaciocinio(normalizarProfundo(questionsRaw) as any[]).filter(questaoCompleta));
+    if (!questions.length) {
+      throw new HttpError(502, "Não consegui gerar as questões agora. Tente de novo em instantes.");
+    }
 
     const { data: inserted, error } = await db()
       .from("activity_results")
