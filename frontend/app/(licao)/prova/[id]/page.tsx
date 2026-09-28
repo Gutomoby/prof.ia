@@ -141,7 +141,7 @@ export default function ProvaPage({ params }: { params: { id: string } }) {
                       </div>
                       <span
                         aria-hidden
-                        className="movimento-essencial pointer-events-none absolute inset-y-0 -inset-x-full animate-brilho bg-gradient-to-r from-transparent via-white/70 to-transparent"
+                        className="movimento-essencial pointer-events-none absolute inset-y-0 -inset-x-full animate-brilho bg-gradient-to-r from-transparent via-superficie/70 to-transparent"
                         style={{ animationDelay: `${i * 0.45}s` }}
                       />
                       {i < 2 && (

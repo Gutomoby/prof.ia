@@ -101,7 +101,7 @@ export function Gauge({
           width: spec.inner,
           height: spec.inner,
           // O miolo do 184 é rgba(255,255,255,.82), fora da escala de .vidro-*.
-          background: vidro ? "rgba(255, 255, 255, .82)" : undefined,
+          background: vidro ? "hsl(var(--superficie) / .82)" : undefined,
         }}
       >
         <MetricText weight="bold" className={spec.text}>

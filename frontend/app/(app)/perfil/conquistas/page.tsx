@@ -229,7 +229,7 @@ export default function ConquistasPage() {
               </p>
               {/* Vidro mais fraco e hairline no lugar da sombra: o grupo do que
                   ainda não aconteceu não pode ter o mesmo peso do que já é seu. */}
-              <div className="overflow-hidden rounded-grupo bg-white/[0.62] shadow-hairline [&>*:last-child_[data-sep]]:hidden">
+              <div className="overflow-hidden rounded-grupo bg-superficie/[0.62] shadow-hairline [&>*:last-child_[data-sep]]:hidden">
                 {aCaminho.map((c) => {
                   const copy = CATALOGO[c.id];
                   const Icone = copy?.icone;

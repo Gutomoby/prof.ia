@@ -222,13 +222,27 @@ export function register(router: Router): void {
       topicLabel = "Prova geral";
     } else if (module) {
       const topics = module.topics ?? [];
-      const query = topics.length ? `${module.name}: ${topics.join(", ")}` : module.name;
-      const chunks = await searchChunks(professorId, query, 10);
-      const escopo = `cobrindo o módulo "${module.name}"` + (topics.length ? ` (tópicos: ${topics.join(", ")})` : "");
-      lotes = [
-        { chunks, n: 4, escopo, enfase: ENFASES[0] },
-        { chunks, n: 4, escopo, enfase: ENFASES[1] },
-      ];
+      if (topics.length >= 2) {
+        // Cada lote fica com METADE dos tópicos, e busca material só deles.
+        // Com os dois lotes olhando o mesmo material e o mesmo escopo, um não
+        // vê o que o outro escreveu e as questões saíam parecidas.
+        const metades = [topics.filter((_, i) => i % 2 === 0), topics.filter((_, i) => i % 2 === 1)];
+        lotes = await Promise.all(
+          metades.map(async (metade, i) => ({
+            chunks: await searchChunks(professorId, `${module.name}: ${metade.join(", ")}`, 6),
+            n: 4,
+            escopo:
+              `do módulo "${module.name}", cobrindo SOMENTE estes tópicos: ${metade.join(", ")}. ` +
+              "Não faça questões sobre outros tópicos do módulo — eles são cobertos em outra parte do quiz",
+            enfase: ENFASES[i],
+          })),
+        );
+      } else {
+        const query = topics.length ? `${module.name}: ${topics.join(", ")}` : module.name;
+        const chunks = await searchChunks(professorId, query, 10);
+        const escopo = `cobrindo o módulo "${module.name}"` + (topics.length ? ` (tópico: ${topics[0]})` : "");
+        lotes = [{ chunks, n: 7, escopo, enfase: null }];
+      }
       topicLabel = module.name;
     } else {
       const topic = payload.topic as string | undefined;

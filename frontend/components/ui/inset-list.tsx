@@ -195,7 +195,7 @@ export function InsetList({
           // compõe o :last-child no próprio separador — que é sempre o último
           // filho da linha — e o esconde em todas.
           "[&>*:last-child_[data-sep]]:hidden",
-          superficie === "vidro" ? "vidro-cartao shadow-vidro" : "bg-white shadow-hairline",
+          superficie === "vidro" ? "vidro-cartao shadow-vidro" : "bg-superficie shadow-hairline",
           className
         )}
         {...props}

@@ -23,11 +23,15 @@ export const metadata: Metadata = {
   },
 };
 
-// Uma cor só, o papel: não há tema escuro para acompanhar. Declarar o
-// azul-marinho aqui pintava a barra do Safari de azul num app inteiro claro.
+// Barra do navegador na cor do papel de cada tema. Estas duas seguem a
+// preferência do sistema; a escolha manual em Configurações > Aparência
+// sobrescreve em runtime (ThemeProvider.aplicarCorDaBarra).
 export const viewport = {
-  themeColor: "#fbfbf7",
-  colorScheme: "light",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fbfbf7" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+  colorScheme: "light dark",
   // Faz o teclado ENCOLHER a viewport de layout em vez de deslizar por cima
   // dela. Sem isso, tudo que é `position: fixed` (a barra de abas, o painel de
   // resposta da lição) fica pairando no meio do conteúdo quando o campo abre.

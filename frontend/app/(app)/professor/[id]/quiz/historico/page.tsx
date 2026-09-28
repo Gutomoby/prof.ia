@@ -195,7 +195,7 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
               "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
               filtro === null
                 ? "bg-indigo text-papel"
-                : "vidro-cartao text-tinta shadow-hairline hover:bg-white"
+                : "vidro-cartao text-tinta shadow-hairline hover:bg-superficie"
             )}
           >
             Todos
@@ -213,7 +213,7 @@ export default function TentativasPage({ params }: { params: { id: string } }) {
                   "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
                   ativo
                     ? "bg-indigo font-semibold text-papel"
-                    : "vidro-cartao font-medium text-tinta shadow-hairline hover:bg-white"
+                    : "vidro-cartao font-medium text-tinta shadow-hairline hover:bg-superficie"
                 )}
               >
                 <MathText className="max-w-[10rem] truncate">{nome}</MathText>

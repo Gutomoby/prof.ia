@@ -60,7 +60,7 @@ export function Segmented<T extends string>({
               // celular, 8/8px no desktop. Medido nas telas.
               desktop ? "rounded-[8px] py-2 text-[15px]" : "rounded-[7px] py-1.5 text-nota",
               ativa
-                ? "bg-papel font-semibold text-tinta shadow-segmentada"
+                ? "bg-aba-ativa font-semibold text-tinta shadow-segmentada"
                 : // Inativa é 510 em tinta fraca. O hover pinta o trilho com
                   // --papel a 60% — mesma regra da aba inativa no desktop, e
                   // acompanha o tema (branco no claro, marinho no escuro).

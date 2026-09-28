@@ -84,7 +84,7 @@ export function DeleteProfessor({
         type="button"
         onClick={() => setAberta(true)}
         className={cn(
-          "mt-3 flex h-toque w-full items-center justify-center rounded-capsula bg-white px-4",
+          "mt-3 flex h-toque w-full items-center justify-center rounded-capsula bg-superficie px-4",
           "text-corpo font-semibold text-erro",
           "shadow-[inset_0_0_0_1px_hsl(var(--erro)/0.35)]",
           "transition-colors duration-140 ease-out hover:bg-erro/6",
@@ -137,7 +137,7 @@ export function DeleteProfessor({
             onChange={(e) => setConfirmText(e.target.value)}
             placeholder={professorName}
             className={cn(
-              "mt-1.5 h-12 w-full rounded-chip bg-white px-3.5 text-linha text-tinta",
+              "mt-1.5 h-12 w-full rounded-chip bg-superficie px-3.5 text-linha text-tinta",
               "shadow-[inset_0_0_0_1px_hsl(var(--erro)/0.35)] placeholder:text-borda-forte",
               "focus:outline-none focus-visible:shadow-foco-forte"
             )}

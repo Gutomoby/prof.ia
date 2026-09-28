@@ -170,7 +170,7 @@ export default function NovoProfessorPage() {
         </PainelPrincipal>
 
         <PainelAuxiliar largura={440} className="mt-[22px] md:mt-0">
-          <div className="rounded-grupo bg-white/70 p-[22px] text-center shadow-hairline">
+          <div className="rounded-grupo bg-superficie/70 p-[22px] text-center shadow-hairline">
             <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-indigo/12 text-indigo">
               <FileUp className="h-[26px] w-[26px]" />
             </span>

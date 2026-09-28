@@ -288,7 +288,7 @@ export default function AjustesPage({ params }: { params: { id: string } }) {
       {/* Zona de perigo: contorno vermelho a 30%, nunca fundo vermelho. */}
       <div
         className={cn(
-          "rounded-grupo bg-white/70 p-4",
+          "rounded-grupo bg-superficie/70 p-4",
           "shadow-[inset_0_0_0_1px_hsl(var(--erro)/0.3)]"
         )}
       >

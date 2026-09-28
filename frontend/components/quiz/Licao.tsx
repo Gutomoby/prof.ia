@@ -355,7 +355,7 @@ export function Licao({
 
             {/* A regra do produto dita: errar não custa nada. */}
             {!acertou && (
-              <div className="mt-3.5 flex items-center gap-2 rounded-chip bg-white/60 px-3 py-2.5">
+              <div className="mt-3.5 flex items-center gap-2 rounded-chip bg-superficie/60 px-3 py-2.5">
                 <Info className="h-[15px] w-[15px] flex-none text-indigo" />
                 <p className="text-nota leading-[1.4] text-tinta-fraca">
                   Errar não tira nada de você, só ensina o Kango o que cobrar de novo.

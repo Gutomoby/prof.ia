@@ -79,6 +79,9 @@ const config: Config = {
         // acento Kango, e os degraus numéricos continuam existindo porque
         // lib/professor-color.ts depende de bg-indigo-700.
         indigo: { ...colors.indigo, DEFAULT: "hsl(var(--indigo) / <alpha-value>)" },
+        "indigo-hover": "hsl(var(--indigo-hover) / <alpha-value>)",
+        "aba-ativa": "hsl(var(--aba-ativa) / <alpha-value>)",
+        superficie: "hsl(var(--superficie) / <alpha-value>)",
         acerto: "hsl(var(--acerto) / <alpha-value>)",
         erro: "hsl(var(--erro) / <alpha-value>)",
         "cinza-tonal": "hsl(var(--cinza-tonal) / <alpha-value>)",
@@ -169,12 +172,12 @@ const config: Config = {
         // Vidro = brilho interno + sombra de cartão.
         // O guia mostra DOIS insets e .08 na sombra; as 81 telas usam UM inset
         // e .07, 177 vezes contra 6. Vale o das telas.
-        vidro: "inset 1.5px 1.5px 1px rgba(255, 255, 255, .95), 0 10px 30px rgba(20, 20, 30, .07)",
+        vidro: "inset 1.5px 1.5px 1px var(--vidro-brilho), 0 10px 30px rgba(20, 20, 30, .07)",
         "vidro-flutuante":
-          "inset 1.5px 1.5px 1px rgba(255, 255, 255, 1), 0 10px 28px rgba(20, 20, 30, .12)",
+          "inset 1.5px 1.5px 1px var(--vidro-brilho-forte), 0 10px 28px rgba(20, 20, 30, .12)",
         // Botão índigo ganha sombra da própria cor a 30%.
-        capsula: "0 8px 20px hsl(var(--indigo) / .3)",
-        "capsula-hover": "0 12px 26px hsl(var(--indigo) / .34)",
+        capsula: "0 8px 20px hsl(var(--sombra-capsula) / .3)",
+        "capsula-hover": "0 12px 26px hsl(var(--sombra-capsula) / .34)",
         "capsula-secundaria":
           "inset 0 0 0 1px hsl(var(--borda)), 0 6px 18px rgba(20, 20, 30, .10)",
         segmentada: "0 1px 3px rgba(0, 0, 0, .1)",
