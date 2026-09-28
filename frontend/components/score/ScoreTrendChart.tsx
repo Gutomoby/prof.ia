@@ -18,7 +18,7 @@ function ChartTooltip({ active, payload }: { active?: boolean; payload?: { paylo
   if (!active || !payload?.length) return null;
   const point = payload[0].payload;
   return (
-    <div className="rounded-chip bg-white px-3 py-2 shadow-vidro">
+    <div className="rounded-chip bg-superficie px-3 py-2 shadow-vidro">
       <p className="text-corpo font-bold metric text-tinta">{pctInteiro(point.score_pct)}%</p>
       <p className="text-nota metric text-tinta-fraca">
         {new Date(point.data).toLocaleDateString("pt-BR")}

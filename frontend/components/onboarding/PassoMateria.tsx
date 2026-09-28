@@ -149,7 +149,7 @@ export function PassoMateria({
           placeholder="Escreva a matéria"
           aria-label="Outra matéria"
           className={cn(
-            "mt-3 h-capsula-tonal flex-none rounded-chip bg-white px-4 text-linha text-tinta shadow-hairline",
+            "mt-3 h-capsula-tonal flex-none rounded-chip bg-superficie px-4 text-linha text-tinta shadow-hairline",
             "placeholder:text-borda-forte focus:outline-none focus-visible:shadow-foco-forte"
           )}
         />

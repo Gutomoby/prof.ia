@@ -32,9 +32,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const html = document.documentElement;
     if (theme === "system") {
       html.removeAttribute("data-theme");
+      html.style.colorScheme = "";
     } else {
       html.setAttribute("data-theme", theme);
+      // Barras de rolagem e campos nativos acompanham a escolha manual.
+      html.style.colorScheme = theme;
     }
+    aplicarCorDaBarra(theme);
   };
 
   const value: ThemeContextType = { theme, setTheme };
@@ -44,6 +48,18 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       {children}
     </ThemeContext.Provider>
   );
+}
+
+const COR_DA_BARRA = { light: "#fbfbf7", dark: "#0a0a0a" } as const;
+
+// As <meta name="theme-color"> do layout vêm com media query (seguem o
+// sistema). Escolha manual: as duas passam a valer a cor escolhida; volta ao
+// "sistema": cada uma recupera a cor da própria media query.
+function aplicarCorDaBarra(theme: Theme) {
+  document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]').forEach((meta) => {
+    const doTema = (meta.media ?? "").includes("dark") ? COR_DA_BARRA.dark : COR_DA_BARRA.light;
+    meta.content = theme === "system" ? doTema : COR_DA_BARRA[theme];
+  });
 }
 
 export function useTheme() {

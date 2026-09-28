@@ -17,12 +17,12 @@ const variantClasses: Record<CapsuleVariant, string> = {
   // Índigo cheio, texto 17/590, sombra da própria cor a 30%.
   principal: cn(
     "h-capsula-principal px-6 bg-indigo text-papel text-linha font-semibold shadow-capsula",
-    "hover:bg-[hsl(226_57%_32%)] hover:shadow-capsula-hover",
+    "hover:bg-indigo-hover hover:shadow-capsula-hover",
     "active:translate-y-px active:shadow-capsula"
   ),
   // Branca com hairline, texto índigo.
   secundaria: cn(
-    "h-capsula-secundaria px-5 bg-white text-indigo text-[16px] font-semibold shadow-capsula-secundaria",
+    "h-capsula-secundaria px-5 bg-superficie text-indigo text-[16px] font-semibold shadow-capsula-secundaria",
     "hover:bg-papel"
   ),
   // Índigo a 12%. Texto sobre tonal fica na cor cheia.

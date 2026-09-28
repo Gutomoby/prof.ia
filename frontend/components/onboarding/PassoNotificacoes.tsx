@@ -59,7 +59,7 @@ export function PassoNotificacoes({ onResolver }: { onResolver: () => void }) {
           material termina de ser lido e quando a prova chega perto.
         </p>
 
-        <div className="mt-6 flex w-full items-start gap-3 rounded-cartao bg-white/[0.92] p-3.5 shadow-[inset_0_0_0_1px_hsl(var(--borda)),0_10px_30px_rgba(20,20,30,.10)]">
+        <div className="mt-6 flex w-full items-start gap-3 rounded-cartao bg-superficie/[0.92] p-3.5 shadow-[inset_0_0_0_1px_hsl(var(--borda)),0_10px_30px_rgba(20,20,30,.10)]">
           <span
             aria-hidden
             className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] bg-indigo text-corpo font-bold text-papel"

@@ -54,6 +54,22 @@
     --tinta-fraca: 218 9% 40%;
     /* Ação principal, aba ativa, progresso, link. */
     --indigo: 226 57% 38%;
+    /* Hover da cápsula principal e a cor da sombra dela. Tokens próprios
+       porque no escuro o acento vira branco: hover escurece o branco, e a
+       sombra deixa de ser um brilho colorido. */
+    --indigo-hover: 226 57% 32%;
+    --sombra-capsula: 226 57% 38%;
+    /* Aba ativa do segmented: no claro é o próprio papel "subindo" do
+       trilho; no escuro precisa ser mais clara que o trilho. */
+    --aba-ativa: 60 20% 98%;
+    /* Superfície "branca" de cartão, campo e botão secundário: branco no
+       claro, grafite no escuro. Use no lugar de bg-white, que não muda com
+       o tema (era o que deixava botão e campo brancos no escuro). */
+    --superficie: 0 0% 100%;
+    /* Brilho interno do vidro. Branco cheio no claro; no escuro, um fio
+       quase apagado — cheio vira uma borda branca estourada. */
+    --vidro-brilho: rgba(255, 255, 255, 0.95);
+    --vidro-brilho-forte: rgba(255, 255, 255, 1);
     /* Certo, dominado, sequência viva, >=70%. */
     --acerto: 152 60% 26%;
     /* Errado, prova no calendário, alerta, <40%. */
@@ -108,86 +124,99 @@
     --radius: 0.75rem;
   }
 
-  /* Tema escuro baseado na paleta Kango: azul-marinho profundo como fundo,
-     com ajustes de contraste para legibilidade. */
+  /* Tema escuro monocromático: preto quase puro de fundo, grafite nas
+     superfícies, branco como acento (botão principal branco com texto preto,
+     no lugar do índigo). Cor só onde carrega significado: verde/vermelho de
+     certo/errado, âmbar das conquistas, cor de identidade de cada matéria.
+     Substitui a primeira versão em azul-marinho, que era derivada do claro
+     por aproximação e deixava tudo "azulado" e com pouco contraste.
+
+     Os dois blocos abaixo são idênticos (preferência do sistema e escolha
+     explícita em Configurações > Aparência) — mudou um, mude o outro. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --papel: 226 40% 8%;
-      --tinta: 60 20% 95%;
-      --tinta-fraca: 218 12% 60%;
-      --indigo: 226 85% 68%;
-      --acerto: 152 55% 48%;
-      --erro: 0 75% 63%;
-      /* Mais escuro que --papel de propósito: no Segmented (segmented.tsx)
-         a aba ativa é bg-papel sobre o trilho bg-cinza-tonal, e a ativa
-         precisa "subir" — mais clara que o trilho — igual no claro (papel
-         98% sobre cinza-tonal 94%). Se cinza-tonal ficasse mais claro que
-         papel aqui, a aba ativa pareceria um buraco em vez de elevada. */
-      --cinza-tonal: 226 35% 5%;
-      --borda: 226 30% 25%;
-      --borda-forte: 226 30% 35%;
-      --papel-parede-meio: 226 35% 11%;
-      --papel-parede-fim: 226 30% 13%;
+      --papel: 0 0% 4%;
+      --tinta: 0 0% 96%;
+      --tinta-fraca: 0 0% 63%;
+      --indigo: 0 0% 96%;
+      --indigo-hover: 0 0% 82%;
+      --sombra-capsula: 0 0% 0%;
+      --aba-ativa: 0 0% 24%;
+    --superficie: 0 0% 11%;
+      --vidro-brilho: rgba(255, 255, 255, 0.06);
+      --vidro-brilho-forte: rgba(255, 255, 255, 0.08);
+      --acerto: 142 55% 52%;
+      --erro: 0 80% 66%;
+      --cinza-tonal: 0 0% 13%;
+      --borda: 0 0% 17%;
+      --borda-forte: 0 0% 26%;
+      --papel-parede-meio: 0 0% 5%;
+      --papel-parede-fim: 0 0% 7%;
 
-      --background: 226 40% 10%;
-      --foreground: 60 20% 95%;
-      --card: 226 30% 22%;
-      --card-foreground: 60 20% 95%;
-      --popover: 226 30% 22%;
-      --popover-foreground: 60 20% 95%;
-      --primary: 226 100% 55%;
-      --primary-foreground: 226 40% 8%;
-      --secondary: 226 30% 20%;
-      --secondary-foreground: 60 20% 95%;
-      --muted: 226 20% 25%;
-      --muted-foreground: 218 12% 60%;
-      --accent: 226 30% 25%;
-      --accent-foreground: 60 20% 95%;
+      --background: 0 0% 4%;
+      --foreground: 0 0% 96%;
+      --card: 0 0% 9%;
+      --card-foreground: 0 0% 96%;
+      --popover: 0 0% 9%;
+      --popover-foreground: 0 0% 96%;
+      --primary: 0 0% 96%;
+      --primary-foreground: 0 0% 4%;
+      --secondary: 0 0% 14%;
+      --secondary-foreground: 0 0% 96%;
+      --muted: 0 0% 14%;
+      --muted-foreground: 0 0% 63%;
+      --accent: 0 0% 16%;
+      --accent-foreground: 0 0% 96%;
       --destructive: 0 72% 60%;
-      --destructive-foreground: 226 40% 8%;
-      --success: 163 94% 50%;
-      --success-foreground: 226 40% 8%;
-      --border: 226 30% 25%;
-      --input: 215 16% 52%;
-      --ring: 226 100% 55%;
+      --destructive-foreground: 0 0% 4%;
+      --success: 142 60% 50%;
+      --success-foreground: 0 0% 4%;
+      --border: 0 0% 17%;
+      --input: 0 0% 30%;
+      --ring: 0 0% 80%;
     }
   }
 
-  /* Suporte para data-theme="dark" (overriding do sistema) */
   :root[data-theme="dark"] {
-    --papel: 226 40% 8%;
-    --tinta: 60 20% 95%;
-    --tinta-fraca: 218 12% 60%;
-    --indigo: 226 85% 68%;
-    --acerto: 152 55% 48%;
-    --erro: 0 75% 63%;
-    --cinza-tonal: 226 35% 5%;
-    --borda: 226 30% 25%;
-    --borda-forte: 226 30% 35%;
-    --papel-parede-meio: 226 35% 11%;
-    --papel-parede-fim: 226 30% 13%;
+    --papel: 0 0% 4%;
+    --tinta: 0 0% 96%;
+    --tinta-fraca: 0 0% 63%;
+    --indigo: 0 0% 96%;
+    --indigo-hover: 0 0% 82%;
+    --sombra-capsula: 0 0% 0%;
+    --aba-ativa: 0 0% 24%;
+    --superficie: 0 0% 11%;
+    --vidro-brilho: rgba(255, 255, 255, 0.06);
+    --vidro-brilho-forte: rgba(255, 255, 255, 0.08);
+    --acerto: 142 55% 52%;
+    --erro: 0 80% 66%;
+    --cinza-tonal: 0 0% 13%;
+    --borda: 0 0% 17%;
+    --borda-forte: 0 0% 26%;
+    --papel-parede-meio: 0 0% 5%;
+    --papel-parede-fim: 0 0% 7%;
 
-    --background: 226 40% 10%;
-    --foreground: 60 20% 95%;
-    --card: 226 30% 22%;
-    --card-foreground: 60 20% 95%;
-    --popover: 226 30% 22%;
-    --popover-foreground: 60 20% 95%;
-    --primary: 226 100% 55%;
-    --primary-foreground: 226 40% 8%;
-    --secondary: 226 30% 20%;
-    --secondary-foreground: 60 20% 95%;
-    --muted: 226 20% 25%;
-    --muted-foreground: 218 12% 60%;
-    --accent: 226 30% 25%;
-    --accent-foreground: 60 20% 95%;
+    --background: 0 0% 4%;
+    --foreground: 0 0% 96%;
+    --card: 0 0% 9%;
+    --card-foreground: 0 0% 96%;
+    --popover: 0 0% 9%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 0 0% 96%;
+    --primary-foreground: 0 0% 4%;
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 63%;
+    --accent: 0 0% 16%;
+    --accent-foreground: 0 0% 96%;
     --destructive: 0 72% 60%;
-    --destructive-foreground: 226 40% 8%;
-    --success: 163 94% 50%;
-    --success-foreground: 226 40% 8%;
-    --border: 226 30% 25%;
-    --input: 215 16% 52%;
-    --ring: 226 100% 55%;
+    --destructive-foreground: 0 0% 4%;
+    --success: 142 60% 50%;
+    --success-foreground: 0 0% 4%;
+    --border: 0 0% 17%;
+    --input: 0 0% 30%;
+    --ring: 0 0% 80%;
   }
 
   /* Forçar modo light com data-theme="light" */
@@ -207,6 +236,12 @@
     --tinta: 220 13% 9%;
     --tinta-fraca: 218 9% 40%;
     --indigo: 226 57% 38%;
+    --indigo-hover: 226 57% 32%;
+    --sombra-capsula: 226 57% 38%;
+    --aba-ativa: 60 20% 98%;
+    --vidro-brilho: rgba(255, 255, 255, 0.95);
+    --vidro-brilho-forte: rgba(255, 255, 255, 1);
+    --superficie: 0 0% 100%;
     --acerto: 152 60% 26%;
     --erro: 0 72% 40%;
     --cinza-tonal: 60 10% 94%;
@@ -308,37 +343,46 @@
     -webkit-backdrop-filter: blur(24px) saturate(180%);
   }
 
-  /* Mesmo material no escuro, mas a base vira o tom de --card escuro
-     (rgb 39 47 73) em vez de branco — senão o vidro flutua claro sobre
-     fundo escuro. O tom precisa ficar nitidamente mais claro que
-     --background (rgb ~15 20 36), senão o card se perde no fundo — foi
-     o que aconteceu na primeira versão (rgb 25 31 52, próximo demais do
-     fundo). Mesmas opacidades por função, valor só muda a cor base. */
+  /* Mesmo material no escuro, com base grafite (rgb 23 = --card escuro)
+     em vez de branco — senão o vidro flutua claro sobre fundo preto.
+     Mesmas opacidades por função, só a cor base muda. */
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .vidro-cartao {
-      background: rgba(39, 47, 73, 0.86);
+      background: rgba(23, 23, 23, 0.86);
     }
     :root:not([data-theme="light"]) .vidro-hud {
-      background: rgba(39, 47, 73, 0.8);
+      background: rgba(23, 23, 23, 0.8);
     }
     :root:not([data-theme="light"]) .vidro-abas {
-      background: rgba(39, 47, 73, 0.74);
+      background: rgba(18, 18, 18, 0.78);
     }
     :root:not([data-theme="light"]) .vidro-sidebar {
-      background: rgba(39, 47, 73, 0.58);
+      background: rgba(14, 14, 14, 0.7);
+    }
+    :root:not([data-theme="light"]) .papel-de-parede {
+      background:
+        radial-gradient(620px circle at -60px -80px, rgba(255, 255, 255, 0.05), transparent 70%),
+        linear-gradient(175deg, hsl(var(--papel)) 0%, hsl(var(--papel-parede-meio)) 60%, hsl(var(--papel-parede-fim)) 100%);
     }
   }
   :root[data-theme="dark"] .vidro-cartao {
-    background: rgba(39, 47, 73, 0.86);
+    background: rgba(23, 23, 23, 0.86);
   }
   :root[data-theme="dark"] .vidro-hud {
-    background: rgba(39, 47, 73, 0.8);
+    background: rgba(23, 23, 23, 0.8);
   }
   :root[data-theme="dark"] .vidro-abas {
-    background: rgba(39, 47, 73, 0.74);
+    background: rgba(18, 18, 18, 0.78);
   }
   :root[data-theme="dark"] .vidro-sidebar {
-    background: rgba(39, 47, 73, 0.58);
+    background: rgba(14, 14, 14, 0.7);
+  }
+  /* Halos coloridos (índigo, verde-água, âmbar) somem no escuro: sobre preto
+     viravam manchas azuladas. Fica só um brilho branco discreto no canto. */
+  :root[data-theme="dark"] .papel-de-parede {
+    background:
+      radial-gradient(620px circle at -60px -80px, rgba(255, 255, 255, 0.05), transparent 70%),
+      linear-gradient(175deg, hsl(var(--papel)) 0%, hsl(var(--papel-parede-meio)) 60%, hsl(var(--papel-parede-fim)) 100%);
   }
 
   /* Papéis de parede das telas de conta. Cada fluxo tem o seu degradê, medido

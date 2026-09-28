@@ -56,7 +56,7 @@ export function PassoMaterial({
         </p>
       </div>
 
-      <div className="mt-5 flex-none rounded-grupo border-[1.5px] border-dashed border-indigo/45 bg-white/70 px-[18px] py-6 text-center">
+      <div className="mt-5 flex-none rounded-grupo border-[1.5px] border-dashed border-indigo/45 bg-superficie/70 px-[18px] py-6 text-center">
         <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-[18px] bg-indigo/12 text-indigo">
           <FileUp className="h-[26px] w-[26px]" />
         </span>
@@ -92,7 +92,7 @@ export function PassoMaterial({
                   className={cn(
                     "flex h-capsula-secundaria w-full cursor-pointer items-center justify-center rounded-capsula",
                     "bg-indigo text-[16px] font-semibold text-papel shadow-capsula",
-                    "transition-all duration-180 ease-out hover:bg-[hsl(226_57%_32%)] active:scale-[0.98]",
+                    "transition-all duration-180 ease-out hover:bg-indigo-hover active:scale-[0.98]",
                     "focus-within:shadow-foco-forte"
                   )}
                 >
@@ -116,7 +116,7 @@ export function PassoMaterial({
               Resumo, anotação de aula ou transcrição
             </p>
 
-            <div className="mt-3.5 overflow-hidden rounded-cartao bg-white text-left shadow-hairline">
+            <div className="mt-3.5 overflow-hidden rounded-cartao bg-superficie text-left shadow-hairline">
               <label className="relative flex min-h-linha-campo items-center gap-4 px-4">
                 <span className="flex-none text-linha">Nome</span>
                 <input
