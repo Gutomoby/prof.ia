@@ -28,6 +28,20 @@ Node.js, Deno e Supabase CLI não vêm com o Windows nem são sincronizados pelo
 - Supabase CLI **não está no winget** — baixar o zip de `https://github.com/supabase/cli/releases/latest` (asset `*_windows_amd64.zip`), extrair, adicionar ao PATH do usuário
 - `backend/venv` (Python) também não é portável entre máquinas — se o `python.exe` do venv apontar para um usuário/caminho que não existe, é sinal de que veio de outra máquina via OneDrive; recriar com `python -m venv venv`, nunca tentar consertar o caminho antigo
 
+## Agent Skills do Remotion
+
+As 12 skills oficiais do Remotion (`remotion-dev/skills`) estão instaladas em `.claude/skills/`, escopo de projeto — `/remotion-create`, `/remotion-markup`, `/remotion-render`, `/remotion-studio`, `/remotion-docs`, `/remotion-captions`, `/remotion-maps`, `/remotion-multimedia`, `/remotion-interactivity`, `/remotion-saas`, `/remotion-upgrade` e o roteador `/remotion-best-practices` (use esse quando não souber qual das outras se aplica).
+
+- Vão pro git, como manda o `.gitignore` (`.claude/*` + `!.claude/skills/`): são só Markdown, sem segredo, e precisam valer nas duas máquinas. O `skills-lock.json` na raiz registra a origem e o hash de cada uma.
+- São ~3 MB / 275 arquivos, com bastante duplicação: o roteador `remotion-best-practices` reempacota as outras 11 como subpastas, porque carrega cada uma por caminho relativo. É assim que o upstream publica — não sair "deduplicando", quebra os links dos `SKILL.md`.
+- Instalação/reinstalação (máquina nova, ou depois de mexer na lista):
+  ```
+  npx skills add remotion-dev/skills --skill '*' --agent claude-code --copy -y
+  ```
+  `--copy` é obrigatório: sem ele o CLI cria symlink apontando pra `node_modules`, que não é versionado nem sobrevive à sincronização do OneDrive no Windows.
+- Pra atualizar, `/remotion-upgrade` — e commitar o `skills-lock.json` junto se o hash mudar.
+- Skill não é biblioteca: nada de Remotion foi adicionado ao `frontend/package.json`. Quando for de fato gerar vídeo, o `/remotion-create` monta o projeto (provavelmente numa pasta própria, tipo `video/`, e não dentro do app Next).
+
 ## Convenção de commit
 
 `tipo: descrição curta em português`, minúsculo, sem ponto final — ex. `fix: login social sem sessao e conta nova sem perfil`, `feat: infraestrutura compartilhada das Edge Functions`. Corpo do commit (quando usado) explica o *porquê*, não o *o quê*.
