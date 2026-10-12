@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, CreditCard, Wallet } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { tooltipTema } from "@/lib/chart-theme";
 import { Capsule } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
@@ -185,7 +186,7 @@ export default function AdminPage() {
               <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
               <XAxis dataKey="date" stroke="hsl(var(--tinta-fraca))" tick={{ fontSize: 12 }} />
               <YAxis stroke="hsl(var(--tinta-fraca))" tick={{ fontSize: 12 }} />
-              <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
+              <Tooltip {...tooltipTema} formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
               <Area type="monotone" dataKey="cost" stroke="hsl(var(--indigo))" fill="url(#colorCost)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -208,7 +209,7 @@ export default function AdminPage() {
                 stroke="hsl(var(--tinta-fraca))"
                 tickFormatter={(v) => `$${Number(v).toFixed(2)}`}
               />
-              <Tooltip formatter={(v: number, nome) => (nome === "custo" ? `$${v.toFixed(4)}` : v)} />
+              <Tooltip {...tooltipTema} formatter={(v: number, nome) => (nome === "custo" ? `$${v.toFixed(4)}` : v)} />
               <Legend />
               <Bar yAxisId="operacoes" dataKey="operacoes" fill="hsl(var(--indigo))" />
               <Bar yAxisId="custo" dataKey="custo" fill="hsl(var(--acerto))" />

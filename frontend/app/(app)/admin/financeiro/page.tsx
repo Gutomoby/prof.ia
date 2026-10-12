@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { BarChart, Bar, AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { tooltipTema } from "@/lib/chart-theme";
 import { Segmented } from "@/components/ui/segmented";
 import { GlassCard } from "@/components/ui/glass-card";
 import { MetricText } from "@/components/ui/metric-text";
@@ -319,7 +320,7 @@ export default function FinanceiroPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
                   <XAxis dataKey="name" stroke="hsl(var(--tinta-fraca))" />
                   <YAxis stroke="hsl(var(--tinta-fraca))" />
-                  <Tooltip formatter={(v: any) => `R$${Number(v).toFixed(2)}`} />
+                  <Tooltip {...tooltipTema} formatter={(v: any) => `R$${Number(v).toFixed(2)}`} />
                   <Legend />
                   <Bar dataKey="receita" fill="hsl(var(--acerto))" />
                   <Bar dataKey="custo" fill="hsl(var(--erro))" />
@@ -346,7 +347,7 @@ export default function FinanceiroPage() {
                     <Cell fill="hsl(var(--acerto))" />
                     <Cell fill="hsl(var(--erro))" />
                   </Pie>
-                  <Tooltip />
+                  <Tooltip {...tooltipTema} />
                 </PieChart>
               </ResponsiveContainer>
             </GlassCard>
@@ -396,7 +397,7 @@ export default function FinanceiroPage() {
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--borda))" />
                   <XAxis dataKey="categoria" stroke="hsl(var(--tinta-fraca))" />
                   <YAxis stroke="hsl(var(--tinta-fraca))" />
-                  <Tooltip formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
+                  <Tooltip {...tooltipTema} formatter={(v: any) => `$${Number(v).toFixed(2)}`} />
                   <Bar dataKey="custo" fill="hsl(var(--indigo))" />
                 </BarChart>
               </ResponsiveContainer>
