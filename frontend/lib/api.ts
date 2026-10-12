@@ -107,6 +107,16 @@ export interface ApiOptions {
   token?: string;
 }
 
+// Erro de cold start: a Edge Function acordou de um período parado e a primeira
+// requisição pegou o worker ainda subindo (502/503 do gateway) ou a conexão
+// caiu. Nada rodou no servidor, então repetir é seguro — e é o que o usuário
+// faria sozinho ao ver o erro ("na segunda vez funciona").
+const GATEWAY_FORA = new Set([502, 503]);
+// Rotas que podem repetir mesmo depois de falha de rede (sem resposta não dá
+// para saber se rodou): leituras e a conferência de questão, que não grava nada.
+const IDEMPOTENTE = (method: string, path: string) =>
+  method === "GET" || path.startsWith("/atividades/conferir");
+
 // Helper interno — todos os métodos abaixo passam por aqui.
 // Adiciona JSON headers e converte respostas em erro num ApiError com mensagem.
 async function request<T>(
@@ -114,18 +124,31 @@ async function request<T>(
   init: RequestInit = {},
   options: ApiOptions = {}
 ): Promise<T> {
-  const res = await fetch(urlDe(path), {
-    cache: "no-store",
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(await authHeader(options.token)),
-      ...(init.headers ?? {}),
-    },
-  });
+  const method = (init.method ?? "GET").toUpperCase();
+  const headers = {
+    "Content-Type": "application/json",
+    ...(await authHeader(options.token)),
+    ...(init.headers ?? {}),
+  };
 
-  if (!res.ok) {
-    throw new ApiError(res.status, await extractErrorMessage(res));
+  let res: Response | null = null;
+  for (let tentativa = 1; tentativa <= 2; tentativa++) {
+    try {
+      res = await fetch(urlDe(path), { cache: "no-store", ...init, headers });
+    } catch (err) {
+      if (tentativa === 2 || !IDEMPOTENTE(method, path)) throw err;
+      await new Promise((r) => setTimeout(r, 800));
+      continue;
+    }
+    if (tentativa === 1 && GATEWAY_FORA.has(res.status)) {
+      await new Promise((r) => setTimeout(r, 800));
+      continue;
+    }
+    break;
+  }
+
+  if (!res || !res.ok) {
+    throw new ApiError(res?.status ?? 0, res ? await extractErrorMessage(res) : "Sem resposta do servidor");
   }
 
   // Algumas rotas (ex.: streaming) não retornam JSON — caller usa fetch direto nesses casos.

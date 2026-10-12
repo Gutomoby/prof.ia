@@ -16,7 +16,6 @@
   backfill em docs/migracao-supabase.md.
 */
 
-import { getEncoding } from "npm:js-tiktoken@1";
 import { db } from "./db.ts";
 
 const CHUNK_SIZE_TOKENS = 500;
@@ -34,9 +33,18 @@ export const EMBEDDING_DIMS = 768;
 // são compatíveis entre modelos). Ver docs/migracao-supabase.md.
 const EMBEDDING_MODEL = "gemini-embedding-2";
 
-let _encoder: ReturnType<typeof getEncoding> | null = null;
-function encoder() {
-  if (!_encoder) _encoder = getEncoding("cl100k_base");
+// js-tiktoken carrega uma tabela de BPE grande ao ser importado. Só indexar
+// texto digitado usa isso; busca (RAG) e quiz não. Importado no topo, TODA
+// função que usa searchChunks (atividades, chat, ia...) pagava esse custo no
+// boot — e a primeira requisição depois de um tempo parado (cold start) era a
+// que falhava. Por isso o import é preguiçoso.
+// deno-lint-ignore no-explicit-any
+let _encoder: any = null;
+async function encoder() {
+  if (!_encoder) {
+    const { getEncoding } = await import("npm:js-tiktoken@1");
+    _encoder = getEncoding("cl100k_base");
+  }
   return _encoder;
 }
 
@@ -47,16 +55,16 @@ function encoder() {
  * cada janela carregando 50 tokens do final da anterior. Isso evita que
  * conceitos cortados na fronteira percam contexto.
  */
-export function chunkText(
+export async function chunkText(
   text: string,
   chunkSizeTokens: number = CHUNK_SIZE_TOKENS,
   overlapTokens: number = CHUNK_OVERLAP_TOKENS,
-): string[] {
+): Promise<string[]> {
   if (overlapTokens >= chunkSizeTokens) {
     throw new Error("overlapTokens precisa ser menor que chunkSizeTokens");
   }
 
-  const enc = encoder();
+  const enc = await encoder();
   const tokens = enc.encode(text);
   if (!tokens.length) return [];
 
@@ -132,7 +140,7 @@ const _LOTE = 64;
  * Retorna o número de chunks indexados.
  */
 export async function indexDocument(professorId: string, documentId: string, text: string): Promise<number> {
-  const chunks = chunkText(text);
+  const chunks = await chunkText(text);
   if (!chunks.length) return 0;
 
   let indexados = 0;
