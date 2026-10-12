@@ -10,6 +10,7 @@ import type {
   Professor,
   ProfessorListItem,
   DocumentItem,
+  DocumentStatus,
   DocumentWithProfessor,
   GeneratedActivity,
   ActivitySubmitResult,
@@ -206,14 +207,93 @@ export function listDocuments(professorId: string) {
   return request<{ items: DocumentItem[] }>(`/documentos?professor_id=${professorId}`);
 }
 
-export function uploadPdf(professorId: string, file: File) {
+/** Andamento da leitura de um PDF (feitos/total de trechos; total vem depois da extração). */
+export interface ProgressoLeitura {
+  feitos: number;
+  total: number | null;
+}
+
+/** Percentual 0–100 da leitura, ou null enquanto o total ainda não é conhecido. */
+export function percentualLeitura(doc: Pick<DocumentItem, "chunks_total" | "chunks_done">): number | null {
+  if (!doc.chunks_total) return null;
+  return Math.min(100, Math.floor(((doc.chunks_done ?? 0) / doc.chunks_total) * 100));
+}
+
+const esperar = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/*
+  A leitura do PDF corre em segundo plano no servidor: o upload responde na
+  hora e o andamento fica em GET /documentos. Esta função espera o desfecho
+  consultando a lista, para que quem precisa do material PRONTO (a configuração
+  da matéria, o primeiro acesso) continue chamando uploadPdf como antes.
+
+  Se o aluno sair da tela, este laço morre mas a leitura NÃO: ela segue no
+  servidor e a lista mostra o andamento quando ele voltar.
+*/
+async function aguardarLeitura(
+  professorId: string,
+  documentId: string,
+  nome: string,
+  opcoes: { onProgress?: (p: ProgressoLeitura) => void; intervaloMs?: number }
+): Promise<{ document_id: string; name: string; chunks: number }> {
+  const intervalo = opcoes.intervaloMs ?? 3000;
+  let falhasSeguidas = 0;
+
+  for (;;) {
+    await esperar(intervalo);
+
+    let doc: DocumentItem | undefined;
+    try {
+      const { items } = await listDocuments(professorId);
+      falhasSeguidas = 0;
+      doc = items.find((d) => d.id === documentId);
+    } catch (err) {
+      // Sessão vencida não melhora com nova tentativa.
+      if (err instanceof ApiError && err.status === 401) throw err;
+      falhasSeguidas += 1;
+      if (falhasSeguidas >= 5) {
+        throw new ApiError(
+          202,
+          `Perdi a conexão enquanto o Kango lia ${nome}. A leitura continua no servidor — você pode sair desta tela e conferir a lista depois.`
+        );
+      }
+      continue;
+    }
+
+    if (!doc) throw new ApiError(404, `${nome} foi removido antes de terminar de ler.`);
+
+    opcoes.onProgress?.({ feitos: doc.chunks_done ?? 0, total: doc.chunks_total ?? null });
+
+    if (doc.status === "erro") {
+      // 422, não 5xx: o motivo já vem escrito para o aluno e o progresso foi guardado.
+      throw new ApiError(422, doc.erro || `O Kango não conseguiu ler ${nome} até o fim.`);
+    }
+    if (doc.status !== "processando") {
+      return { document_id: doc.id, name: doc.name, chunks: doc.chunks_total ?? 0 };
+    }
+  }
+}
+
+export async function uploadPdf(
+  professorId: string,
+  file: File,
+  opcoes: { onProgress?: (p: ProgressoLeitura) => void; intervaloMs?: number } = {}
+) {
   const formData = new FormData();
   formData.append("professor_id", professorId);
   formData.append("file", file);
-  return requestForm<{ document_id: string; name: string; chunks: number }>(
+  const enviado = await requestForm<{ document_id: string; name: string; status: DocumentStatus }>(
     "/documentos/pdf",
     formData
   );
+  return aguardarLeitura(professorId, enviado.document_id, enviado.name, opcoes);
+}
+
+// Continua a leitura de um PDF que parou (erro/cota), de onde parou.
+export function retomarDocumento(id: string) {
+  return request<{ document_id: string; status: DocumentStatus }>(`/documentos/${id}/retomar`, {
+    method: "POST",
+  });
 }
 
 export function uploadText(payload: { professor_id: string; name: string; raw_text: string }) {
@@ -513,6 +593,7 @@ export const api = {
   deleteProfessor,
   listDocuments,
   uploadPdf,
+  retomarDocumento,
   uploadText,
   deleteDocument,
   generateAtividade,

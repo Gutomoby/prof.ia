@@ -7,6 +7,7 @@ import {
   FileText,
   FileX,
   Loader2,
+  RotateCw,
   ScanLine,
   ShieldCheck,
   Sparkles,
@@ -14,7 +15,7 @@ import {
   Type,
   Upload,
 } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, percentualLeitura, type ProgressoLeitura } from "@/lib/api";
 import { Capsule, capsuleVariants } from "@/components/ui/capsule";
 import { InlineAlert } from "@/components/ui/inline-alert";
 import { InsetList, InsetRow } from "@/components/ui/inset-list";
@@ -32,14 +33,12 @@ import type { DocumentItem } from "@/lib/types";
   O cabeçalho (volta, nome da matéria, abas) vem do layout da sala em
   professor/[id]/layout.tsx — aqui mora só o conteúdo.
 
-  Uma diferença que o handoff não tem como mostrar: a linha ativa do desenho diz
-  "Lendo · página 3 de 8", e esse dado não existe. O upload em
-  backend/routers/documentos.py é síncrono — extrai, indexa e só então responde
-  —, e a tabela `documents` não tem contagem de páginas nem coluna de status.
-  Enquanto a requisição está no ar a linha aparece com o mesmo tratamento visual
-  (fundo índigo a 8%, ícone cheio, spinner), dizendo o que de fato se sabe:
-  que está lendo. Página a página exige indexação assíncrona com status
-  persistido — item 5 do consolidado de backend no plano.
+  A linha ativa do desenho diz "Lendo · página 3 de 8". Não há contagem de
+  páginas, então a linha mostra o percentual de trechos já lidos — que o
+  servidor grava a cada lote (documents.chunks_done / chunks_total). A leitura
+  de PDF corre em segundo plano: dá para sair da tela e voltar, e se parar
+  (limite da IA, por exemplo) a linha oferece "Tentar de novo", que continua de
+  onde parou em vez de recomeçar.
 */
 
 type Aba = "pdf" | "texto";
@@ -82,6 +81,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [pdfError, setPdfError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfProgresso, setPdfProgresso] = useState<ProgressoLeitura | null>(null);
+  // Documento cujo "tentar de novo" está a caminho.
+  const [retomandoId, setRetomandoId] = useState<string | null>(null);
+  const [retomarError, setRetomarError] = useState<string | null>(null);
   // Nome do arquivo recusado por não ter texto — dispara a tela 43.
   const [pdfSemTexto, setPdfSemTexto] = useState<string | null>(null);
 
@@ -111,18 +114,43 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
   // Nome do que está sendo lido agora — alimenta a linha ativa da lista.
   const lendo = pdfLoading ? pdfFile?.name : textLoading ? textName : null;
 
-  async function refreshDocuments() {
-    setLoadingList(true);
-    setListError(null);
+  // Ids que estavam sendo lidos na última consulta — para saber quando um
+  // deles terminou (e a trilha passa a ter material novo esperando).
+  const lendoIds = useRef<Set<string>>(new Set());
+
+  async function refreshDocuments(silencioso = false) {
+    if (!silencioso) {
+      setLoadingList(true);
+      setListError(null);
+    }
     try {
       const res = await api.listDocuments(professorId);
       setDocuments(res.items);
+      const agoraLendo = new Set(res.items.filter((d) => d.status === "processando").map((d) => d.id));
+      const terminou = [...lendoIds.current].some(
+        (id) => !agoraLendo.has(id) && res.items.some((d) => d.id === id && d.status === "pronto")
+      );
+      lendoIds.current = agoraLendo;
+      if (terminou) {
+        setNovosCapitulos(null);
+        setPrecisaAtualizarTrilha(true);
+      }
     } catch {
-      setListError("Não foi possível carregar os materiais.");
+      if (!silencioso) setListError("Não foi possível carregar os materiais.");
     } finally {
-      setLoadingList(false);
+      if (!silencioso) setLoadingList(false);
     }
   }
+
+  // Enquanto algum PDF é lido em segundo plano, a lista se atualiza sozinha.
+  // Pausa durante o envio em primeira mão: ali o uploadPdf já acompanha o seu.
+  const temLeitura = documents.some((d) => d.status === "processando");
+  useEffect(() => {
+    if (!temLeitura || pdfLoading) return;
+    const timer = setInterval(() => refreshDocuments(true), 4000);
+    return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [temLeitura, pdfLoading, professorId]);
 
   useEffect(() => {
     refreshDocuments();
@@ -155,7 +183,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     if (!(err instanceof ApiError)) {
       // Sem status HTTP: a requisição nem chegou ao fim. Em arquivo grande é o
       // caso típico — a conexão cai antes da leitura terminar.
-      return `A conexão caiu antes do Kango terminar de ler ${arquivo}. Nada foi salvo. Tente de novo — em arquivo grande, ficar nesta tela até o fim ajuda.`;
+      return `A conexão caiu antes de ${arquivo} terminar de subir. Tente de novo.`;
     }
     if (err.status === 401) {
       return "Sua sessão expirou enquanto o arquivo subia. Entre de novo e reenvie.";
@@ -164,7 +192,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       return `${arquivo} passou do tamanho aceito. Divida em partes menores (por capítulo, por exemplo) e envie uma de cada vez.`;
     }
     if (err.status >= 500) {
-      return `O Kango não conseguiu ler ${arquivo} até o fim, então não salvou nada pela metade. Tente enviar de novo; se repetir, divida o arquivo em partes.`;
+      return `O Kango não conseguiu receber ${arquivo}. Tente enviar de novo; se repetir, divida o arquivo em partes.`;
     }
     return err.message;
   }
@@ -175,9 +203,10 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
     const nome = pdfFile.name;
     setPdfError(null);
     setPdfSemTexto(null);
+    setPdfProgresso(null);
     setPdfLoading(true);
     try {
-      await api.uploadPdf(professorId, pdfFile);
+      await api.uploadPdf(professorId, pdfFile, { onProgress: setPdfProgresso });
       setPdfFile(null);
       if (inputRef.current) inputRef.current.value = "";
       await refreshDocuments();
@@ -193,8 +222,29 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
         err instanceof ApiError && /extrair texto|escaneado/i.test(err.message);
       if (semTexto) setPdfSemTexto(nome);
       else setPdfError(mensagemDeEnvio(err, nome));
+      // Parou no meio (cota, sobrecarga): o documento ficou na lista com o
+      // progresso guardado e o botão de tentar de novo.
+      if (err instanceof ApiError && (err.status === 422 || err.status === 202)) {
+        setPdfFile(null);
+        if (inputRef.current) inputRef.current.value = "";
+        await refreshDocuments(true);
+      }
     } finally {
       setPdfLoading(false);
+      setPdfProgresso(null);
+    }
+  }
+
+  async function handleRetomar(id: string) {
+    setRetomarError(null);
+    setRetomandoId(id);
+    try {
+      await api.retomarDocumento(id);
+      await refreshDocuments(true);
+    } catch (err) {
+      setRetomarError(err instanceof ApiError ? err.message : "Não foi possível retomar a leitura.");
+    } finally {
+      setRetomandoId(null);
     }
   }
 
@@ -407,6 +457,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
       )}
 
       {deleteError && <InlineAlert>{deleteError}</InlineAlert>}
+      {retomarError && <InlineAlert>{retomarError}</InlineAlert>}
 
       <div className="mt-1.5">
         {loadingList && !lendo ? (
@@ -435,45 +486,91 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
                 icon={<Loader2 className="animate-spin" />}
                 iconTone="indigo"
                 title={lendo}
-                subtitle={<span className="text-indigo">Lendo o arquivo...</span>}
+                subtitle={
+                  <span className="text-indigo">
+                    {pdfLoading && pdfProgresso && percentualLeitura({ chunks_total: pdfProgresso.total, chunks_done: pdfProgresso.feitos }) !== null
+                      ? `Lendo… ${percentualLeitura({ chunks_total: pdfProgresso.total, chunks_done: pdfProgresso.feitos })}%`
+                      : "Lendo o arquivo..."}
+                  </span>
+                }
               />
             )}
-            {documents.map((doc: DocumentItem) => (
-              <InsetRow
-                key={doc.id}
-                altura="dupla"
-                icon={doc.type === "pdf" ? <FileText /> : <Type />}
-                title={doc.name}
-                subtitle={
-                  <>
-                    {doc.type === "pdf" ? "PDF" : "Texto"} ·{" "}
-                    <MetricText tone="fraca">
-                      {new Date(doc.created_at).toLocaleDateString("pt-BR")}
-                    </MetricText>
-                  </>
-                }
-                trailing={
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(doc.id)}
-                    disabled={deletingId === doc.id}
-                    aria-label={`Apagar ${doc.name}`}
-                    className={cn(
-                      "flex h-toque w-toque items-center justify-center rounded-capsula text-erro",
-                      "transition-colors duration-140 ease-out hover:bg-erro/12",
-                      "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
-                      "disabled:opacity-50"
-                    )}
-                  >
-                    {deletingId === doc.id ? (
-                      <Loader2 className="h-[17px] w-[17px] animate-spin" />
+            {documents.map((doc: DocumentItem) => {
+              const lendoAgora = doc.status === "processando";
+              const comErro = doc.status === "erro";
+              const pct = percentualLeitura(doc);
+              return (
+                <InsetRow
+                  key={doc.id}
+                  active={lendoAgora}
+                  altura="dupla"
+                  icon={lendoAgora ? <Loader2 className="animate-spin" /> : doc.type === "pdf" ? <FileText /> : <Type />}
+                  iconTone={lendoAgora ? "indigo" : undefined}
+                  title={doc.name}
+                  subtitle={
+                    lendoAgora ? (
+                      <span className="text-indigo">
+                        {pct !== null ? `Lendo… ${pct}%` : "Lendo o arquivo..."} · pode sair desta tela
+                      </span>
+                    ) : comErro ? (
+                      <span className="text-erro">
+                        {doc.erro || "A leitura parou."}
+                        {pct ? ` (${pct}% já lido)` : ""}
+                      </span>
                     ) : (
-                      <Trash2 className="h-[17px] w-[17px]" />
-                    )}
-                  </button>
-                }
-              />
-            ))}
+                      <>
+                        {doc.type === "pdf" ? "PDF" : "Texto"} ·{" "}
+                        <MetricText tone="fraca">
+                          {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+                        </MetricText>
+                      </>
+                    )
+                  }
+                  trailing={
+                    <span className="flex items-center">
+                      {comErro && (
+                        <button
+                          type="button"
+                          onClick={() => handleRetomar(doc.id)}
+                          disabled={retomandoId === doc.id}
+                          aria-label={`Tentar de novo ${doc.name}`}
+                          className={cn(
+                            "flex h-toque w-toque items-center justify-center rounded-capsula text-indigo",
+                            "transition-colors duration-140 ease-out hover:bg-indigo/12",
+                            "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
+                            "disabled:opacity-50"
+                          )}
+                        >
+                          {retomandoId === doc.id ? (
+                            <Loader2 className="h-[17px] w-[17px] animate-spin" />
+                          ) : (
+                            <RotateCw className="h-[17px] w-[17px]" />
+                          )}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(doc.id)}
+                        disabled={deletingId === doc.id}
+                        aria-label={`Apagar ${doc.name}`}
+                        className={cn(
+                          "flex h-toque w-toque items-center justify-center rounded-capsula text-erro",
+                          "transition-colors duration-140 ease-out hover:bg-erro/12",
+                          "focus-visible:outline-none focus-visible:ring-0 focus-visible:shadow-foco-forte",
+                          "disabled:opacity-50"
+                        )}
+                      >
+                        {deletingId === doc.id ? (
+                          <Loader2 className="h-[17px] w-[17px] animate-spin" />
+                        ) : (
+                          <Trash2 className="h-[17px] w-[17px]" />
+                        )}
+                      </button>
+                    </span>
+                  }
+                />
+              );
+            })}
           </InsetList>
         )}
       </div>
@@ -546,6 +643,7 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
               block
               className="md:w-fit"
               loading={updatingModules}
+              disabled={temLeitura}
               onClick={handleUpdateTrilha}
             >
               {updatingModules
@@ -557,6 +655,11 @@ export default function ConfigurarPage({ params }: { params: { id: string } }) {
             {/* Um livro leva ~30s para ser lido. Sem dizer isso, o botão parado
                 em "Lendo o material..." parece travado e a pessoa recarrega a
                 página no meio. */}
+            {temLeitura && !updatingModules && (
+              <p className="text-nota text-tinta-fraca md:self-center">
+                Espere o Kango terminar de ler o material para atualizar a trilha.
+              </p>
+            )}
             {updatingModules && (
               <p className="text-nota text-tinta-fraca md:self-center">
                 Pode levar até um minuto em material grande. Fique nesta tela.

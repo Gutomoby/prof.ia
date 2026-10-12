@@ -1,6 +1,6 @@
 """
 Processamento pesado de PDF (extração + chunking + embedding + insert),
-rodando no Google Cloud Run — sem o teto de 2s de CPU das Supabase Edge
+em segundo plano e resumível (ver ingestao.py), rodando no Google Cloud Run — sem o teto de 2s de CPU das Supabase Edge
 Functions (ver docs/migracao-supabase.md e o comentário em
 supabase/functions/api/routes/documentos.ts). Chamado por essa mesma rota
 via HTTP, autenticado por um segredo compartilhado (header X-Api-Key).
@@ -17,12 +17,16 @@ import json
 import logging
 import os
 import re
+import signal
+import threading
 
 import fitz  # PyMuPDF
 import httpx
 import tiktoken
 from flask import Flask, jsonify, request
 from supabase import create_client
+
+import ingestao
 
 # Cloud Run captura stdout/stderr automaticamente como log da revisão — sem
 # isso, um erro só aparecia como "status 500" no log de requisição, sem o
@@ -117,7 +121,6 @@ CHUNK_SIZE_TOKENS = 500
 CHUNK_OVERLAP_TOKENS = 50
 EMBEDDING_MODEL = "gemini-embedding-2"
 EMBEDDING_DIMS = 768
-LOTE = 64
 
 _tokenizer = None
 
@@ -168,14 +171,18 @@ def chunk_text(text: str) -> list[str]:
     return chunks
 
 
-def embed_texts(texts: list[str]) -> list[list[float]]:
-    """Mesma chamada REST que _shared/embeddings.ts::embedTexts, em Python."""
-    if not texts:
-        return []
-    url = (
-        f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{EMBEDDING_MODEL}:batchEmbedContents?key={GEMINI_API_KEY}"
-    )
+_GEMINI_URL = (
+    f"https://generativelanguage.googleapis.com/v1beta/models/{EMBEDDING_MODEL}:batchEmbedContents"
+)
+
+
+def _enviar_embeddings(texts: list[str]):
+    """Uma chamada ao Gemini. A chave vai no HEADER, não na URL: o httpx repete a
+    URL na mensagem de erro, e foi assim que a chave vazou nos logs.
+
+    Falha de transporte vira ErroDeRede com só o NOME da exceção — nunca a
+    mensagem original, que pode carregar a URL.
+    """
     body = {
         "requests": [
             {
@@ -186,14 +193,67 @@ def embed_texts(texts: list[str]) -> list[list[float]]:
             for t in texts
         ]
     }
-    resp = httpx.post(url, json=body, timeout=60.0)
-    resp.raise_for_status()
-    data = resp.json()
-    return [e["values"] for e in data.get("embeddings", [])]
+    try:
+        return httpx.post(
+            _GEMINI_URL,
+            json=body,
+            headers={"x-goog-api-key": GEMINI_API_KEY},
+            timeout=60.0,
+        )
+    except httpx.HTTPError as exc:
+        raise ingestao.ErroDeRede(type(exc).__name__) from None
+
+
+# Uma instância por processo: o lock interno faz PDFs simultâneos dividirem o
+# mesmo ritmo em vez de somarem rajadas contra a cota do Gemini.
+_embedder = ingestao.Embedder(_enviar_embeddings)
+
+# SIGTERM = o Cloud Run vai derrubar a instância. O worker para entre lotes; o
+# documento fica 'processando' com batimento velho e a retomada o pega.
+_parar = threading.Event()
+
+
+_sigterm_anterior = None
+
+
+def _ao_receber_sigterm(signum, frame):
+    logging.warning("SIGTERM recebido: parando os workers entre lotes")
+    _parar.set()
+    # Encadeia o handler do gunicorn, senão o worker não encerra direito.
+    if callable(_sigterm_anterior):
+        _sigterm_anterior(signum, frame)
+
+
+try:
+    _sigterm_anterior = signal.signal(signal.SIGTERM, _ao_receber_sigterm)
+except ValueError:  # fora da thread principal (ex.: testes); sem handler, tudo bem
+    pass
+
+
+def _rodar_ingestao(document_id: str, professor_id: str, storage_path: str) -> None:
+    try:
+        ingestao.processar_documento(
+            get_supabase(),
+            _embedder,
+            document_id=document_id,
+            professor_id=professor_id,
+            storage_path=storage_path,
+            bucket=STORAGE_BUCKET,
+            extrair=extract_text,
+            quebrar=chunk_text,
+            parar=_parar,
+        )
+    except Exception:  # noqa: BLE001 — processar_documento já trata; isto é o cinto de segurança
+        logging.exception("worker de ingestão caiu (document_id=%s)", document_id)
 
 
 @app.post("/processar")
 def processar():
+    """Inicia (ou retoma) a leitura de um documento EM SEGUNDO PLANO.
+
+    Responde 202 na hora; quem acompanha o andamento é documents.status /
+    chunks_done / erro. O claim atômico impede dois workers no mesmo PDF.
+    """
     if request.headers.get("X-Api-Key") != PDF_PROCESSOR_SECRET:
         return jsonify({"error": "nao_autorizado"}), 401
 
@@ -204,64 +264,23 @@ def processar():
     if not document_id or not professor_id or not storage_path:
         return jsonify({"error": "payload_invalido"}), 400
 
-    sb = get_supabase()
-
     try:
-        file_bytes = sb.storage.from_(STORAGE_BUCKET).download(storage_path)
-    except Exception as exc:  # noqa: BLE001 — reportado ao chamador, não é fatal pro processo
-        logging.exception("falha_download (document_id=%s)", document_id)
-        return jsonify({"error": f"falha_download: {exc}"}), 500
-
-    try:
-        texto = extract_text(file_bytes)
-    except Exception as exc:  # noqa: BLE001
-        logging.exception("falha_extracao (document_id=%s)", document_id)
-        return jsonify({"error": f"falha_extracao: {exc}"}), 500
-
-    # Código "sem_texto" reconhecido explicitamente pela rota chamadora
-    # (documentos.ts) pra manter a mesma tela de "PDF sem texto" do frontend.
-    if not texto.strip():
-        return jsonify({"error": "sem_texto"}), 422
-
-    chunks = chunk_text(texto)
-    if not chunks:
-        return jsonify({"error": "sem_texto"}), 422
-
-    # Falha no meio da indexação não deixa chunk órfão: o chamador apaga a
-    # linha de `documents` na compensação, e `chunks.document_id` tem
-    # `on delete cascade` — os já inseridos somem junto.
-    indexados = 0
-    try:
-        for inicio in range(0, len(chunks), LOTE):
-            lote = chunks[inicio : inicio + LOTE]
-            vetores = embed_texts(lote)
-            sb.table("chunks").insert(
-                [
-                    {
-                        "professor_id": professor_id,
-                        "document_id": document_id,
-                        "content": conteudo,
-                        "embedding": vetor,
-                        "chunk_index": inicio + i,
-                    }
-                    for i, (conteudo, vetor) in enumerate(zip(lote, vetores))
-                ]
-            ).execute()
-            indexados += len(lote)
-    except Exception as exc:  # noqa: BLE001
-        logging.exception(
-            "falha_indexacao (document_id=%s, chunks_ja_indexados=%d)", document_id, indexados
-        )
-        return jsonify({"error": f"falha_indexacao: {exc}"}), 500
-
-    try:
-        sb.table("documents").update({"raw_text": texto}).eq("id", document_id).execute()
+        resp = get_supabase().rpc("claim_documento", {"p_document_id": document_id}).execute()
     except Exception:  # noqa: BLE001
-        # raw_text é só cópia de apoio (não é lido por nenhuma rota hoje) —
-        # não vale derrubar uma indexação que já deu certo por causa disso.
-        pass
+        logging.exception("falha_claim (document_id=%s)", document_id)
+        return jsonify({"error": "falha_claim"}), 500
 
-    return jsonify({"chunks": indexados}), 200
+    if resp.data is not True:
+        # Já tem worker vivo nele (ou o documento já está pronto/não existe).
+        return jsonify({"status": "ja_em_andamento"}), 200
+
+    threading.Thread(
+        target=_rodar_ingestao,
+        args=(document_id, professor_id, storage_path),
+        name=f"ingestao-{document_id}",
+        daemon=True,
+    ).start()
+    return jsonify({"status": "iniciado"}), 202
 
 
 def chunks_do_professor(sb, professor_id: str) -> list[dict]:

@@ -24,7 +24,16 @@ export interface DocumentItem {
   name: string;
   type: "pdf" | "text";
   created_at: string;
+  // Leitura em segundo plano (PDF). Documentos antigos e textos vêm 'pronto'.
+  // Opcionais para não quebrar quem ainda lê só id/name/type.
+  status?: DocumentStatus;
+  chunks_total?: number | null;
+  chunks_done?: number;
+  // Motivo da falha, já escrito para o aluno; só vem quando status === "erro".
+  erro?: string | null;
 }
+
+export type DocumentStatus = "processando" | "pronto" | "erro";
 
 export interface QuizQuestion {
   topico: string;

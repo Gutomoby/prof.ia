@@ -82,25 +82,44 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   const apiKey = Deno.env.get("GEMINI_API_KEY");
   if (!apiKey) throw new Error("GEMINI_API_KEY não configurada no ambiente");
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents?key=${apiKey}`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        requests: texts.map((t) => ({
-          model: `models/${EMBEDDING_MODEL}`,
-          content: { parts: [{ text: t }] },
-          outputDimensionality: EMBEDDING_DIMS,
-        })),
-      }),
-    },
-  );
-  if (!res.ok) throw new Error(`Gemini embeddings API ${res.status}: ${await res.text()}`);
+  const body = JSON.stringify({
+    requests: texts.map((t) => ({
+      model: `models/${EMBEDDING_MODEL}`,
+      content: { parts: [{ text: t }] },
+      outputDimensionality: EMBEDDING_DIMS,
+    })),
+  });
 
-  const data = await res.json();
-  // deno-lint-ignore no-explicit-any
-  return (data.embeddings ?? []).map((e: any) => e.values as number[]);
+  // Chave no HEADER, não na URL: erro de fetch repete a URL e a chave ia parar
+  // nos logs. Retry curto para 429/5xx (a busca do RAG roda dentro de uma
+  // requisição do aluno, então não dá para esperar muito); cota DIÁRIA não
+  // adianta tentar de novo.
+  let ultimo = "";
+  for (let tentativa = 1; tentativa <= 3; tentativa++) {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${EMBEDDING_MODEL}:batchEmbedContents`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+        body,
+      },
+    );
+    if (res.ok) {
+      const data = await res.json();
+      // deno-lint-ignore no-explicit-any
+      return (data.embeddings ?? []).map((e: any) => e.values as number[]);
+    }
+
+    const corpo = await res.text();
+    ultimo = `Gemini embeddings API ${res.status}: ${corpo.slice(0, 300)}`;
+    const recuperavel = res.status === 429 || res.status >= 500;
+    if (!recuperavel || /perday|per_day/i.test(corpo) || tentativa === 3) break;
+
+    const sugerido = /"retryDelay":\s*"(\d+(?:\.\d+)?)s"/.exec(corpo);
+    const esperaMs = Math.min(sugerido ? Number(sugerido[1]) * 1000 : 1000 * 2 ** tentativa, 8000);
+    await new Promise((r) => setTimeout(r, esperaMs));
+  }
+  throw new Error(ultimo);
 }
 
 // Chunks por lote de embedding/insert. Um livro rende mais de mil pedaços; em

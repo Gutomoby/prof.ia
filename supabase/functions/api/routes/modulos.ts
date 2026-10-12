@@ -100,6 +100,19 @@ export function register(router: Router): void {
     const professorId = ctx.params.id;
     const professor = await getOwnedProfessor(professorId, userId, "id, modules_generated_at");
 
+    // Material ainda sendo lido = chunks incompletos. Gerar agora montaria a
+    // trilha sobre um pedaço do livro e marcaria o material como "já coberto".
+    const { data: emLeitura, error: erroLeitura } = await db()
+      .from("documents")
+      .select("id")
+      .eq("professor_id", professorId)
+      .eq("status", "processando")
+      .limit(1);
+    if (erroLeitura) throw new HttpError(500, erroLeitura.message);
+    if (emLeitura && emLeitura.length) {
+      throw new HttpError(409, "Ainda estou lendo seu material. Assim que terminar, atualize a trilha.");
+    }
+
     // A trilha CRESCE: módulos existentes ficam de pé (o histórico de quiz
     // aponta pra eles) e a IA só acrescenta o que ainda não está coberto —
     // por isso a lista atual é buscada aqui de novo, mesmo o Cloud Run já
@@ -125,7 +138,10 @@ export function register(router: Router): void {
         .from("documents")
         .select("id")
         .eq("professor_id", professorId)
-        .gt("created_at", geradoEm)
+        // heartbeat_at cobre o PDF que terminou de ser lido depois da última
+        // geração (criado antes, mas só agora completo) — o batimento final é
+        // gravado quando o documento fica pronto.
+        .or(`created_at.gt.${geradoEm},heartbeat_at.gt.${geradoEm}`)
         .limit(1);
       if (erroDocs) throw new HttpError(500, erroDocs.message);
       if (!docsRecentes || !docsRecentes.length) {
