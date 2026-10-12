@@ -309,16 +309,20 @@ export function register(router: Router): void {
   });
 
   router.post("/atividades/conferir", async (ctx) => {
-    await currentUserId(ctx.req);
+    const userId = await currentUserId(ctx.req);
     const payload = await ctx.body<{ activity_id?: unknown; question_index?: unknown; answer?: unknown }>();
 
     const { data, error } = await db()
       .from("activity_results")
-      .select("id, questions, score_pct")
+      .select("id, professor_id, questions, score_pct")
       .eq("id", payload.activity_id as string)
       .limit(1);
     if (error) throw new HttpError(500, error.message);
     if (!data || !data.length) throw new HttpError(404, "Atividade não encontrada");
+
+    // O id da atividade vem do cliente: sem isto, conhecer um id bastava para
+    // ler o gabarito (resposta e explicação) de atividade de outra pessoa.
+    await getOwnedProfessor(data[0].professor_id as string, userId, "id");
 
     const questions = (data[0].questions as Questao[]) ?? [];
     const idx = payload.question_index as number;
@@ -353,6 +357,9 @@ export function register(router: Router): void {
     if (!data || !data.length) throw new HttpError(404, "Atividade não encontrada");
 
     const professorId = data[0].professor_id as string;
+    // Mesma checagem do conferir: não se envia resposta (nem se ganha XP) na
+    // atividade de outra pessoa.
+    await getOwnedProfessor(professorId, userId, "id");
     const questions = data[0].questions as Questao[];
     const answers = (payload.answers as Record<string, unknown>) ?? {};
     const { corrigidas, scorePct } = corrigirQuestoes(questions, answers);
@@ -407,17 +414,18 @@ export function register(router: Router): void {
   });
 
   router.get("/atividades/:id", async (ctx) => {
-    await currentUserId(ctx.req);
+    const userId = await currentUserId(ctx.req);
 
     const { data, error } = await db()
       .from("activity_results")
-      .select("id, topic, difficulty, questions, answers, score_pct, time_seconds, created_at")
+      .select("id, professor_id, topic, difficulty, questions, answers, score_pct, time_seconds, created_at")
       .eq("id", ctx.params.id)
       .limit(1);
     if (error) throw new HttpError(500, error.message);
     if (!data || !data.length) throw new HttpError(404, "Atividade não encontrada");
 
     const row = data[0];
+    await getOwnedProfessor(row.professor_id as string, userId, "id");
     if (row.score_pct === null) throw new HttpError(400, "Essa atividade ainda não foi respondida");
 
     const { corrigidas } = corrigirQuestoes(row.questions as Questao[], (row.answers as Record<string, unknown>) ?? {});
